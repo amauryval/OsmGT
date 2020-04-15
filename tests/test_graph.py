@@ -39,8 +39,6 @@ def test_create_edges_with_an_undirected_graph(point_a, point_b, point_c):
     assert graph.edge_exists_from_vertices_name(point_b.wkt, point_c.wkt)
     assert not graph.edge_exists_from_vertices_name(point_a.wkt, point_c.wkt)
 
-    assert graph.edges_content().shape[0] == 2
-    assert graph.vertices_content().shape[0] == 3
 
 def test_edges_with_a_weighted_undirected_graph(point_a, point_b, point_c):
     graph = GraphHelpers(directed=False)
@@ -64,6 +62,3 @@ def test_edges_with_a_weighted_undirected_graph(point_a, point_b, point_c):
         graph.edge_weights[edge]
         for edge in graph.edges()
     ]) == 26.1
-
-    assert graph.edges_content().shape[0] == 2
-    assert graph.vertices_content().shape[0] == 3
