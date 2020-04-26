@@ -2,7 +2,6 @@ import geopandas as gpd
 
 from shapely.geometry import Point
 from shapely.geometry import LineString
-from shapely.geometry import Polygon
 
 import geojson
 
@@ -13,7 +12,7 @@ from collections import Counter
 from more_itertools import split_at
 
 from osmgt.apis.core import ApiCore
-# from osmgt.network.graphtools_helper import GraphHelpers
+from osmgt.network.graphtools_helper import GraphHelpers
 from osmgt.geometry.reprojection import ogr_reproject
 
 
@@ -168,19 +167,19 @@ class OverpassApi(ApiCore):
         # output = output.to_crs(3857)
         return output
 
-    # def to_graph(self):
-    #     self.to_numpy_array()
-    #     graph = GraphHelpers(directed=False)
-    #
-    #     for feature in self._output:
-    #         feature_dict = feature.tolist()
-    #         graph.add_edge(
-    #             str(feature_dict["node_1"]),
-    #             str(feature_dict["node_2"]),
-    #             f'{str(feature_dict["node_1"])}_{str(feature_dict["node_2"])}',
-    #             feature_dict["length"],
-    #         )
-    #     return graph
+    def to_graph(self):
+        self.to_numpy_array()
+        graph = GraphHelpers(directed=False)
+
+        for feature in self._output:
+            feature_dict = feature.tolist()
+            graph.add_edge(
+                str(feature_dict["node_1"]),
+                str(feature_dict["node_2"]),
+                f'{str(feature_dict["node_1"])}_{str(feature_dict["node_2"])}',
+                feature_dict["length"],
+            )
+        return graph
 
     def _get_tags(self, feature):
         return feature.get("tags", {})
