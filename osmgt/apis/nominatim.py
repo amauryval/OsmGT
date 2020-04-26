@@ -43,7 +43,3 @@ class NominatimApi(ApiCore):
 
     def data(self):
         return self._result_query
-
-if __name__ == '__main__':
-    a = NominatimApi(q="roanne", limit=1)
-    assert False
