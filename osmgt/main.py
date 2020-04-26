@@ -4,9 +4,13 @@ from osmgt.apis.overpass import OverpassApi
 
 class OsmGt:
 
+    def __get_data(self, location_name):
+        location_osm_id = NominatimApi(q=location_name, limit=1).data()[0]["osm_id"]
+        location_osm_id += 3600000000
+        query = f'area({location_osm_id})->.searchArea;(way["highway"](area.searchArea););out geom;(._;>;);'
+        return OverpassApi(query)
 
-    @staticmethod
-    def get_graph_from_location(location_name):
+    def get_graph_from_location(self, location_name):
         """
         get a graph tool graph from a location name
 
@@ -14,7 +18,35 @@ class OsmGt:
         :type location_name: str
         :return:
         """
-        location_osm_id = NominatimApi(q=location_name, limit=1).data()[0]["osm_id"]
-        location_osm_id += 3600000000
-        query = f'area({location_osm_id})->.searchArea;(way["highway"](area.searchArea););out geom;(._;>;);'
-        return OverpassApi(query).to_graph()
+        result = self.__get_data(location_name)
+
+        return result.to_graph()
+
+    def get_road_numpy_array_from_location(self, location_name):
+        """
+        get a numpy array graph from a location name
+
+        :param location_name: the location name
+        :type location_name: str
+        :return:
+        """
+        result = self.__get_data(location_name)
+
+        return result.to_numpy_array()
+
+    def get_road_gdf_from_location(self, location_name, export_to_file=False):
+        """
+        get a geodataframe from a location name
+
+        :param location_name: the location name
+        :type location_name: str
+        :param export_to_file: to export or not a file
+        :type export_to_file: bool, default False
+        :return:
+        """
+        result = self.__get_data(location_name)
+
+        if export_to_file:
+            result.to_linestrings().to_file(f"{location_name}_roads.geojson", driver='GeoJSON')
+
+        return result.to_linestrings()

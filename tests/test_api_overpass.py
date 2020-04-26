@@ -14,11 +14,6 @@ def test_api_overpass_building_polygons():
 
     osm_data = OverpassApi(query)
 
-    data_polygon = osm_data.to_polygons()
-    assert data_polygon.shape[0] == 50
-    assert data_polygon.shape[-1] == 12
-    assert all(map(lambda x: isinstance(x, Polygon), data_polygon["geometry"]))
-
     data_points = osm_data.to_points()
     assert data_points.shape[0] == 474
     assert data_points.shape[-1] == 1
@@ -44,18 +39,12 @@ def test_api_overpass_railway_lines():
     with pytest.raises(ErrorOverpassApi) as exception_info:
         _ = osm_data.to_points()
 
-    data_polygons = osm_data.to_polygons()
-    assert data_polygons.shape[0] == 1029
-    assert data_polygons.shape[-1] == 37
-    assert all(map(lambda x: isinstance(x, Polygon), data_polygons["geometry"]))
-
 
 def test_api_overpass_stops_points():
     bbox_value = "(45.707486, 4.771849, 45.808425, 4.898393)"
     query = f'node{bbox_value}["highway"="stop"];out geom;(._;>;);'
 
     osm_data = OverpassApi(query)
-
 
     data_points = osm_data.to_points()
     assert data_points.shape[0] == 313
@@ -64,6 +53,3 @@ def test_api_overpass_stops_points():
 
     with pytest.raises(ErrorOverpassApi) as exception_info:
         _ = osm_data.to_linestrings()
-
-    with pytest.raises(ErrorOverpassApi) as exception_info:
-        _ = osm_data.to_polygons()
