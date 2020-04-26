@@ -20,7 +20,7 @@ class NominatimApi(ApiCore):
         super().__init__()
 
         parameters = self.__check_parameters(params)
-        self._result_query = self.compute_query(self.nominatim_url, parameters)
+        self.__RESULT_QUERY = self.compute_query(self.nominatim_url, parameters)
 
     def __check_parameters(self, input):
         parameters = {}
@@ -42,4 +42,4 @@ class NominatimApi(ApiCore):
         return parameters
 
     def data(self):
-        return self._result_query
+        return self.__RESULT_QUERY

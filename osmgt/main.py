@@ -1,5 +1,4 @@
-from osmgt.apis.nominatim import NominatimApi
-from osmgt.apis.overpass import OverpassApi
+from osmgt.core import OsmGtCore
 
 
 class OsmGt:
@@ -13,13 +12,7 @@ class OsmGt:
         """
 
         self._location_name = location_name
-        self.__get_data()
-
-    def __get_data(self):
-        location_osm_id = NominatimApi(q=self._location_name, limit=1).data()[0]["osm_id"]
-        location_osm_id += 3600000000
-        query = f'area({location_osm_id})->.searchArea;(way["highway"](area.searchArea););out geom;(._;>;);'
-        self._osm_result = OverpassApi(query)
+        self._osm_result = OsmGtCore(location_name)
 
     def get_graph_from_location(self):
         """
