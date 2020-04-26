@@ -3,6 +3,8 @@ import geopandas as gpd
 from shapely.geometry import Point
 from shapely.geometry import LineString
 
+import uuid
+
 import geojson
 
 import numpy as np
@@ -26,6 +28,7 @@ class OverpassApi(ApiCore):
     __NEXT_INDEX = 1
     __ITEM_LIST_SEPARATOR = "_"
     __GRAPH_FIELDS = {"node_1", "node_2", "geometry", "length"}
+    __ID_FIELD = "uuid"
 
     __OVERPASS_URL = "https://www.overpass-api.de/api/interpreter"
     __OVERPASS_QUERY_PREFIX = "[out:json];"
@@ -80,6 +83,7 @@ class OverpassApi(ApiCore):
                     "node_2": line_coordinates[-1],
                     "geometry": geometry,
                     "length": geometry.length,
+                    self.__ID_FIELD: uuid.uuid1()
                 }
                 data.update(self._get_tags(feature))
                 array = np.array(data)
@@ -172,12 +176,11 @@ class OverpassApi(ApiCore):
         graph = GraphHelpers(directed=False)
 
         for feature in self._output:
-            feature_dict = feature.tolist()
             graph.add_edge(
-                str(feature_dict["node_1"]),
-                str(feature_dict["node_2"]),
-                f'{str(feature_dict["node_1"])}_{str(feature_dict["node_2"])}',
-                feature_dict["length"],
+                str(feature["node_1"]),
+                str(feature["node_2"]),
+                feature[self.__ID_FIELD],
+                feature["length"],
             )
         return graph
 
