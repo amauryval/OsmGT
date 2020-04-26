@@ -1,4 +1,6 @@
 from graph_tool import Graph
+from graph_tool.all import graph_draw
+from graph_tool.draw import sfdp_layout
 
 
 class ExistingVertex(ValueError):
@@ -184,3 +186,20 @@ class GraphHelpers(Graph):
         """
 
         return self.find_vertex_from_name(vertex_name) is not None
+
+    def plot(self, output_file_with_extension):
+        pos = sfdp_layout(self)
+        graph_draw(
+            self,
+            pos=pos,
+            vertex_shape="circle",
+            vertex_size=3,
+            vertex_anchor=0,
+            vertex_color="white",
+            vertex_fill_color=(1, 0, 0, 1),  # normalized values
+            vertex_pen_width=0.7,
+            edge_color=(1, 0, 0, 1),
+            bg_color=(0, 0, 0, 1),
+            output_size=[1024,1024],
+            output=output_file_with_extension
+        )
