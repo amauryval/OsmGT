@@ -196,10 +196,10 @@ class GraphHelpers(Graph):
             vertex_size=3,
             vertex_anchor=0,
             vertex_color="white",
-            vertex_fill_color=(1, 0, 0, 1),  # normalized values
-            vertex_pen_width=0.7,
+            vertex_fill_color=(0, 0, 0, 1),  # normalized values
+            vertex_pen_width=0.6,
             edge_color=(1, 0, 0, 1),
             bg_color=(0, 0, 0, 1),
-            output_size=[1024,1024],
+            output_size=[1024, 1024],
             output=output_file_with_extension
         )
