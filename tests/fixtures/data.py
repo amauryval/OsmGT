@@ -19,3 +19,11 @@ def point_b():
 @pytest.fixture
 def point_c():
     return loads(wkt_point_c)
+
+@pytest.fixture
+def epsg_2154():
+    return 2154
+
+@pytest.fixture
+def epsg_4326():
+    return 4326
