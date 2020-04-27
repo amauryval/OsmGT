@@ -1,21 +1,4 @@
-import geopandas as gpd
-
-from shapely.geometry import Point
-from shapely.geometry import LineString
-
-import uuid
-
-import geojson
-
-import numpy as np
-
-from collections import Counter
-
-from more_itertools import split_at
-
 from osmgt.apis.core import ApiCore
-from osmgt.network.graphtools_helper import GraphHelpers
-from osmgt.geometry.reprojection import ogr_reproject
 
 
 class ErrorOverpassApi(ValueError):

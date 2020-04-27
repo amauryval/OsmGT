@@ -3,7 +3,7 @@ from osmgt.core import OsmGtCore
 
 class OsmGt:
 
-    def __init__(self, location_name):
+    def __init__(self, location_name, new_points):
         """
         get a road data from a location name
 
@@ -12,15 +12,15 @@ class OsmGt:
         """
 
         self._location_name = location_name
-        self._osm_result = OsmGtCore(location_name)
+        self._osm_result = OsmGtCore(location_name, new_points)
 
-    def get_graph_from_location(self):
-        """
-        get a graph tool graph from a location name
-
-        """
-
-        return self._osm_result.to_graph()
+    # def get_graph_from_location(self):
+    #     """
+    #     get a graph tool graph from a location name
+    #
+    #     """
+    #
+    #     return self._osm_result.to_graph()
 
     def get_road_numpy_array_from_location(self):
         """

@@ -17,8 +17,14 @@ from collections import Counter
 
 from more_itertools import split_at
 
-from osmgt.network.graphtools_helper import GraphHelpers
+# from osmgt.network.graphtools_helper import GraphHelpers
 from osmgt.geometry.reprojection import ogr_reproject
+
+import scipy
+
+
+class OsmGtCoreError(ValueError):
+    pass
 
 
 class OsmGtCore:
@@ -33,10 +39,13 @@ class OsmGtCore:
     __OUTPUT_EPSG = 3857
     __LOCATION_OSM_DEFAULT_ID = 3600000000  # this is it...
 
-    def __init__(self, location_name):
+    _ways_to_add = []
+
+    def __init__(self, location_name, new_points):
         super().__init__()
 
         self._location_name = location_name
+        self._new_points = new_points
 
         self._output = []
         self.__get_data_from_osm()
@@ -48,30 +57,45 @@ class OsmGtCore:
         self._raw_data = OverpassApi(location_osm_id=location_id).data()["elements"]
 
     def __get_all_ways_found_by_query(self):
-        return filter(lambda x: x["type"] == "way", self._raw_data)
+        all_the_ways_found = filter(lambda x: x["type"] == "way", self._raw_data)
+        all_the_ways_found_restructured = {}
+        for feature in all_the_ways_found:
+            all_the_ways_found_restructured[str(feature["id"])] = feature
+            all_the_ways_found_restructured[str(feature["id"])]["geometry"] = [
+                [coords["lon"] for coords in feature["geometry"]],
+                [coords["lat"] for coords in feature["geometry"]]
+            ]
+        return all_the_ways_found_restructured
 
     def __cleaning_geometry(self):
-        # find all the existing intersection from coordinates
-        ways_found = self.__get_all_ways_found_by_query()
-        intersections_found = self.find_intersections_from_ways(ways_found)
+        # find nearest lines from new_points
+        all_the_ways_found = self.__get_all_ways_found_by_query()
 
-        ways_found = self.__get_all_ways_found_by_query()
-        for feature in ways_found:
-            coordinates = list(map(lambda x: frozenset([x["lon"], x["lat"]]), feature["geometry"]))
+        for pos, new_node in enumerate(self._new_points):
+            all_the_ways_found = self.find_nearest_lines_on_osm_network(all_the_ways_found, new_node, pos)
+
+        # reformat data
+        all_the_ways_found = all_the_ways_found.values()
+
+        # find all the existing intersection from coordinates
+        intersections_found = self.find_intersections_from_ways(all_the_ways_found)
+
+        for feature in all_the_ways_found:
+            coordinates = list(map(frozenset, zip(*feature["geometry"])))
             points_intersections = set(coordinates).intersection(intersections_found)
 
             lines_coordinates_rebuild = self._topology_builder(coordinates, points_intersections)
 
             for line_coordinates in lines_coordinates_rebuild:
                 line_coordinates = list(map(tuple, line_coordinates))
-                geometry = ogr_reproject(LineString(line_coordinates), self.__INPUT_EPSG, self.__OUTPUT_EPSG)
-
+                # geometry = ogr_reproject(LineString(line_coordinates), self.__INPUT_EPSG, self.__OUTPUT_EPSG)
+                geometry = LineString(line_coordinates)
                 data = {
                     "node_1": line_coordinates[0],
                     "node_2": line_coordinates[-1],
                     "geometry": geometry,
                     "length": geometry.length,
-                    self.__ID_FIELD: uuid.uuid1()
+                    "id": feature["id"]
                 }
                 data.update(self._get_tags(feature))
                 array = np.array(data)
@@ -79,6 +103,66 @@ class OsmGtCore:
                 self._output.append(array)
 
         self._output = np.stack(self._output)
+
+    def __find_neighbors(self, coords_list):
+        from scipy import spatial
+        tree = spatial.KDTree(coords_list)
+        return tree
+
+    def __interpolate_lines(self, x_list, y_list):
+        from scipy.interpolate import interp1d
+        interp_func = interp1d(x_list, y_list)
+        x_new = np.linspace(min(x_list), max(x_list), 100 - len(x_list) + 2)
+        x_new = np.sort(np.append(x_new, x_list[1:-1]))  # include the original points
+        y_new = interp_func(x_new)
+        return list(zip(x_new, y_new))
+
+    def find_nearest_lines_on_osm_network(self, ways_found, new_node, pos):
+        # interpolation lines
+        lines_interpolated = {
+            str(osm_id): self.__interpolate_lines(
+                feature["geometry"][0],
+                feature["geometry"][-1]
+            )
+            for osm_id, feature in ways_found.items()
+        }
+        all_interpolated_coords_reference = {
+            f"{osm_id}_{key}": coord
+            for osm_id, feature in lines_interpolated.items()
+            for key, coord in enumerate(feature)
+        }
+        all_interpolated_coords_reference_values = list(all_interpolated_coords_reference.values())
+
+        # find neighbors
+        tree = self.__find_neighbors(all_interpolated_coords_reference_values)
+        idx_found = tree.query(new_node)[-1]
+        osm_id_linked_found = next(key for key, value in all_interpolated_coords_reference.items() if value == all_interpolated_coords_reference_values[idx_found])
+        new_feature_coords = {}
+        new_feature_coords[osm_id_linked_found] = [
+            tuple(new_node),
+            all_interpolated_coords_reference_values[idx_found]
+        ]
+        osm_id, pos_point = osm_id_linked_found.split("_")
+
+        # update geometry
+        linestring_linked = ways_found[osm_id]
+        linestring_linked_geom_coords = LineString(list(zip(*linestring_linked["geometry"]))).coords[:]
+        if len(set(new_feature_coords[osm_id_linked_found]).intersection(set(linestring_linked_geom_coords))) == 1:
+            #point found already exists : start or end = nothing to change
+            pass
+        else:
+            line_interpolated = lines_interpolated[osm_id]
+            linestring_linked_updated = list(filter(lambda x: x in linestring_linked_geom_coords + [new_feature_coords[osm_id_linked_found][-1]], line_interpolated))
+            ways_found[osm_id]["geometry"] = list(zip(*linestring_linked_updated))
+
+        ways_found[f"{osm_id}_{pos}"] = {
+            "type": "way",
+            "id": f"{osm_id}_{pos}",
+            "geometry": list(zip(*new_feature_coords[osm_id_linked_found])),
+            "tags": {}  # TODO add attributes ?
+        }
+
+        return ways_found
 
     def to_numpy_array(self):
         return self._output
@@ -130,11 +214,10 @@ class OsmGtCore:
     def find_intersections_from_ways(self, ways_found):
 
         all_coord_points = [
-            frozenset([coords["lon"], coords["lat"]])
+            list(map(frozenset, zip(*feature["geometry"])))
             for feature in ways_found
-            for coords in feature["geometry"]
         ]
-        intersections_count = Counter(all_coord_points)
+        intersections_count = Counter([coord for sublist in all_coord_points for coord in sublist])
         intersections_found = [coord for coord, count in intersections_count.items() if count >= self.__NUMBER_OF_NODES_INTERSECTIONS]
         return set(intersections_found)
 
@@ -156,18 +239,18 @@ class OsmGtCore:
         # output = output.to_crs(3857)
         return output
 
-    def to_graph(self):
-        self.to_numpy_array()
-        graph = GraphHelpers(directed=False)
-
-        for feature in self._output:
-            graph.add_edge(
-                str(feature["node_1"]),
-                str(feature["node_2"]),
-                feature[self.__ID_FIELD],
-                feature["length"],
-            )
-        return graph
+    # def to_graph(self):
+    #     self.to_numpy_array()
+    #     graph = GraphHelpers(directed=False)
+    #
+    #     for feature in self._output:
+    #         graph.add_edge(
+    #             str(feature["node_1"]),
+    #             str(feature["node_2"]),
+    #             feature["id"],
+    #             feature["length"],
+    #         )
+    #     return graph
 
     def _get_tags(self, feature):
         return feature.get("tags", {})
