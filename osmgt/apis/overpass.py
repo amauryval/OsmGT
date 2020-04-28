@@ -13,8 +13,9 @@ class OverpassApi(ApiCore):
     __OVERPASS_QUERY_SUFFIX = ""
 
 
-    def __init__(self, location_osm_id):
+    def __init__(self, logger, location_osm_id):
         super().__init__()
+        self.logger = logger
 
         # TODO : create others filters to get different data
         query = self._get_roads_data(location_osm_id)
