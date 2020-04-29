@@ -13,6 +13,7 @@ from osmgt.common.osmgt_core import OsmGtCore
 # from osmgt.network.graphtools_helper import GraphHelpers
 from osmgt.geometry.reprojection import ogr_reproject
 
+from shapely.geometry import LineString
 
 from osmgt.geometry.geom_network_cleaner import GeomNetworkCleaner
 
@@ -47,30 +48,34 @@ class MainCore(OsmGtCore):
         self.__get_data_from_osm()
 
         # data processing
-        self.__prepare_network_to_be_cleaned()
-        self._output = GeomNetworkCleaner(self.logger, self._raw_data_filtered_restructured, new_points).run()
+        raw_data_restructured = self.__prepare_network_to_be_cleaned()
+        self._output = GeomNetworkCleaner(self.logger, raw_data_restructured, new_points).run()
 
     def __get_data_from_osm(self):
         location_id = NominatimApi(self.logger, q=self._location_name, limit=1).data()[0]["osm_id"]
         location_id += self.__LOCATION_OSM_DEFAULT_ID
-        self._raw_data = OverpassApi(self.logger, location_osm_id=location_id).data()["elements"]
+        raw_data = OverpassApi(self.logger, location_osm_id=location_id).data()["elements"]
+        self._raw_data = filter(lambda x: x["type"] == "way", raw_data)
 
     def __prepare_network_to_be_cleaned(self):
         self.logger.info(f"Prepare Data")
 
-        # TODO reproject here
-        # geometry = ogr_reproject(LineString(line_coordinates), self.__INPUT_EPSG, self.__OUTPUT_EPSG)
+        raw_data_reprojected = []
+        for feature in self._raw_data:
+            try:
+                feature["geometry"] = ogr_reproject(
+                    LineString([(coords["lon"], coords["lat"]) for coords in feature["geometry"]]),
+                    self.epsg_4236, self.epsg_3857
+                )
 
-        # TODO prepare a generic format, in parallel of source data
-        raw_data_filtered = filter(lambda x: x["type"] == "way", self._raw_data)
-        raw_data_filtered_restructured = {}
-        for feature in raw_data_filtered:
-            raw_data_filtered_restructured[str(feature["id"])] = feature
-            raw_data_filtered_restructured[str(feature["id"])]["geometry"] = [
-                [coords["lon"] for coords in feature["geometry"]],
-                [coords["lat"] for coords in feature["geometry"]]
-            ]
-        self._raw_data_filtered_restructured = raw_data_filtered_restructured
+            except:
+                feature["geometry"] = LineString([(coords["lon"], coords["lat"]) for coords in feature["geometry"]])
+            feature["bounds"] = feature["geometry"].bounds
+            feature["geometry"] = feature["geometry"].coords[:]
+
+            raw_data_reprojected.append(feature)
+
+        return raw_data_reprojected
 
     def to_numpy_array(self):
         return self._output
