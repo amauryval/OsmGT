@@ -16,13 +16,13 @@ class OsmGt(MainCore):
 
         self._location_name = location_name
 
-    # def get_graph_from_location(self):
-    #     """
-    #     get a graph tool graph from a location name
-    #
-    #     """
-    #     self.logger.info("Prepare graph...")
-    #     return self.to_graph()
+    def get_graph_from_location(self):
+        """
+        get a graph tool graph from a location name
+
+        """
+        self.logger.info("Prepare graph...")
+        return self.to_graph()
 
     def get_road_numpy_array_from_location(self):
         """

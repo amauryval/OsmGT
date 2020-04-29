@@ -3,6 +3,9 @@ from graph_tool.all import graph_draw
 from graph_tool.draw import sfdp_layout
 
 
+class ErrorGraphHelpers(ValueError):
+    pass
+
 class ExistingVertex(ValueError):
     pass
 
@@ -22,13 +25,13 @@ class GraphHelpers(Graph):
     - edge_exists_from_vertices_name()
     """
 
-    def __init__(self, directed):
+    def __init__(self):
         """
 
         :param directed: is directed or not
         :type directed: bool
         """
-        super(GraphHelpers, self).__init__(directed=directed)
+        super(GraphHelpers, self).__init__(directed=False)
 
         self.vertex_names = self.new_vertex_property('string')
         self.edge_names = self.new_edge_property('string')
@@ -37,6 +40,44 @@ class GraphHelpers(Graph):
 
         self.vertices_content = {}
         self.edges_content = {}
+        self.edges_vertices_content = {}
+
+    def find_edges_from_vertex(self, vertex_name):
+        vertex = self.find_vertex_from_name(vertex_name)
+        if vertex is not None:
+            all_edges_found = vertex.all_edges()
+            edges_names = [
+                self.edge_names[edge]
+                for edge in all_edges_found
+            ]
+            edges_exist = list(
+                map(
+                    self.edge_exists_from_name,
+                    edges_names
+                )
+            )
+            if all(edges_exist):
+                return edges_names
+            else:
+                raise ErrorGraphHelpers("Seems impossible ?")
+
+    def find_vertex_names_from_edge_name(self, edge_name):
+        edge = self.find_edge_from_name(edge_name)
+        if edge is not None:
+
+            vertex_source_name = self.vertex_names[edge.source()]
+            vertex_target_name = self.vertex_names[edge.target()]
+
+            if all([
+                    self.vertex_exists_from_name(vertex_source_name),
+                    self.vertex_exists_from_name(vertex_source_name),
+                ]):
+                return vertex_source_name, vertex_target_name
+            else:
+                # if an edge exists, it must have source and target nodes
+                raise ErrorGraphHelpers("Seems impossible ?")
+
+        return None
 
     def add_vertex(self, vertex_name):
         """
@@ -89,6 +130,7 @@ class GraphHelpers(Graph):
             edge = super(GraphHelpers, self).add_edge(source, target)
             self.edge_names[edge] = edge_name
             self.edges_content[edge_name] = edge
+            self.edges_vertices_content[edge_name] = frozenset([source_vertex_name, target_vertex_name])
 
             if weight is not None:
                 self.edge_weights[edge] = weight

@@ -10,7 +10,8 @@ import geojson
 
 from osmgt.common.osmgt_core import OsmGtCore
 
-# from osmgt.network.graphtools_helper import GraphHelpers
+from osmgt.network.graphtools_helper import GraphHelpers
+
 from osmgt.geometry.reprojection import ogr_reproject
 
 from shapely.geometry import LineString
@@ -112,21 +113,21 @@ class MainCore(OsmGtCore):
         self.logger.info(f"Prepare Geodataframe")
         output = gpd.GeoDataFrame.from_features(features)
         output.crs = self.epsg_4236
-        # output = output.to_crs(self.epsg_3857)
+        output = output.to_crs(self.epsg_3857)
         return output
 
-    # def to_graph(self):
-    #     self.to_numpy_array()
-    #     graph = GraphHelpers(directed=False)
-    #
-    #     for feature in self._output:
-    #         graph.add_edge(
-    #             str(feature["node_1"]),
-    #             str(feature["node_2"]),
-    #             feature["id"],
-    #             feature["length"],
-    #         )
-    #     return graph
+    def to_graph(self):
+        self.to_numpy_array()
+        graph = GraphHelpers(directed=False)
+
+        for feature in self._output:
+            graph.add_edge(
+                str(feature["node_1"]),
+                str(feature["node_2"]),
+                feature["id"],
+                feature["length"],
+            )
+        return graph
 
     def _get_tags(self, feature):
         return feature.get("tags", {})
