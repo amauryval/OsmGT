@@ -23,6 +23,8 @@ class GraphHelpers(Graph):
     - edge_exists_from_name()
     - find_edge_from_vertices_name()
     - edge_exists_from_vertices_name()
+    - find_edges_from_vertex()
+    - find_vertex_names_from_edge_name()
     """
 
     def __init__(self):

@@ -27,13 +27,13 @@ class GeomNetworkCleaner:
     __FIELD_ID = "id"
     __GEOMETRY_FIELD = "geometry"
 
-    def __init__(self, logger, network_data, new_nodes):
+    def __init__(self, logger, network_data, additionnal_nodes):
 
         self.logger = logger
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_argument(network_data)
-        self._new_nodes = new_nodes
+        self._additionnal_nodes = additionnal_nodes
 
         self._output = []
 
@@ -41,7 +41,7 @@ class GeomNetworkCleaner:
         self._prepare_data()
 
         # connect all the added nodes
-        if self._new_nodes is not None:
+        if self._additionnal_nodes is not None:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
@@ -171,7 +171,7 @@ class GeomNetworkCleaner:
 
     def _connect_all_nodes(self):
         line_connection_computed = []
-        for node in self._new_nodes:
+        for node in self._additionnal_nodes:
             line_connection = self._compute_line_connection(node[self.__GEOMETRY_FIELD])
             del node[self.__GEOMETRY_FIELD]
             if line_connection is not None:
@@ -221,7 +221,7 @@ class GeomNetworkCleaner:
 
         indexes_feature = list(map(str, [
             index_feature
-            for node in self._new_nodes
+            for node in self._additionnal_nodes
             for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, 3)
         ]))
 
