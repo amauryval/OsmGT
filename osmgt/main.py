@@ -18,5 +18,5 @@ class OsmGt:
 
     @staticmethod
     def network_from_osmgt_file(osmgt_input_file):
-        osmgt = OsmgtFileSource(osmgt_input_file).raise_error.get_data_from_osmgt_file()
+        osmgt = OsmgtFileSource(osmgt_input_file).get_data_from_osmgt_file()
         return osmgt

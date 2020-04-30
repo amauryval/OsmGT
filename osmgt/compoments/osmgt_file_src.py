@@ -22,14 +22,14 @@ class OsmgtFileSource(OsmGtCore):
 
         input_file_name = os.path.splitext(os.path.basename(self._osmgt_input_file_path))[0]
         self._format_output_file_name(input_file_name)
-        self._OUTPUT = self.__open_from_pikle_file(self._osmgt_input_file_path)
+        self._output_data = self.__open_from_pikle_file(self._osmgt_input_file_path)
 
         return self
 
-    def __open_from_pikle_file(self, pikle_file_path):
-        self.logger.info("Opening from pikle file...")
+    def __open_from_pikle_file(self, input_file_path):
+        self.logger.info(f"Opening from {input_file_path}...")
 
-        with open(pikle_file_path, "rb") as input:
+        with open(input_file_path, "rb") as input:
             input_data = pickle.load(input)
 
         return input_data

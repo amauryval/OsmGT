@@ -21,6 +21,7 @@ class OsmGtWebSource(OsmGtCore):
         # TODO check variables
 
         self.logger.info(f"Working location: {self._location_name}")
+        self.logger.info("Loading Data...")
 
         self._format_output_file_name(self._location_name.lower())
 
@@ -28,7 +29,7 @@ class OsmGtWebSource(OsmGtCore):
         location_id += self.location_osm_default_id
         raw_data = OverpassApi(self.logger, location_osm_id=location_id).data()["elements"]
         raw_data_restructured = self.__prepare_network_to_be_cleaned(raw_data)
-        self.__OUTPUT = GeomNetworkCleaner(self.logger, raw_data_restructured, self._additionnal_points).run()
+        self._output_data = GeomNetworkCleaner(self.logger, raw_data_restructured, self._additionnal_points).run()
 
         return self
 

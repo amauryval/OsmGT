@@ -19,7 +19,7 @@ import geojson
 class OsmGtCore:
 
     __DEFAULT_OUTPUT_NETWORK_FILE_PATH = "%s_network"
-    _OUTPUT = []
+    _output_data = []
 
     # LOGGER VARIABLE
     _log_dir = "logs"
@@ -123,7 +123,7 @@ class OsmGtCore:
         self.logger.info(f"Prepare Geodataframe")
 
         features = []
-        for feature in self._OUTPUT:
+        for feature in self._output_data:
             geometry = feature["geometry"]
             properties = {
                 key: feature[key] for key in feature.keys()
@@ -167,8 +167,8 @@ class OsmGtCore:
 
         self.logger.info(f"Exporting to {output_path}...")
 
-        with open(output_path, "wb") as output:
-            pickle.dump(self._OUTPUT, output)
-
+        with open(output_path, "wb") as output_file:
+            pickle.dump(self._output_data, output_file)
+        assert True
     def _format_output_file_name(self, title):
         self.__DEFAULT_OUTPUT_NETWORK_FILE_PATH = os.path.join(os.getcwd(), self.__DEFAULT_OUTPUT_NETWORK_FILE_PATH % title)
