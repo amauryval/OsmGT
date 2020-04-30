@@ -44,8 +44,6 @@ class OsmGtCore:
             self.logger_name = parent.logger_name
             self.logger = parent.logger
             self.raise_error = parent.raise_error
-            self.progress_value = parent.progress_value
-            self.step_log_progress = parent.step_log_progress
 
     def __create_logger(self, logger_level, logger_dir):
         """
