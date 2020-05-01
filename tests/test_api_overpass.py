@@ -2,7 +2,7 @@ import pytest
 
 from osmgt.apis.overpass import OverpassApi
 
-from osmgt.compoments.osmgt_core import OsmGtCore
+from osmgt.compoments.core import OsmGtCore
 
 
 def overpass_query_result():

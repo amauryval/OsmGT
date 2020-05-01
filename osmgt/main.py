@@ -1,22 +1,16 @@
 
-from osmgt.compoments.osm_web_src import OsmGtWebSource
-from osmgt.compoments.osmgt_file_src import OsmgtFileSource
+# from osmgt.compoments.osm_web_src import OsmGtWebSource
+# from osmgt.compoments.osmgt_file_src import OsmgtFileSource
+
+from osmgt.compoments.network import OsmGtNetwork
 
 
 class OsmGt:
 
     @staticmethod
-    def network_from_location_name(location_name, additionnal_points=None):
-        """
-        get a numpy array graph from a location name
-        """
-        osmgt = OsmGtWebSource(
-            location_name,
-            additionnal_points
-        ).get_data_from_osm()
-        return osmgt
+    def network_from_location(location_name, additionnal_nodes):
+        return OsmGtNetwork().from_location(location_name, additionnal_nodes)
 
     @staticmethod
-    def network_from_osmgt_file(osmgt_input_file):
-        osmgt = OsmgtFileSource(osmgt_input_file).get_data_from_osmgt_file()
-        return osmgt
+    def network_from_osmgt_file(osmgt_file_name):
+        return OsmGtNetwork().from_osmgt_file(osmgt_file_name)

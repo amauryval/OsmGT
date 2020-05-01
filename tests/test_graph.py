@@ -1,7 +1,7 @@
 import pytest
 
-from osmgt.network.graphtools_helper import GraphHelpers
-from osmgt.network.graphtools_helper import ExistingVertex
+from osmgt.network.gt_helper import GraphHelpers
+from osmgt.network.gt_helper import ExistingVertex
 
 
 def create_undirected_graph(point_a, point_b, point_c):

@@ -1,7 +1,7 @@
 import pytest
 
 from osmgt.apis.nominatim import NominatimApi
-from osmgt.compoments.osmgt_core import OsmGtCore
+from osmgt.compoments.core import OsmGtCore
 
 def test_find_a_city_by_name():
     output = NominatimApi(logger=OsmGtCore().logger, q="Lyon", limit=1).data()

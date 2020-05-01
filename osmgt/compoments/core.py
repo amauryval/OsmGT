@@ -7,20 +7,10 @@ import logging
 
 import pickle
 
-# from osmgt.network.graphtools_helper import GraphHelpers
-
-import pickle
-
 import geopandas as gpd
-
-import geojson
 
 
 class OsmGtCore:
-
-    __DEFAULT_OUTPUT_NETWORK_FILE_PATH = "%s_network"
-    _output_data = []
-
     # LOGGER VARIABLE
     _log_dir = "logs"
     _formatter = logging.Formatter(
@@ -103,6 +93,28 @@ class OsmGtCore:
 
         return logger_init
 
+    def from_osmgt_file(self, osmgt_file_path):
+        assert ".osmgt" in osmgt_file_path
+
+        self.logger.info(f"Opening from {osmgt_file_path}...")
+        with open(osmgt_file_path, "rb") as input_file:
+            self._output_data = pickle.load(input_file)
+
+        return self
+
+    def export_to_osmgt_file(self, output_file_name):
+        output_path = f"{output_file_name}.osmgt"
+        self.logger.info(f"Exporting to {output_path}...")
+
+        with open(output_path, "wb") as output_file:
+            pickle.dump(self._output_data, output_file)
+
+    def convert_list_to_gdf(self, features):
+        output_gdf = gpd.GeoDataFrame.from_features(features)
+        output_gdf.crs = self.epsg_4236
+        output_gdf = output_gdf.to_crs(self.epsg_3857)
+        return output_gdf
+
     @property
     def epsg_4236(self):
         return 4326
@@ -118,57 +130,3 @@ class OsmGtCore:
     @property
     def graph_fields(self):
         return {"node_1", "node_2", "geometry", "length"}
-
-    def get_gdf(self):
-        self.logger.info(f"Prepare Geodataframe")
-
-        features = []
-        for feature in self._output_data:
-            geometry = feature["geometry"]
-            properties = {
-                key: feature[key] for key in feature.keys()
-                if key not in self.graph_fields
-            }
-            feature = geojson.Feature(
-                geometry=geometry,
-                properties=properties
-            )
-            features.append(feature)
-
-        output = gpd.GeoDataFrame.from_features(features)
-        output.crs = self.epsg_4236
-        output = output.to_crs(self.epsg_3857)
-
-        return output
-
-    def export_to_geojson(self):
-        output_gdf = self.get_gdf()
-        output_path = f"{self.__DEFAULT_OUTPUT_NETWORK_FILE_PATH}.geojson"
-        self.logger.info(f"Exporting to {output_path}...")
-        output_gdf.to_file(output_path, driver="GeoJSON")
-
-    # def to_graph(self):
-    #     graph = GraphHelpers()
-    #
-    #     for feature in self.__output:
-    #         graph.add_edge(
-    #             str(feature["node_1"]),
-    #             str(feature["node_2"]),
-    #             feature["id"],
-    #             feature["length"],
-    #         )
-    #     return graph
-
-    def export_to_osmgt_file(self, output_file_name=None):
-
-        output_path = f"{self.__DEFAULT_OUTPUT_NETWORK_FILE_PATH}.osmgt"
-        if output_file_name is not None:
-            output_path = f"{output_file_name}.osmgt"
-
-        self.logger.info(f"Exporting to {output_path}...")
-
-        with open(output_path, "wb") as output_file:
-            pickle.dump(self._output_data, output_file)
-        assert True
-    def _format_output_file_name(self, title):
-        self.__DEFAULT_OUTPUT_NETWORK_FILE_PATH = os.path.join(os.getcwd(), self.__DEFAULT_OUTPUT_NETWORK_FILE_PATH % title)
