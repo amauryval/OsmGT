@@ -15,10 +15,11 @@ from collections import Counter
 from more_itertools import split_at
 
 import sys
-sys.setrecursionlimit(10000)
+
+import functools
+
 
 class GeomNetworkCleaner:
-
     __NB_INTERPOLATION_POINTS = 100
     __INTERPOLATION_LEVEL = 7
 
@@ -69,7 +70,8 @@ class GeomNetworkCleaner:
                     "length": geometry.length,
                     self.__FIELD_ID: f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
                 }
-                data.update(self._get_tags(feature))
+                data = {**data, **self._get_tags(feature)}
+                # data.update(self._get_tags(feature))
 
                 self._output.append(np.array(data))
 
@@ -85,6 +87,7 @@ class GeomNetworkCleaner:
         }
 
     def compute_added_node_connections(self):
+        connections_added = {}
 
         self.logger.info("Starting: Adding new nodes on the network")
         node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
@@ -94,19 +97,17 @@ class GeomNetworkCleaner:
 
             candidates = {}
             for line_key in lines_keys:
-                line_found = self._network_data[line_key]
-                interpolated_line_coords = self.__interpolate_curve_from_original_points(
-                    np.vstack(list(zip(*line_found["geometry"]))).T,
-                    self.__INTERPOLATION_LEVEL
-                ).tolist()
+                interpolated_line_coords = self.__interpolate_line(line_key)
+
                 line_tree = spatial.cKDTree(interpolated_line_coords)
                 dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
-                candidates[dist] = {
+                new_candidate = {
                     "interpolated_line": list(map(tuple, interpolated_line_coords)),
-                    "original_line": line_found["geometry"],
+                    "original_line": self._network_data[line_key]["geometry"],
                     "original_line_key": line_key,
                     "end_point_found": tuple(interpolated_line_coords[nearest_line_object_idx])
                 }
+                candidates[dist] = new_candidate
 
             best_line = candidates[min(candidates.keys())]
             connection_coords = [tuple(node_found["geometry"]), best_line["end_point_found"]]
@@ -114,7 +115,8 @@ class GeomNetworkCleaner:
             if frozenset(connection_coords[0]) != (frozenset(connection_coords[-1])):
                 # update source node geom
                 self._additionnal_nodes[node_key]["geometry"] = connection_coords
-                self._network_data[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
+                connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
+
             else:
                 print(f"{node_key} already on the network")
 
@@ -125,6 +127,7 @@ class GeomNetworkCleaner:
                     best_line["interpolated_line"]
                 )
             )
+
             if len(linestring_linked_updated) == 1:
                 print(f"no need to update line, because no new node added")
             if len(linestring_linked_updated) == 0:
@@ -132,7 +135,21 @@ class GeomNetworkCleaner:
             else:
                 self._network_data[best_line["original_line_key"]]["geometry"] = linestring_linked_updated
 
+        self._network_data = {**self._network_data, **connections_added}
+        # self._network_data.update(connections_added)
         self.logger.info("Done: Adding new nodes on the network")
+
+    # @caching_to_dict
+    @functools.lru_cache(maxsize=128)
+    def __interpolate_line(self, line_key):
+
+        line_found = self._network_data[line_key]
+        interpolated_line_coords = self.__interpolate_curve_from_original_points(
+            np.vstack(list(zip(*line_found["geometry"]))).T,
+            self.__INTERPOLATION_LEVEL
+        ).tolist()
+
+        return interpolated_line_coords
 
     def _rebuild_nearest_connection_intersection(self, line_connection_computed_grouped):
         # rebuild nearest geometry
@@ -178,13 +195,18 @@ class GeomNetworkCleaner:
             point_intersection = tuple(point_intersection)
             if point_intersection in middle_coordinates_values:
                 # we get the middle values from coordinates to avoid to catch the first and last value when editing
-                middle_coordinates_values.insert(
-                    middle_coordinates_values.index(point_intersection),
+
+                middle_coordinates_values = self.insert_value(
+                    middle_coordinates_values,
+                    point_intersection,
                     point_intersection
                 )
-                middle_coordinates_values.insert(
-                    middle_coordinates_values.index(point_intersection) + self.__NEXT_INDEX,
-                    self.__ITEM_LIST_SEPARATOR
+
+                middle_coordinates_values = self.insert_value(
+                    middle_coordinates_values,
+                    point_intersection,
+                    self.__ITEM_LIST_SEPARATOR,
+                    "after"
                 )
                 coordinates = [first_value] + middle_coordinates_values + [last_value]
                 is_rebuild = True
@@ -221,7 +243,7 @@ class GeomNetworkCleaner:
         node_by_nearest_lines = {
             str(node_uuid): [
                 str(index_feature)
-                for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, 3)
+                for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, 5)
             ]
             for node_uuid, node in self._additionnal_nodes.items()
         }
@@ -295,3 +317,25 @@ class GeomNetworkCleaner:
 
     def _get_tags(self, feature):
         return feature.get("tags", {})
+
+    def _interpolated_lines_cache(self, new_line_interpolated):
+        self.__CACHE_INTERPOLATED_LINES[new_line_interpolated["original_line_key"]] = new_line_interpolated["interpolated_line"]
+
+    @staticmethod
+    def insert_value(list_object, search_value, value_to_add, position=None):
+        assert position in {None, "after", "before"}
+
+        index_increment = 0
+        if position == "before":
+            index_increment = - 1
+        if position == "after":
+            index_increment = 1
+
+        try:
+            list_object.insert(list_object.index(search_value) + index_increment, value_to_add)
+            return list_object
+        except ValueError:
+            raise ValueError("{search_value} not found")
+
+        return list_object
+
