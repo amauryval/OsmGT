@@ -1,5 +1,4 @@
 from scipy import spatial
-from scipy.interpolate import interp1d, splev
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
@@ -8,24 +7,19 @@ import rtree
 
 import numpy as np
 
-import itertools
-
 from collections import Counter
 
 from more_itertools import split_at
-
-import sys
 
 import functools
 
 
 class GeomNetworkCleaner:
-    __NB_INTERPOLATION_POINTS = 100
     __INTERPOLATION_LEVEL = 7
+    __NB_OF_NEAREST_ELEMENTS_TO_FIND = 5
 
     __NUMBER_OF_NODES_INTERSECTIONS = 2
-    __NEXT_INDEX = 1
-    __ITEM_LIST_SEPARATOR = "_"
+    __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
     # TODO should be an integer : create a new id ?
     __FIELD_ID = "id"
@@ -71,13 +65,11 @@ class GeomNetworkCleaner:
                     self.__FIELD_ID: f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
                 }
                 data = {**data, **self._get_tags(feature)}
-                # data.update(self._get_tags(feature))
 
                 self._output.append(np.array(data))
 
         self.logger.info("Done: build lines")
         self.logger.info("Network cleaning DONE!")
-
         return np.stack(self._output)
 
     def _prepare_data(self):
@@ -94,10 +86,9 @@ class GeomNetworkCleaner:
 
         for node_key, lines_keys in node_by_nearest_lines.items():
             node_found = self._additionnal_nodes[node_key]
-
             candidates = {}
             for line_key in lines_keys:
-                interpolated_line_coords = self.__interpolate_line(line_key)
+                interpolated_line_coords = self.__compute_interpolation_on_line(line_key)
 
                 line_tree = spatial.cKDTree(interpolated_line_coords)
                 dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
@@ -139,12 +130,11 @@ class GeomNetworkCleaner:
         # self._network_data.update(connections_added)
         self.logger.info("Done: Adding new nodes on the network")
 
-    # @caching_to_dict
-    @functools.lru_cache(maxsize=128)
-    def __interpolate_line(self, line_key):
+    @functools.lru_cache(maxsize=None)
+    def __compute_interpolation_on_line(self, line_key):
 
         line_found = self._network_data[line_key]
-        interpolated_line_coords = self.__interpolate_curve_from_original_points(
+        interpolated_line_coords = self.__interpolate_curve_based_on_original_points(
             np.vstack(list(zip(*line_found["geometry"]))).T,
             self.__INTERPOLATION_LEVEL
         ).tolist()
@@ -205,7 +195,7 @@ class GeomNetworkCleaner:
                 middle_coordinates_values = self.insert_value(
                     middle_coordinates_values,
                     point_intersection,
-                    self.__ITEM_LIST_SEPARATOR,
+                    self.__ITEM_LIST_SEPARATOR_TO_SPLIT_LINE,
                     "after"
                 )
                 coordinates = [first_value] + middle_coordinates_values + [last_value]
@@ -243,23 +233,14 @@ class GeomNetworkCleaner:
         node_by_nearest_lines = {
             str(node_uuid): [
                 str(index_feature)
-                for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, 5)
+                for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, self.__NB_OF_NEAREST_ELEMENTS_TO_FIND)
             ]
             for node_uuid, node in self._additionnal_nodes.items()
         }
 
-        # line_key_by_node_keys = {
-        #     line_value: [
-        #         node_key
-        #         for node_key in node_by_nearest_linestring.keys()
-        #         if node_by_nearest_linestring[node_key] == line_value
-        #     ]
-        #     for line_value in set(node_by_nearest_linestring.values())
-        # }
-
         return node_by_nearest_lines
 
-    def __interpolate_curve_from_original_points(self, x, n):
+    def __interpolate_curve_based_on_original_points(self, x, n):
         if n > 1:
             m = 0.5 * (x[:-1] + x[1:])
             if x.ndim == 2:
@@ -269,57 +250,18 @@ class GeomNetworkCleaner:
             x_new = np.empty(msize, dtype=x.dtype)
             x_new[0::2] = x
             x_new[1::2] = m
-            return self.__interpolate_curve_from_original_points(x_new, n - 1)
+            return self.__interpolate_curve_based_on_original_points(x_new, n - 1)
         elif n == 1:
             return x
         else:
             raise ValueError
 
-    def __interpolate_lines_from_original_points(self, x_list, y_list):
-        interp_func = interp1d(x_list, y_list)
-
-        if len(x_list) > self.__NB_INTERPOLATION_POINTS:
-            # means that points road are greater than 100
-            # Could be crash here
-            self.__NB_INTERPOLATION_POINTS *= 10
-
-        x_new = np.linspace(min(x_list), max(x_list), self.__NB_INTERPOLATION_POINTS - len(x_list) + 2)
-        x_new = np.sort(np.append(x_new, x_list[1:-1]))  # include original points
-        y_new = interp_func(x_new)
-        return list(zip(x_new, y_new))
-
-    def __interpolate_lines_from_distance(self, x_list, y_list):
-        points = np.array([x_list, y_list]).T  # a (nbre_points x nbre_dim) array
-
-        # Linear length along the line:
-        distance = np.cumsum(np.sqrt(np.sum(np.diff(points, axis=0) ** 2, axis=1)))
-        distance = np.insert(distance, 0, 0) / distance[-1]
-
-        # Interpolation for different methods:
-        alpha = np.linspace(distance.min(), int(distance.max()), 10)
-
-        interpolator = interp1d(distance, points, kind="slinear", axis=0)
-        new_points = interpolator(alpha)
-        a = list(map(tuple, new_points.tolist()))
-        if len(a) == 1:
-            assert True
-        return list(map(tuple, new_points.tolist()))
-
     def _check_argument(self, argument):
         # TODO check argument
         return argument
 
-    def _group_list_of_dict_by_key_value(self, dict_object, key_name):
-        return {
-            key: [value for value in dict_object if value[key_name].split("_")[0] == key]
-            for key, _ in itertools.groupby(dict_object, lambda x: x[key_name].split("_")[0])
-        }
-
     def _get_tags(self, feature):
         return feature.get("tags", {})
-
-    def _interpolated_lines_cache(self, new_line_interpolated):
-        self.__CACHE_INTERPOLATED_LINES[new_line_interpolated["original_line_key"]] = new_line_interpolated["interpolated_line"]
 
     @staticmethod
     def insert_value(list_object, search_value, value_to_add, position=None):
@@ -336,6 +278,3 @@ class GeomNetworkCleaner:
             return list_object
         except ValueError:
             raise ValueError("{search_value} not found")
-
-        return list_object
-
