@@ -28,6 +28,10 @@ class OsmGtNetwork(OsmGtCore):
 
     def from_location(self, location_name, additionnal_nodes):
         self.logger.info(f"From location: {location_name}")
+
+        if additionnal_nodes is not None:
+            additionnal_nodes = self.__built_addtionnal_nodes(additionnal_nodes)
+
         self.logger.info("Loading network data...")
 
         location_id = NominatimApi(self.logger, q=location_name, limit=1).data()[0]["osm_id"]
@@ -42,8 +46,7 @@ class OsmGtNetwork(OsmGtCore):
         return self
 
     def get_gdf(self):
-        if self._output_data is None:
-            raise ErrorNetworkData("Data is empty!")
+        self.check_build_input_data()
 
         self.logger.info(f"Prepare Geodataframe")
 
@@ -60,13 +63,12 @@ class OsmGtNetwork(OsmGtCore):
             )
             features.append(feature)
 
-        output_gdf = super().convert_list_to_gdf(features)
+        output_gdf = super()._convert_list_to_gdf(features)
 
         return output_gdf
 
     # def get_graph(self):
-    #     if self._output_data is None:
-            # raise ErrorNetworkData("Data is empty!")
+    #     self.check_build_input_data()
     #     graph = GraphHelpers()
     #
     #     for feature in self._output_data:
@@ -77,6 +79,26 @@ class OsmGtNetwork(OsmGtCore):
     #             feature["length"],
     #         )
     #     return graph
+
+    def __built_addtionnal_nodes(self, additionnal_nodes):
+        # TODO assert structure
+        self.logger.info("Prepare additionnal nodes...")
+
+        features = additionnal_nodes.to_dict('records')
+        additionnal_nodes_rebuild = {}
+        for feature in features:
+            geometry = feature["geometry"]
+            del feature["geometry"]
+            uuid = str(feature["id"])
+            del feature["id"]
+            additionnal_nodes_rebuild.update({
+                uuid: {
+                    "geometry": geometry.coords[:][0],
+                    "tags": feature,
+                    "id": uuid
+                }
+            })
+        return additionnal_nodes_rebuild
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
@@ -108,6 +130,10 @@ class OsmGtNetwork(OsmGtCore):
             raw_data_reprojected.append(feature)
 
         return raw_data_reprojected
+
+    def check_build_input_data(self):
+        if self._output_data is None:
+            raise ErrorNetworkData("Data is empty!")
 
     @property
     def __road_query(self):

@@ -1,5 +1,5 @@
 from scipy import spatial
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, splev
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
@@ -14,10 +14,13 @@ from collections import Counter
 
 from more_itertools import split_at
 
+import sys
+sys.setrecursionlimit(10000)
 
 class GeomNetworkCleaner:
 
     __NB_INTERPOLATION_POINTS = 100
+    __INTERPOLATION_LEVEL = 7
 
     __NUMBER_OF_NODES_INTERSECTIONS = 2
     __NEXT_INDEX = 1
@@ -84,16 +87,52 @@ class GeomNetworkCleaner:
     def compute_added_node_connections(self):
 
         self.logger.info("Starting: Adding new nodes on the network")
-        self.__prepare_tree_analysis()
-        line_connection_computed_grouped = self._connect_all_nodes()
-        self._rebuild_nearest_connection_intersection(line_connection_computed_grouped)
+        node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
+
+        for node_key, lines_keys in node_by_nearest_lines.items():
+            node_found = self._additionnal_nodes[node_key]
+
+            candidates = {}
+            for line_key in lines_keys:
+                line_found = self._network_data[line_key]
+                interpolated_line_coords = self.__interpolate_curve_from_original_points(
+                    np.vstack(list(zip(*line_found["geometry"]))).T,
+                    self.__INTERPOLATION_LEVEL
+                ).tolist()
+                line_tree = spatial.cKDTree(interpolated_line_coords)
+                dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
+                candidates[dist] = {
+                    "interpolated_line": list(map(tuple, interpolated_line_coords)),
+                    "original_line": line_found["geometry"],
+                    "original_line_key": line_key,
+                    "end_point_found": tuple(interpolated_line_coords[nearest_line_object_idx])
+                }
+
+            best_line = candidates[min(candidates.keys())]
+            connection_coords = [tuple(node_found["geometry"]), best_line["end_point_found"]]
+
+            if frozenset(connection_coords[0]) != (frozenset(connection_coords[-1])):
+                # update source node geom
+                self._additionnal_nodes[node_key]["geometry"] = connection_coords
+                self._network_data[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
+            else:
+                print(f"{node_key} already on the network")
+
+            #update source line geom
+            linestring_linked_updated = list(
+                filter(
+                    lambda x: tuple(x) in best_line["original_line"] + [best_line["end_point_found"]],
+                    best_line["interpolated_line"]
+                )
+            )
+            if len(linestring_linked_updated) == 1:
+                print(f"no need to update line, because no new node added")
+            if len(linestring_linked_updated) == 0:
+                assert True
+            else:
+                self._network_data[best_line["original_line_key"]]["geometry"] = linestring_linked_updated
+
         self.logger.info("Done: Adding new nodes on the network")
-
-    def __prepare_tree_analysis(self):
-
-        self._network_data_interpolated_line = self.__format_and_interpolate_network_data()
-        self._network_data_interpolated_flatten_points = self.__interpolate_network_data_coords_flatten()
-        self._network_data_tree = self.__build_kdtree()
 
     def _rebuild_nearest_connection_intersection(self, line_connection_computed_grouped):
         # rebuild nearest geometry
@@ -117,11 +156,15 @@ class GeomNetworkCleaner:
                         line_interpolated
                     )
                 )
+                if len(linestring_linked_updated) == 1:
+                    assert True
                 self._network_data[nearest_object_id][self.__GEOMETRY_FIELD] = linestring_linked_updated
 
             # add new lines connection
             for enum, line in enumerate(connection_lines):
                 line["id"] = f"{nearest_object_id}_{enum}"
+                if len(linestring_linked_updated) == 1:
+                    assert True
                 line[self.__GEOMETRY_FIELD] = line[self.__GEOMETRY_FIELD]
                 self._network_data[line["id"]] = line
 
@@ -169,70 +212,48 @@ class GeomNetworkCleaner:
 
         return set(intersections_found)
 
-    def _connect_all_nodes(self):
-        line_connection_computed = []
-        for node in self._additionnal_nodes:
-            line_connection = self._compute_line_connection(node[self.__GEOMETRY_FIELD])
-            del node[self.__GEOMETRY_FIELD]
-            if line_connection is not None:
-                line_connection.update(node)
-                line_connection_computed.append(line_connection)
-            else:
-                self.logger.info(f"Node '{node[self.__FIELD_ID]}' (id) already exists!")
-
-        line_connection_computed_grouped = self._group_list_of_dict_by_key_value(line_connection_computed, "nearest_object_id")
-
-        return line_connection_computed_grouped
-
-    def _compute_line_connection(self, node):
-        dist, nearest_object_idx = self._network_data_tree.query(node)
-
-        nearest_object_id_found = list(self._network_data_interpolated_flatten_points)[nearest_object_idx]
-        end_point_on_network = self._network_data_interpolated_flatten_points[nearest_object_id_found]
-
-        connection_coords = [tuple(node), end_point_on_network]
-        if frozenset(connection_coords[0]) != (frozenset(connection_coords[-1])):
-            line_connection = {
-                self.__GEOMETRY_FIELD: connection_coords,
-                "nearest_object_id": nearest_object_id_found
-            }
-            return line_connection
-
-        return None
-
-    def __build_kdtree(self):
-        coords_list = list(self._network_data_interpolated_flatten_points.values())
-        tree = spatial.KDTree(coords_list)
-        return tree
-
-    def __interpolate_network_data_coords_flatten(self):
-        network_data_interpolated_flatten_points = {
-            f"{feature_id}_{coord_pos}": coord
-            for feature_id, feature in self._network_data_interpolated_line.items()
-            for coord_pos, coord in enumerate(feature)
-        }
-        return network_data_interpolated_flatten_points
-
-    def __format_and_interpolate_network_data(self):
+    def __find_nearest_line_for_each_key_nodes(self):
         # find the nereast network arc to interpolate
         index = rtree.index.Index()
         for fid, feature in self._network_data.items():
             index.insert(int(fid), feature["bounds"])
 
-        indexes_feature = list(map(str, [
-            index_feature
-            for node in self._additionnal_nodes
-            for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, 3)
-        ]))
-
-        network_data_interpolated_line = {
-            object_id: self.__interpolate_lines(*list(zip(*feature[self.__GEOMETRY_FIELD])))
-            for object_id, feature in self._network_data.items()
-            if object_id in indexes_feature
+        node_by_nearest_lines = {
+            str(node_uuid): [
+                str(index_feature)
+                for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, 3)
+            ]
+            for node_uuid, node in self._additionnal_nodes.items()
         }
-        return network_data_interpolated_line
 
-    def __interpolate_lines(self, x_list, y_list):
+        # line_key_by_node_keys = {
+        #     line_value: [
+        #         node_key
+        #         for node_key in node_by_nearest_linestring.keys()
+        #         if node_by_nearest_linestring[node_key] == line_value
+        #     ]
+        #     for line_value in set(node_by_nearest_linestring.values())
+        # }
+
+        return node_by_nearest_lines
+
+    def __interpolate_curve_from_original_points(self, x, n):
+        if n > 1:
+            m = 0.5 * (x[:-1] + x[1:])
+            if x.ndim == 2:
+                msize = (x.shape[0] + m.shape[0], x.shape[1])
+            else:
+                raise NotImplementedError
+            x_new = np.empty(msize, dtype=x.dtype)
+            x_new[0::2] = x
+            x_new[1::2] = m
+            return self.__interpolate_curve_from_original_points(x_new, n - 1)
+        elif n == 1:
+            return x
+        else:
+            raise ValueError
+
+    def __interpolate_lines_from_original_points(self, x_list, y_list):
         interp_func = interp1d(x_list, y_list)
 
         if len(x_list) > self.__NB_INTERPOLATION_POINTS:
@@ -244,6 +265,23 @@ class GeomNetworkCleaner:
         x_new = np.sort(np.append(x_new, x_list[1:-1]))  # include original points
         y_new = interp_func(x_new)
         return list(zip(x_new, y_new))
+
+    def __interpolate_lines_from_distance(self, x_list, y_list):
+        points = np.array([x_list, y_list]).T  # a (nbre_points x nbre_dim) array
+
+        # Linear length along the line:
+        distance = np.cumsum(np.sqrt(np.sum(np.diff(points, axis=0) ** 2, axis=1)))
+        distance = np.insert(distance, 0, 0) / distance[-1]
+
+        # Interpolation for different methods:
+        alpha = np.linspace(distance.min(), int(distance.max()), 10)
+
+        interpolator = interp1d(distance, points, kind="slinear", axis=0)
+        new_points = interpolator(alpha)
+        a = list(map(tuple, new_points.tolist()))
+        if len(a) == 1:
+            assert True
+        return list(map(tuple, new_points.tolist()))
 
     def _check_argument(self, argument):
         # TODO check argument
