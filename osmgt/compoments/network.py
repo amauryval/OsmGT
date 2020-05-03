@@ -1,5 +1,3 @@
-import os
-
 from osmgt.compoments.core import OsmGtCore
 
 from osmgt.apis.nominatim import NominatimApi
@@ -11,7 +9,7 @@ from osmgt.geometry.geom_network_cleaner import GeomNetworkCleaner
 import geojson
 from shapely.geometry import LineString
 
-# from osmgt.network.gt_helper import GraphHelpers
+from osmgt.network.gt_helper import GraphHelpers
 
 
 class ErrorNetworkData(Exception):
@@ -41,19 +39,18 @@ class OsmGtNetwork(OsmGtCore):
 
         return self
 
+    def get_graph(self):
+        self.check_build_input_data()
+        graph = GraphHelpers()
 
-    # def get_graph(self):
-    #     self.check_build_input_data()
-    #     graph = GraphHelpers()
-    #
-    #     for feature in self._output_data:
-    #         graph.add_edge(
-    #             feature["geometry"].coords[0],
-    #             feature["geometry"].coords[-1],
-    #             feature["id"],
-    #             feature["geometry"].coords[0].length,
-    #         )
-    #     return graph
+        for feature in self._output_data:
+            graph.add_edge(
+                feature["geometry"].coords[0],
+                feature["geometry"].coords[-1],
+                feature["uuid"],
+                feature["geometry"].coords[0].length,
+            )
+        return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
@@ -83,7 +80,6 @@ class OsmGtNetwork(OsmGtCore):
             properties = feature
             del feature["type"]
             properties["bounds"] = ", ".join(map(str, geometry.bounds))
-            properties["uuid"] = uuid_enum
             properties["uuid"] = uuid_enum
             properties = {**properties, **self.insert_tags_field(properties)}
             del properties["tags"]

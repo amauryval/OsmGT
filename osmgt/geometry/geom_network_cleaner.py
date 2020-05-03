@@ -12,6 +12,8 @@ from more_itertools import split_at
 
 import functools
 
+import copy
+
 
 class GeomNetworkCleaner:
 
@@ -22,7 +24,6 @@ class GeomNetworkCleaner:
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
     __FIELD_ID = "uuid"
-    __GEOMETRY_FIELD = "geometry"
 
     def __init__(self, logger, network_data, additionnal_nodes):
 
@@ -49,22 +50,26 @@ class GeomNetworkCleaner:
 
             # compare linecoords and intersections points:
             # careful: frozenset destroy the coords order
-            coordinates_list = frozenset(map(frozenset, feature[self.__GEOMETRY_FIELD]))
+            coordinates_list = frozenset(map(frozenset, feature["geometry"]))
             points_intersections = coordinates_list.intersection(intersections_found)
 
             # rebuild linestring
-            lines_coordinates_rebuild = self._topology_builder(feature[self.__GEOMETRY_FIELD], points_intersections)
+            lines_coordinates_rebuild = self._topology_builder(feature["geometry"], points_intersections)
 
             if len(lines_coordinates_rebuild) != 0:
                 for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
-                    feature["uuid"] = f"{feature['uuid']}{new_suffix_id}"
-                    feature["geometry"] = LineString(line_coordinates)
-                    feature["bounds"] = ", ".join(map(str, feature["geometry"].bounds))
-                    feature["length"] = feature["geometry"].length
 
-                    if feature["length"] != 0:
-                        # only lenght > 0, else means that linestring has exact start and end coordinates (node on network)
-                        self._output.append(self._geojson_formating(feature))
+                    new_geometry = LineString(line_coordinates)
+                    new_geometry_length = new_geometry.length
+                    if new_geometry_length > 0:
+
+                        feature_updated = copy.deepcopy(feature)
+                        feature_updated["uuid"] = str(f"{feature['id']}_{new_suffix_id}")
+                        feature_updated["geometry"] = new_geometry
+                        feature_updated["bounds"] = ", ".join(map(str, new_geometry.bounds))
+                        feature_updated["length"] = new_geometry_length
+
+                        self._output.append(self._geojson_formating(feature_updated))
 
             else:
                 assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
@@ -72,8 +77,6 @@ class GeomNetworkCleaner:
                 feature["geometry"] = LineString(feature["geometry"])
                 self._output.append(self._geojson_formating(feature))
 
-        self.logger.info("Done: build lines")
-        self.logger.info("Network cleaning DONE!")
         return self._output
 
     def _prepare_data(self):
@@ -135,7 +138,6 @@ class GeomNetworkCleaner:
                 # TODO ? here trying to force split line if node is on the network
                 self._additionnal_nodes[node_key]["geometry"] = connection_coords
                 connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
-
 
             # update source line geom
             linestring_linked_updated = list(
@@ -210,7 +212,7 @@ class GeomNetworkCleaner:
             [
                 coords
                 for feature in self._network_data.values()
-                for coords in feature[self.__GEOMETRY_FIELD]
+                for coords in feature["geometry"]
             ]
         ))
         intersections_found = dict(
@@ -256,7 +258,7 @@ class GeomNetworkCleaner:
             list_object.insert(list_object.index(search_value) + index_increment, value_to_add)
             return list_object
         except ValueError:
-            raise ValueError("{search_value} not found")
+            raise ValueError(f"{search_value} not found")
 
     def _geojson_formating(self, input_data):
         geometry = input_data["geometry"]
