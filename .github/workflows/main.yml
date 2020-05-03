@@ -11,8 +11,7 @@ jobs:
       uses: actions/checkout@v1
     - name: Launch Dockerfile
       uses: ./
-    - name: Run tests with Pytest
-      run: python -m pytest tests
-    - name: Run tests Coverage
-      run: python -m pytest --cov=osmgt tests/ --doctest-modules
+      run: |
+        python -m pytest tests
+        python -m pytest --cov=osmgt tests/ --doctest-modules
 
