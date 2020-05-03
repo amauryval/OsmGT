@@ -1,7 +1,6 @@
 from scipy import spatial
 
 from shapely.geometry import LineString
-from shapely.geometry import shape
 
 import rtree
 
@@ -12,17 +11,16 @@ from collections import Counter
 from more_itertools import split_at
 
 import functools
-from numba import jit
 
 
 class GeomNetworkCleaner:
+
     __INTERPOLATION_LEVEL = 7
     __NB_OF_NEAREST_ELEMENTS_TO_FIND = 5
 
     __NUMBER_OF_NODES_INTERSECTIONS = 2
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
-    # TODO should be an integer : create a new id ?
     __FIELD_ID = "uuid"
     __GEOMETRY_FIELD = "geometry"
 
@@ -50,7 +48,8 @@ class GeomNetworkCleaner:
         for feature in self._network_data.values():
 
             # compare linecoords and intersections points:
-            coordinates_list = frozenset(map(frozenset, feature[self.__GEOMETRY_FIELD]))  # careful: frozenset destroy the coords order
+            # careful: frozenset destroy the coords order
+            coordinates_list = frozenset(map(frozenset, feature[self.__GEOMETRY_FIELD]))
             points_intersections = coordinates_list.intersection(intersections_found)
 
             # rebuild linestring
@@ -126,7 +125,7 @@ class GeomNetworkCleaner:
             else:
                 print(f"{node_key} already on the network")
 
-            #update source line geom
+            # update source line geom
             linestring_linked_updated = list(
                 filter(
                     lambda x: tuple(x) in best_line["original_line"] + [best_line["end_point_found"]],
@@ -149,7 +148,7 @@ class GeomNetworkCleaner:
     def __compute_interpolation_on_line(self, line_key):
 
         line_found = self._network_data[line_key]
-        interpolated_line_coords = self.__interpolate_curve_based_on_original_points(
+        interpolated_line_coords = interpolate_curve_based_on_original_points(
             np.vstack(list(zip(*line_found["geometry"]))).T,
             self.__INTERPOLATION_LEVEL
         ).tolist()
@@ -200,42 +199,30 @@ class GeomNetworkCleaner:
                 for coords in feature[self.__GEOMETRY_FIELD]
             ]
         ))
-        intersections_found = dict(filter(lambda x: x[1] >= self.__NUMBER_OF_NODES_INTERSECTIONS, all_coord_points.items())).keys()
+        intersections_found = dict(
+            filter(lambda x: x[1] >= self.__NUMBER_OF_NODES_INTERSECTIONS, all_coord_points.items())
+        ).keys()
         self.logger.info("Done: Find intersections")
 
         return set(intersections_found)
 
     def __find_nearest_line_for_each_key_nodes(self):
         # find the nereast network arc to interpolate
-        index = rtree.index.Index()
+        tree_index = rtree.index.Index()
         for fid, feature in self._network_data.items():
-            index.insert(int(fid), tuple(map(float, feature["bounds"].split(", "))))
+            tree_index.insert(int(fid), tuple(map(float, feature["bounds"].split(", "))))
 
         node_by_nearest_lines = {
             node_uuid: [
                 index_feature
-                for index_feature in index.nearest(tuple(map(float, node["bounds"].split(", "))), self.__NB_OF_NEAREST_ELEMENTS_TO_FIND)
+                for index_feature in tree_index.nearest(
+                    tuple(map(float, node["bounds"].split(", "))), self.__NB_OF_NEAREST_ELEMENTS_TO_FIND
+                )
             ]
             for node_uuid, node in self._additionnal_nodes.items()
         }
 
         return node_by_nearest_lines
-
-    def __interpolate_curve_based_on_original_points(self, x, n):
-        if n > 1:
-            m = 0.5 * (x[:-1] + x[1:])
-            if x.ndim == 2:
-                msize = (x.shape[0] + m.shape[0], x.shape[1])
-            else:
-                raise NotImplementedError
-            x_new = np.empty(msize, dtype=x.dtype)
-            x_new[0::2] = x
-            x_new[1::2] = m
-            return self.__interpolate_curve_based_on_original_points(x_new, n - 1)
-        elif n == 1:
-            return x
-        else:
-            raise ValueError
 
     def _check_argument(self, argument):
         # TODO check argument
@@ -265,3 +252,20 @@ class GeomNetworkCleaner:
             "geometry": geometry,
             "properties": properties
         }
+
+
+def interpolate_curve_based_on_original_points(x, n):
+    if n > 1:
+        m = 0.5 * (x[:-1] + x[1:])
+        if x.ndim == 2:
+            msize = (x.shape[0] + m.shape[0], x.shape[1])
+        else:
+            raise NotImplementedError
+        x_new = np.empty(msize, dtype=x.dtype)
+        x_new[0::2] = x
+        x_new[1::2] = m
+        return interpolate_curve_based_on_original_points(x_new, n - 1)
+    elif n == 1:
+        return x
+    else:
+        raise ValueError
