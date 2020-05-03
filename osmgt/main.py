@@ -1,43 +1,25 @@
-from osmgt.core import OsmGtCore
+
+# from osmgt.compoments.osm_web_src import OsmGtWebSource
+# from osmgt.compoments.osmgt_file_src import OsmgtFileSource
+
+from osmgt.compoments.network import OsmGtNetwork
+from osmgt.compoments.poi import OsmGtPoi
 
 
 class OsmGt:
 
-    def __init__(self, location_name):
-        """
-        get a road data from a location name
+    @staticmethod
+    def network_from_location(location_name, additionnal_nodes):
+        return OsmGtNetwork().from_location(location_name, additionnal_nodes)
 
-        :param location_name: the location name
-        :type location_name: str
-        """
+    @staticmethod
+    def network_from_osmgt_file(osmgt_file_name):
+        return OsmGtNetwork().from_osmgt_file(osmgt_file_name)
 
-        self._location_name = location_name
-        self._osm_result = OsmGtCore(location_name)
+    @staticmethod
+    def poi_from_location(location_name):
+        return OsmGtPoi().from_location(location_name)
 
-    def get_graph_from_location(self):
-        """
-        get a graph tool graph from a location name
-
-        """
-
-        return self._osm_result.to_graph()
-
-    def get_road_numpy_array_from_location(self):
-        """
-        get a numpy array graph from a location name
-        """
-
-        return self._osm_result.to_numpy_array()
-
-    def get_road_gdf_from_location(self, export_to_file=False):
-        """
-        get a geodataframe from a location name
-
-        :param export_to_file: to export or not a file
-        :type export_to_file: bool, default False
-        """
-
-        if export_to_file:
-            self._osm_result.to_linestrings().to_file(f"{self._location_name}_roads.geojson", driver='GeoJSON')
-
-        return self._osm_result.to_linestrings()
+    @staticmethod
+    def poi_from_osmgt_file(osmgt_file_name):
+        return OsmGtPoi().from_osmgt_file(osmgt_file_name)

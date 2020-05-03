@@ -16,8 +16,9 @@ class NominatimApi(ApiCore):
 
     _output = []
 
-    def __init__(self, **params):
+    def __init__(self, logger, **params):
         super().__init__()
+        self.logger = logger
 
         parameters = self.__check_parameters(params)
         self.__RESULT_QUERY = self.compute_query(self.nominatim_url, parameters)

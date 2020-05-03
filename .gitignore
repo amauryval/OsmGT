@@ -6,6 +6,20 @@ __pycache__/
 # C extensions
 *.so
 
+# geo files extensions
+*.cpg
+*.dbf
+*.prj
+*.qml
+*.shp
+*.shx
+*.geojson
+
+
+# OSMG extensions
+*.osmgt
+*.osm
+
 # Distribution / packaging
 .Python
 build/
