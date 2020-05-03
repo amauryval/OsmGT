@@ -92,6 +92,10 @@ class GeomNetworkCleaner:
         assert True
 
     def compute_added_node_connections(self):
+        node_con_stats = {
+            "connections_added": 0,
+            "line_split": 0
+        }
         connections_added = {}
 
         self.logger.info("Starting: Adding new nodes on the network")
@@ -121,9 +125,10 @@ class GeomNetworkCleaner:
                 # update source node geom
                 self._additionnal_nodes[node_key]["geometry"] = connection_coords
                 connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
-
+                node_con_stats["connections_added"] += 1
             else:
-                print(f"{node_key} already on the network")
+                # node_key already on the network, no need to add it on the graph, but line is split
+                pass
 
             # update source line geom
             linestring_linked_updated = list(
@@ -138,11 +143,13 @@ class GeomNetworkCleaner:
             if len(linestring_linked_updated) == 0:
                 assert True
             else:
+                node_con_stats["line_split"] += 1
                 self._network_data[best_line["original_line_key"]]["geometry"] = linestring_linked_updated
 
         self._network_data = {**self._network_data, **connections_added}
-        # self._network_data.update(connections_added)
-        self.logger.info("Done: Adding new nodes on the network")
+
+        stats_infos = ", ".join([f"{key}: {value}" for key, value in node_con_stats.items()])
+        self.logger.info(f"Done: Adding new nodes on the network ; {stats_infos}")
 
     @functools.lru_cache(maxsize=None)
     def __compute_interpolation_on_line(self, line_key):
@@ -265,7 +272,9 @@ def interpolate_curve_based_on_original_points(x, n):
         x_new[0::2] = x
         x_new[1::2] = m
         return interpolate_curve_based_on_original_points(x_new, n - 1)
+
     elif n == 1:
         return x
+
     else:
         raise ValueError
