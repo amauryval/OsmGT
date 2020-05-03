@@ -22,6 +22,8 @@ COPY . /home/app/
 
 WORKDIR /home/app/
 
+RUN conda install --yes pytest pytest-cov
+
 EXPOSE 8888
 RUN jupyter notebook --generate-config --allow-root
 CMD ["jupyter", "notebook", "--allow-root", "--notebook-dir=.", "--ip=0.0.0.0", "--port=8888", "--no-browser"]

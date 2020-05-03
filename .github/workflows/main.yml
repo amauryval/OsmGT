@@ -9,7 +9,10 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v1
-    - name: Launch Dockerfile & tests
+    - name: Launch Dockerfile
       uses: ./
-      with:
-        args: python -m pytest tests
+    - name: Run tests with Pytest
+      run: python -m pytest tests
+    - name: Run tests Coverage
+      run: python -m pytest --cov=osmgt tests/ --doctest-modules
+
