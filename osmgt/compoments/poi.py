@@ -45,20 +45,7 @@ class OsmGtPoi(OsmGtCore):
         if warning_edition:
             self.logger.warning(f"If you modify the geometry output gdf, it will be not compatible with the graph")
 
-        features = []
-        for feature in self._output_data:
-            geometry = feature["geometry"]
-            properties = {
-                key: feature[key] for key in feature.keys()
-                if key not in self.graph_fields
-            }
-            feature = geojson.Feature(
-                geometry=geometry,
-                properties=properties
-            )
-            features.append(feature)
-
-        output_gdf = super()._convert_list_to_gdf(features)
+        output_gdf = super()._convert_list_to_gdf(self._output_data)
 
         return output_gdf
 
@@ -66,19 +53,34 @@ class OsmGtPoi(OsmGtCore):
         self.logger.info("Formating data")
 
         raw_data = filter(lambda x: x["type"] == "node", raw_data)
-        raw_data_reprojected = []
-        for poi_num, feature in enumerate(raw_data):
+        features = []
+        for uuid_enum, feature in enumerate(raw_data, start=1):
+
             try:
-                feature["geometry"] = ogr_reproject(
+                geometry = ogr_reproject(
                     Point(feature["lon"], feature["lat"]),
                     self.epsg_4236, self.epsg_3857
                 )
             except:
-                feature["geometry"] = Point(feature["lon"], feature["lat"])
-            feature["id"] = poi_num
-            raw_data_reprojected.append(feature)
+                geometry = Point(feature["lon"], feature["lat"])
+            del feature["lon"]
+            del feature["lat"]
 
-        return raw_data_reprojected
+            properties = feature
+            del feature["type"]
+            properties["bounds"] = ", ".join(map(str, geometry.bounds))
+            properties["uuid"] = uuid_enum
+            properties = {**properties, **self.insert_tags_field(properties)}
+            del feature["tags"]
+
+            feature = geojson.Feature(
+                geometry=geometry,
+                properties=properties
+            )
+
+            features.append(feature)
+
+        return features
 
     def check_build_input_data(self):
         if self._output_data is None:

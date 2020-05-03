@@ -1,7 +1,7 @@
 from scipy import spatial
 
 from shapely.geometry import LineString
-from shapely.geometry import Point
+from shapely.geometry import shape
 
 import rtree
 
@@ -22,7 +22,7 @@ class GeomNetworkCleaner:
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
     # TODO should be an integer : create a new id ?
-    __FIELD_ID = "id"
+    __FIELD_ID = "uuid"
     __GEOMETRY_FIELD = "geometry"
 
     def __init__(self, logger, network_data, additionnal_nodes):
@@ -31,7 +31,7 @@ class GeomNetworkCleaner:
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_argument(network_data)
-        self._additionnal_nodes = additionnal_nodes
+        self._additionnal_nodes = additionnal_nodes.__geo_interface__["features"]
 
         self._output = []
 
@@ -45,6 +45,7 @@ class GeomNetworkCleaner:
         # find all the existing intersection from coordinates
         intersections_found = self.find_intersections_from_ways()
 
+
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
 
@@ -55,28 +56,41 @@ class GeomNetworkCleaner:
             # rebuild linestring
             lines_coordinates_rebuild = self._topology_builder(feature[self.__GEOMETRY_FIELD], points_intersections)
 
-            for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
-                geometry = LineString(line_coordinates)
-                data = {
-                    "node_1": line_coordinates[0],
-                    "node_2": line_coordinates[-1],
-                    "geometry": geometry,
-                    "length": geometry.length,
-                    self.__FIELD_ID: f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
-                }
-                data = {**data, **self._get_tags(feature)}
+            if len(lines_coordinates_rebuild) != 0:
+                for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
+                    feature["uuid"] = f"{feature['uuid']}{new_suffix_id}"
+                    feature["geometry"] = LineString(line_coordinates)
+                    feature["bounds"] = ", ".join(map(str, feature["geometry"].bounds))
+                    feature["length"] = feature["geometry"].length
+                    self._output.append(self._geojson_formating(feature))
 
-                self._output.append(np.array(data))
+            else:
+                assert set(feature["geometry"]) == set(line_coordinates)
+                # nothing to change
+                feature["geometry"] = LineString(feature["geometry"])
+                self._output.append(self._geojson_formating(feature))
 
         self.logger.info("Done: build lines")
         self.logger.info("Network cleaning DONE!")
-        return np.stack(self._output)
+        return self._output
 
     def _prepare_data(self):
         self._network_data = {
-            str(feature[self.__FIELD_ID]): feature
+            feature["properties"][self.__FIELD_ID]: {
+                **{"geometry": list(map(tuple, feature["geometry"]["coordinates"]))},
+                **feature["properties"]
+            }
             for feature in self._network_data
         }
+
+        self._additionnal_nodes = {
+            feature["properties"][self.__FIELD_ID]: {
+                **{"geometry": feature["geometry"]["coordinates"]},
+                **feature["properties"]
+            }
+            for feature in self._additionnal_nodes
+        }
+        assert True
 
     def compute_added_node_connections(self):
         connections_added = {}
@@ -92,6 +106,7 @@ class GeomNetworkCleaner:
 
                 line_tree = spatial.cKDTree(interpolated_line_coords)
                 dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
+
                 new_candidate = {
                     "interpolated_line": list(map(tuple, interpolated_line_coords)),
                     "original_line": self._network_data[line_key]["geometry"],
@@ -186,13 +201,13 @@ class GeomNetworkCleaner:
             if point_intersection in middle_coordinates_values:
                 # we get the middle values from coordinates to avoid to catch the first and last value when editing
 
-                middle_coordinates_values = self.insert_value(
+                middle_coordinates_values = self._insert_value(
                     middle_coordinates_values,
                     point_intersection,
                     point_intersection
                 )
 
-                middle_coordinates_values = self.insert_value(
+                middle_coordinates_values = self._insert_value(
                     middle_coordinates_values,
                     point_intersection,
                     self.__ITEM_LIST_SEPARATOR_TO_SPLIT_LINE,
@@ -228,12 +243,12 @@ class GeomNetworkCleaner:
         # find the nereast network arc to interpolate
         index = rtree.index.Index()
         for fid, feature in self._network_data.items():
-            index.insert(int(fid), feature["bounds"])
+            index.insert(int(fid), tuple(map(float, feature["bounds"].split(", "))))
 
         node_by_nearest_lines = {
-            str(node_uuid): [
-                str(index_feature)
-                for index_feature in index.nearest(Point(node[self.__GEOMETRY_FIELD]).bounds, self.__NB_OF_NEAREST_ELEMENTS_TO_FIND)
+            node_uuid: [
+                index_feature
+                for index_feature in index.nearest(tuple(map(float, node["bounds"].split(", "))), self.__NB_OF_NEAREST_ELEMENTS_TO_FIND)
             ]
             for node_uuid, node in self._additionnal_nodes.items()
         }
@@ -264,7 +279,7 @@ class GeomNetworkCleaner:
         return feature.get("tags", {})
 
     @staticmethod
-    def insert_value(list_object, search_value, value_to_add, position=None):
+    def _insert_value(list_object, search_value, value_to_add, position=None):
         assert position in {None, "after", "before"}
 
         index_increment = 0
@@ -278,3 +293,12 @@ class GeomNetworkCleaner:
             return list_object
         except ValueError:
             raise ValueError("{search_value} not found")
+
+    def _geojson_formating(self, input_data):
+        geometry = input_data["geometry"]
+        del input_data["geometry"]
+        properties = input_data
+        return {
+            "geometry": geometry,
+            "properties": properties
+        }

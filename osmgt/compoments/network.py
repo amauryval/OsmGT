@@ -29,11 +29,7 @@ class OsmGtNetwork(OsmGtCore):
     def from_location(self, location_name, additionnal_nodes):
         self.logger.info(f"From location: {location_name}")
 
-        if additionnal_nodes is not None:
-            additionnal_nodes = self.__built_addtionnal_nodes(additionnal_nodes)
-
         self.logger.info("Loading network data...")
-
         location_id = NominatimApi(self.logger, q=location_name, limit=1).data()[0]["osm_id"]
         location_id += self.location_osm_default_id
         location_id_query_part = self.__from_location_builder(location_id)
@@ -49,21 +45,7 @@ class OsmGtNetwork(OsmGtCore):
         self.check_build_input_data()
 
         self.logger.info(f"Prepare Geodataframe")
-
-        features = []
-        for feature in self._output_data:
-            geometry = feature["geometry"]
-            properties = {
-                key: feature[key] for key in feature.keys()
-                if key not in self.graph_fields
-            }
-            feature = geojson.Feature(
-                geometry=geometry,
-                properties=properties
-            )
-            features.append(feature)
-
-        output_gdf = super()._convert_list_to_gdf(features)
+        output_gdf = super()._convert_list_to_gdf(self._output_data)
 
         return output_gdf
 
@@ -73,32 +55,12 @@ class OsmGtNetwork(OsmGtCore):
     #
     #     for feature in self._output_data:
     #         graph.add_edge(
-    #             str(feature["node_1"]),
-    #             str(feature["node_2"]),
+    #             feature["geometry"].coords[0],
+    #             feature["geometry"].coords[-1],
     #             feature["id"],
-    #             feature["length"],
+    #             feature["geometry"].coords[0].length,
     #         )
     #     return graph
-
-    def __built_addtionnal_nodes(self, additionnal_nodes):
-        # TODO assert structure
-        self.logger.info("Prepare additionnal nodes...")
-
-        features = additionnal_nodes.to_dict('records')
-        additionnal_nodes_rebuild = {}
-        for feature in features:
-            geometry = feature["geometry"]
-            del feature["geometry"]
-            uuid = str(feature["id"])
-            del feature["id"]
-            additionnal_nodes_rebuild.update({
-                uuid: {
-                    "geometry": geometry.coords[:][0],
-                    "tags": feature,
-                    "id": uuid
-                }
-            })
-        return additionnal_nodes_rebuild
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
@@ -114,22 +76,32 @@ class OsmGtNetwork(OsmGtCore):
         self.logger.info("Formating data")
 
         raw_data = filter(lambda x: x["type"] == "way", raw_data)
-        raw_data_reprojected = []
-        for feature in raw_data:
+        features = []
+        for uuid_enum, feature in enumerate(raw_data, start=1):
             try:
-                feature["geometry"] = ogr_reproject(
+                geometry = ogr_reproject(
                     LineString([(coords["lon"], coords["lat"]) for coords in feature["geometry"]]),
                     self.epsg_4236, self.epsg_3857
                 )
             except:
-                feature["geometry"] = LineString([(coords["lon"], coords["lat"]) for coords in feature["geometry"]])
+                geometry = LineString([(coords["lon"], coords["lat"]) for coords in feature["geometry"]])
+            del feature["geometry"]
 
-            feature["bounds"] = feature["geometry"].bounds
-            feature["geometry"] = feature["geometry"].coords[:]
+            properties = feature
+            del feature["type"]
+            properties["bounds"] = ", ".join(map(str, geometry.bounds))
+            properties["uuid"] = uuid_enum
+            properties["uuid"] = uuid_enum
+            properties = {**properties, **self.insert_tags_field(properties)}
+            del properties["tags"]
 
-            raw_data_reprojected.append(feature)
+            feature = geojson.Feature(
+                geometry=geometry,
+                properties=properties
+            )
+            features.append(feature)
 
-        return raw_data_reprojected
+        return features
 
     def check_build_input_data(self):
         if self._output_data is None:

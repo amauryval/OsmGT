@@ -54,3 +54,7 @@ class OsmGtCore(Logger):
         output_gdf.crs = self.epsg_4236
         output_gdf = output_gdf.to_crs(self.epsg_3857)
         return output_gdf
+
+    @staticmethod
+    def insert_tags_field(feature):
+        return feature.get("tags", {})
