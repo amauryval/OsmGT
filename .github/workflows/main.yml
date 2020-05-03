@@ -9,7 +9,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v1
-    - name: Launch Dockerfile
+    - name: Launch Dockerfile & tests
       uses: ./
       run: |
         python -m pytest tests
