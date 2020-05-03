@@ -1,6 +1,7 @@
 import requests
 from osmgt.apis.core import ApiCore
 
+
 class ErrorNominatimApi(ValueError):
     pass
 
@@ -10,7 +11,14 @@ class NominatimApi(ApiCore):
     nominatim_url = "https://nominatim.openstreetmap.org/search/?"
 
     query_parameter = "q"
-    other_query_parameter = {"street", "city", "county", "state", "country", "postalcode"}
+    other_query_parameter = {
+        "street",
+        "city",
+        "county",
+        "state",
+        "country",
+        "postalcode",
+    }
 
     format_parameter = {"format": "json"}
 
@@ -34,8 +42,12 @@ class NominatimApi(ApiCore):
                 except KeyError:
                     pass
 
-        elif not any([input_key in self.other_query_parameter for input_key in input.keys()]):
-            raise ErrorNominatimApi(f"{', '.join(self.other_query_parameter)} not found!")
+        elif not any(
+            [input_key in self.other_query_parameter for input_key in input.keys()]
+        ):
+            raise ErrorNominatimApi(
+                f"{', '.join(self.other_query_parameter)} not found!"
+            )
 
         parameters.update(input)
         parameters.update(self.format_parameter)

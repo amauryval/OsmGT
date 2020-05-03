@@ -28,7 +28,9 @@ class OsmGtNetwork(OsmGtCore):
         self.logger.info(f"From location: {location_name}")
 
         self.logger.info("Loading network data...")
-        location_id = NominatimApi(self.logger, q=location_name, limit=1).data()[0]["osm_id"]
+        location_id = NominatimApi(self.logger, q=location_name, limit=1).data()[0][
+            "osm_id"
+        ]
         location_id += self.location_osm_default_id
         location_id_query_part = self.__from_location_builder(location_id)
 
@@ -55,9 +57,7 @@ class OsmGtNetwork(OsmGtCore):
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = GeomNetworkCleaner(
-            self.logger,
-            raw_data_restructured,
-            additionnal_nodes
+            self.logger, raw_data_restructured, additionnal_nodes
         ).run()
 
         return raw_data_topology_rebuild
@@ -70,11 +70,19 @@ class OsmGtNetwork(OsmGtCore):
         for uuid_enum, feature in enumerate(raw_data, start=1):
             try:
                 geometry = ogr_reproject(
-                    LineString([(coords["lon"], coords["lat"]) for coords in feature["geometry"]]),
-                    self.epsg_4236, self.epsg_3857
+                    LineString(
+                        [
+                            (coords["lon"], coords["lat"])
+                            for coords in feature["geometry"]
+                        ]
+                    ),
+                    self.epsg_4236,
+                    self.epsg_3857,
                 )
             except:
-                geometry = LineString([(coords["lon"], coords["lat"]) for coords in feature["geometry"]])
+                geometry = LineString(
+                    [(coords["lon"], coords["lat"]) for coords in feature["geometry"]]
+                )
             del feature["geometry"]
 
             properties = feature
@@ -84,10 +92,7 @@ class OsmGtNetwork(OsmGtCore):
             properties = {**properties, **self.insert_tags_field(properties)}
             del properties["tags"]
 
-            feature = geojson.Feature(
-                geometry=geometry,
-                properties=properties
-            )
+            feature = geojson.Feature(geometry=geometry, properties=properties)
             features.append(feature)
 
         return features
@@ -95,7 +100,7 @@ class OsmGtNetwork(OsmGtCore):
     @property
     def __road_query(self):
         query = 'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]'
-        return '(%s(area.searchArea););out geom;(._;>;);' % query
+        return "(%s(area.searchArea););out geom;(._;>;);" % query
 
     def __from_location_builder(self, location_osm_id):
         return f"area({location_osm_id})->.searchArea;"

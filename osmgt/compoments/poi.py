@@ -27,7 +27,9 @@ class OsmGtPoi(OsmGtCore):
         self.logger.info(f"From location: {location_name}")
         self.logger.info("Loading network data...")
 
-        location_id = NominatimApi(self.logger, q=location_name, limit=1).data()[0]["osm_id"]
+        location_id = NominatimApi(self.logger, q=location_name, limit=1).data()[0][
+            "osm_id"
+        ]
         location_id += self.location_osm_default_id
         location_id_query_part = self.__from_location_builder(location_id)
 
@@ -48,7 +50,8 @@ class OsmGtPoi(OsmGtCore):
             try:
                 geometry = ogr_reproject(
                     Point(feature["lon"], feature["lat"]),
-                    self.epsg_4236, self.epsg_3857
+                    self.epsg_4236,
+                    self.epsg_3857,
                 )
             except:
                 geometry = Point(feature["lon"], feature["lat"])
@@ -62,10 +65,7 @@ class OsmGtPoi(OsmGtCore):
             properties = {**properties, **self.insert_tags_field(properties)}
             del feature["tags"]
 
-            feature = geojson.Feature(
-                geometry=geometry,
-                properties=properties
-            )
+            feature = geojson.Feature(geometry=geometry, properties=properties)
 
             features.append(feature)
 
