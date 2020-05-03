@@ -7,11 +7,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout
     - uses: actions/checkout@v1
     - name: Update Conda environment
       uses: matthewrmshin/conda-action@v1
       with:
-        args: conda env update -f ./test/environment.yml
+        args: conda env update -f ./environment.yml
     - name: Prove that Pytest is installed
       uses: ./
       with:
