@@ -18,3 +18,5 @@ dependencies:
   - graph-tool
   - cairo
   - scipy
+  - pytest
+  - pytest-cov

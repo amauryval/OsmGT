@@ -21,7 +21,3 @@ ENV PATH /opt/conda/envs/osmgt/bin:$PATH
 COPY . /home/app/
 
 WORKDIR /home/app/
-
-RUN conda install --yes pytest pytest-cov
-
-
