@@ -10,5 +10,5 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v1
     - name: Launch Dockerfile & tests
-      uses: ./
-      args: python -m pytest tests
+      with:
+        args: python -m pytest tests
