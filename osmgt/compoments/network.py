@@ -41,13 +41,6 @@ class OsmGtNetwork(OsmGtCore):
 
         return self
 
-    def get_gdf(self):
-        self.check_build_input_data()
-
-        self.logger.info(f"Prepare Geodataframe")
-        output_gdf = super()._convert_list_to_gdf(self._output_data)
-
-        return output_gdf
 
     # def get_graph(self):
     #     self.check_build_input_data()
@@ -102,10 +95,6 @@ class OsmGtNetwork(OsmGtCore):
             features.append(feature)
 
         return features
-
-    def check_build_input_data(self):
-        if self._output_data is None:
-            raise ErrorNetworkData("Data is empty!")
 
     @property
     def __road_query(self):

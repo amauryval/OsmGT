@@ -12,6 +12,10 @@ import geopandas as gpd
 from osmgt.compoments.logger import Logger
 
 
+class ErrorOsnGtCore(Exception):
+    pass
+
+
 class OsmGtCore(Logger):
 
     def __init__(self):
@@ -33,6 +37,20 @@ class OsmGtCore(Logger):
         with open(output_path, "wb") as output_file:
             pickle.dump(self._output_data, output_file)
 
+    def get_gdf(self):
+        self.check_build_input_data()
+
+        self.logger.info(f"Prepare Geodataframe")
+        output_gdf = gpd.GeoDataFrame.from_features(self._output_data)
+        output_gdf.crs = self.epsg_4236
+        output_gdf = output_gdf.to_crs(self.epsg_3857)
+
+        return output_gdf
+
+    def check_build_input_data(self):
+        if self._output_data is None:
+            raise ErrorOsnGtCore("Data is empty!")
+
     @property
     def epsg_4236(self):
         return 4326
@@ -43,17 +61,11 @@ class OsmGtCore(Logger):
 
     @property
     def location_osm_default_id(self):
-        return 3600000000  # this is it...
+        return 3600000000  #  this is it...
 
     @property
     def graph_fields(self):
         return {"node_1", "node_2", "geometry", "length"}
-
-    def _convert_list_to_gdf(self, features):
-        output_gdf = gpd.GeoDataFrame.from_features(features)
-        output_gdf.crs = self.epsg_4236
-        output_gdf = output_gdf.to_crs(self.epsg_3857)
-        return output_gdf
 
     @staticmethod
     def insert_tags_field(feature):

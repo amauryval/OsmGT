@@ -38,17 +38,6 @@ class OsmGtPoi(OsmGtCore):
 
         return self
 
-    def get_gdf(self, warning_edition=True):
-        self.check_build_input_data()
-
-        self.logger.info(f"Prepare Geodataframe")
-        if warning_edition:
-            self.logger.warning(f"If you modify the geometry output gdf, it will be not compatible with the graph")
-
-        output_gdf = super()._convert_list_to_gdf(self._output_data)
-
-        return output_gdf
-
     def __build_points(self, raw_data):
         self.logger.info("Formating data")
 
@@ -81,10 +70,6 @@ class OsmGtPoi(OsmGtCore):
             features.append(feature)
 
         return features
-
-    def check_build_input_data(self):
-        if self._output_data is None:
-            raise ErrorPoiData("Data is empty!")
 
     @property
     def __shop_query(self):
