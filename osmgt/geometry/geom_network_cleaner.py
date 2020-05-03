@@ -12,6 +12,7 @@ from collections import Counter
 from more_itertools import split_at
 
 import functools
+from numba import jit
 
 
 class GeomNetworkCleaner:
@@ -45,7 +46,6 @@ class GeomNetworkCleaner:
         # find all the existing intersection from coordinates
         intersections_found = self.find_intersections_from_ways()
 
-
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
 
@@ -65,7 +65,7 @@ class GeomNetworkCleaner:
                     self._output.append(self._geojson_formating(feature))
 
             else:
-                assert set(feature["geometry"]) == set(line_coordinates)
+                assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
                 # nothing to change
                 feature["geometry"] = LineString(feature["geometry"])
                 self._output.append(self._geojson_formating(feature))
@@ -156,40 +156,6 @@ class GeomNetworkCleaner:
 
         return interpolated_line_coords
 
-    def _rebuild_nearest_connection_intersection(self, line_connection_computed_grouped):
-        # rebuild nearest geometry
-        for nearest_object_id, connection_lines in line_connection_computed_grouped.items():
-            end_points_to_add_nearest_object = [
-                line_coord[self.__GEOMETRY_FIELD][-1]
-                for line_coord in connection_lines
-            ]
-            # get original geometry
-            original_linestring_linked_coords = self._network_data[nearest_object_id][self.__GEOMETRY_FIELD]
-
-            nodes_intersections = set(end_points_to_add_nearest_object).intersection(set(original_linestring_linked_coords))
-            if len(nodes_intersections) == len(end_points_to_add_nearest_object):
-                # point found already exists : start or end = nothing to change
-                pass
-            else:
-                line_interpolated = self._network_data_interpolated_line[nearest_object_id]
-                linestring_linked_updated = list(
-                    filter(
-                        lambda x: x in original_linestring_linked_coords + end_points_to_add_nearest_object,
-                        line_interpolated
-                    )
-                )
-                if len(linestring_linked_updated) == 1:
-                    assert True
-                self._network_data[nearest_object_id][self.__GEOMETRY_FIELD] = linestring_linked_updated
-
-            # add new lines connection
-            for enum, line in enumerate(connection_lines):
-                line["id"] = f"{nearest_object_id}_{enum}"
-                if len(linestring_linked_updated) == 1:
-                    assert True
-                line[self.__GEOMETRY_FIELD] = line[self.__GEOMETRY_FIELD]
-                self._network_data[line["id"]] = line
-
     def _topology_builder(self, coordinates, points_intersections):
         is_rebuild = False
 
@@ -274,9 +240,6 @@ class GeomNetworkCleaner:
     def _check_argument(self, argument):
         # TODO check argument
         return argument
-
-    def _get_tags(self, feature):
-        return feature.get("tags", {})
 
     @staticmethod
     def _insert_value(list_object, search_value, value_to_add, position=None):
