@@ -61,7 +61,10 @@ class GeomNetworkCleaner:
                     feature["geometry"] = LineString(line_coordinates)
                     feature["bounds"] = ", ".join(map(str, feature["geometry"].bounds))
                     feature["length"] = feature["geometry"].length
-                    self._output.append(self._geojson_formating(feature))
+
+                    if feature["length"] != 0:
+                        # only lenght > 0, else means that linestring has exact start and end coordinates (node on network)
+                        self._output.append(self._geojson_formating(feature))
 
             else:
                 assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
@@ -127,8 +130,12 @@ class GeomNetworkCleaner:
                 connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
                 node_con_stats["connections_added"] += 1
             else:
-                # node_key already on the network, no need to add it on the graph, but line is split
-                pass
+                # node_key already on the network, no need to add it on the graph ; line is not split
+
+                # TODO ? here trying to force split line if node is on the network
+                self._additionnal_nodes[node_key]["geometry"] = connection_coords
+                connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
+
 
             # update source line geom
             linestring_linked_updated = list(
