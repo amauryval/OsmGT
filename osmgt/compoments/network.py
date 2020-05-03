@@ -109,7 +109,8 @@ class OsmGtNetwork(OsmGtCore):
 
     @property
     def __road_query(self):
-        return '(way["highway"](area.searchArea););out geom;(._;>;);'
+        query = 'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]'
+        return '(%s(area.searchArea););out geom;(._;>;);' % query
 
     def __from_location_builder(self, location_osm_id):
         return f"area({location_osm_id})->.searchArea;"
