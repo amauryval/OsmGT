@@ -83,6 +83,7 @@ class GeomNetworkCleaner:
                 assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
                 # nothing to change
                 feature["geometry"] = LineString(feature["geometry"])
+                feature["length"] = feature["geometry"].length
                 self._output.append(self._geojson_formating(feature))
 
         return self._output

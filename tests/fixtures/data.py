@@ -113,3 +113,13 @@ def some_point_features():
     output_gdf = build_geojson_features(all_features)
 
     return output_gdf
+
+
+@pytest.fixture
+def pois_default_columns_from_output():
+    return ["id", "uuid", "bounds", "geometry"]
+
+
+@pytest.fixture
+def roads_default_columns_from_output():
+    return ["id", "uuid", "bounds", "geometry", "length"]

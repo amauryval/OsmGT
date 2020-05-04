@@ -1,15 +1,11 @@
-import os
-import sys
-
-import datetime
-
-import logging
-
 import pickle
 
 import geopandas as gpd
+import geojson
 
-from osmgt.compoments.logger import Logger
+from osmgt.helpers.logger import Logger
+
+from osmgt.apis.nominatim import NominatimApi
 
 
 class ErrorOsnGtCore(Exception):
@@ -17,8 +13,38 @@ class ErrorOsnGtCore(Exception):
 
 
 class OsmGtCore(Logger):
+
+    _location_id = None
+
     def __init__(self):
         super().__init__()
+
+    def from_location(self, location_name):
+        self.logger.info(f"From location: {location_name}")
+        self.logger.info("Loading data...")
+
+        location_id = next(iter(NominatimApi(self.logger, q=location_name, limit=1).data()))[
+            "osm_id"
+        ]
+        self._location_id = self.location_osm_default_id_computing(location_id)
+
+    def from_bbox(self, bbox_value):
+        self.logger.info(f"From bbox: {bbox_value}")
+        self.logger.info("Loading data...")
+
+    @staticmethod
+    def from_location_name_query_builder(location_osm_id, query):
+        geo_tag_query = "area.searchArea"
+        query = query(geo_tag_query)
+        return f"area({location_osm_id})->.searchArea;({query});out geom;(._;>;);"
+
+    @staticmethod
+    def from_bbox_query_builder(bbox_value, query):
+        assert isinstance(bbox_value, tuple)
+        assert len(bbox_value) == 4
+        bbox_value_formated = ", ".join(map(str, bbox_value))
+        query = query(bbox_value_formated)
+        return f"({query});out geom;(._;>;);"
 
     def from_osmgt_file(self, osmgt_file_path):
         assert ".osmgt" in osmgt_file_path
@@ -58,14 +84,16 @@ class OsmGtCore(Logger):
     def epsg_3857(self):
         return 4326
 
-    @property
-    def location_osm_default_id(self):
-        return 3600000000  #  this is it...
+    def location_osm_default_id_computing(self, osm_location_id):
+        return osm_location_id + 3600000000  #  this is it...
 
-    @property
-    def graph_fields(self):
-        return {"node_1", "node_2", "geometry", "length"}
+    def _build_feature_from_osm(self, uuid_enum, geometry, properties):
 
-    @staticmethod
-    def insert_tags_field(feature):
-        return feature.get("tags", {})
+        properties_found = properties.get("tags", {})
+        properties_found["id"] = properties["id"]
+        properties_found["uuid"] = uuid_enum
+        properties_found["bounds"] = ", ".join(map(str, geometry.bounds))
+
+        feature_build = geojson.Feature(geometry=geometry, properties=properties_found)
+
+        return feature_build

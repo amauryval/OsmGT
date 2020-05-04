@@ -1,5 +1,3 @@
-import pytest
-
 from osmgt.apis.nominatim import NominatimApi
 from osmgt.compoments.core import OsmGtCore
 

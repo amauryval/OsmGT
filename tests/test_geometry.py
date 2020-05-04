@@ -1,5 +1,3 @@
-import pytest
-
 from osmgt.geometry.reprojection import ogr_reproject
 
 from osmgt.geometry.geom_network_cleaner import GeomNetworkCleaner

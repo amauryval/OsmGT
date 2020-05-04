@@ -6,17 +6,12 @@ from osmgt.apis.overpass import OverpassApi
 from osmgt.geometry.reprojection import ogr_reproject
 from osmgt.geometry.geom_network_cleaner import GeomNetworkCleaner
 
-import geojson
 from shapely.geometry import LineString
 
 from osmgt.network.gt_helper import GraphHelpers
 
 
-class ErrorNetworkData(Exception):
-    pass
-
-
-class OsmGtNetwork(OsmGtCore):
+class OsmGtRoads(OsmGtCore):
 
     __DATA_NAME = "network"
     _output_data = None
@@ -24,18 +19,27 @@ class OsmGtNetwork(OsmGtCore):
     def __init__(self):
         super().__init__()
 
-    def from_location(self, location_name, additionnal_nodes):
-        self.logger.info(f"From location: {location_name}")
+    def from_location(self, location_name, additionnal_nodes=None):
+        super().from_location(location_name)
 
-        self.logger.info("Loading network data...")
-        location_id = NominatimApi(self.logger, q=location_name, limit=1).data()[0][
-            "osm_id"
-        ]
-        location_id += self.location_osm_default_id
-        location_id_query_part = self.__from_location_builder(location_id)
+        # location_id = next(iter(NominatimApi(self.logger, q=location_name, limit=1).data()))[
+        #     "osm_id"
+        # ]
+        # location_id = self.location_osm_default_id_computing(location_id)
+        request = self.from_location_name_query_builder(self._location_id, self.__roads_query)
 
-        query = f"{location_id_query_part}{self.__road_query}"
-        raw_data = OverpassApi(self.logger).querier(query)["elements"]
+        raw_data = OverpassApi(self.logger).query(request)["elements"]
+
+        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
+
+        return self
+
+    def from_bbox(self, bbox_value, additionnal_nodes=None):
+        super().from_bbox(bbox_value)
+
+        request = self.from_bbox_query_builder(bbox_value, self.__roads_query)
+
+        raw_data = OverpassApi(self.logger).query(request)["elements"]
 
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
 
@@ -49,8 +53,8 @@ class OsmGtNetwork(OsmGtCore):
             graph.add_edge(
                 feature["geometry"].coords[0],
                 feature["geometry"].coords[-1],
-                feature["uuid"],
-                feature["geometry"].coords[0].length,
+                feature["properties"]["uuid"],
+                feature["properties"]["length"],
             )
         return graph
 
@@ -69,6 +73,7 @@ class OsmGtNetwork(OsmGtCore):
         features = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
             try:
+                # TODO remove ? seems useless
                 geometry = ogr_reproject(
                     LineString(
                         [
@@ -85,22 +90,11 @@ class OsmGtNetwork(OsmGtCore):
                 )
             del feature["geometry"]
 
-            properties = feature
-            del feature["type"]
-            properties["bounds"] = ", ".join(map(str, geometry.bounds))
-            properties["uuid"] = uuid_enum
-            properties = {**properties, **self.insert_tags_field(properties)}
-            del properties["tags"]
-
-            feature = geojson.Feature(geometry=geometry, properties=properties)
-            features.append(feature)
+            feature_build = self._build_feature_from_osm(uuid_enum, geometry, feature)
+            features.append(feature_build)
 
         return features
 
-    @property
-    def __road_query(self):
-        query = 'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]'
-        return "(%s(area.searchArea););out geom;(._;>;);" % query
-
-    def __from_location_builder(self, location_osm_id):
-        return f"area({location_osm_id})->.searchArea;"
+    def __roads_query(self, geo_filter):
+        query = f'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]({geo_filter});'
+        return query

@@ -1,30 +1,28 @@
 import requests
 
 
-class ErrorRequestResponse(ValueError):
+class ErrorRequest(ValueError):
     pass
 
 
 class ApiCore:
+
     def check_request_response(self, response):
+        python_class_name = self.__class__.__name__
         response_code = response.status_code
+        response_reason = f"{response.status_code}:{response.reason}"
+        response_elapsed_time = str(response.elapsed)
+        response_result_message = f"{python_class_name}: Query {response_reason} in {response_elapsed_time} sec."
 
         if response_code == 200:
             self.logger.info(
-                f"{self.__class__.__name__}: Query success ({response_code}) in {str(response.elapsed)} sec."
-            )
-        elif response_code == 400:
-            raise ErrorRequestResponse(
-                f"{self.__class__.__name__}: Query Bad Query ({response_code})."
-            )
-        elif response_code == 404:
-            raise ErrorRequestResponse(
-                f"{self.__class__.__name__}: Query bad request ({response_code})."
+                f"{response_result_message}"
             )
         else:
-            self.logger.warning(
-                f"{self.__class__.__name__}: response code not implemented yet: {response_code}"
+            raise ErrorRequest(
+                f"{response_result_message} ; url={response.url}"
             )
+
 
     def compute_query(self, url, parameters):
         response = requests.get(url, params=parameters)

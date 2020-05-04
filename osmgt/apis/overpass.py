@@ -21,6 +21,6 @@ class OverpassApi(ApiCore):
             "data": f"{self.__OVERPASS_QUERY_PREFIX}{query}{self.__OVERPASS_QUERY_SUFFIX}"
         }
 
-    def querier(self, query):
+    def query(self, query):
         parameters = self._build_parameters(query)
         return self.compute_query(self.__OVERPASS_URL, parameters)
