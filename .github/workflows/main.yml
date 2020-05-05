@@ -9,10 +9,13 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v1
-    - name: Launch Dockerfile & tests
-      uses: ./
+    - uses: goanpeca/setup-miniconda@v1
       with:
-        args: python -m pytest --cov=osmgt --cov-report=xml tests/
+         activate-environment: osmgt
+         environment-file: environment.yml
+         python-version: 3.8
+    - name: Run tests
+      run: python -m pytest --cov=osmgt --cov-report=xml tests/
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
