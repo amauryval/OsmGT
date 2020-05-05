@@ -1,6 +1,4 @@
 OsmGT
-
-
 ====
 
 ![CI](https://github.com/wiralyki/osmgt/workflows/CI/badge.svg?event=status)
