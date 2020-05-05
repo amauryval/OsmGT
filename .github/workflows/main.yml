@@ -10,13 +10,14 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Prepare Conda env
-      uses: goanpeca/setup-miniconda@v1
+      uses: matthewrmshin/conda-action@v1
       with:
          activate-environment: osmgt
          environment-file: environment.yml
          python-version: 3.8
          auto-activate-base: false
     - name: Run tests
+      shell: sh -l {0}
       run: python -m pytest --cov=osmgt --cov-report=xml tests/
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
