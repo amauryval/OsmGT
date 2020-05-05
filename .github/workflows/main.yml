@@ -15,7 +15,7 @@ jobs:
          activate-environment: osmgt
          environment-file: environment.yml
          python-version: 3.8
-         auto-activate-base: false
+         auto-activate-base: true
     - name: Run tests
       run: python -m pytest --cov=osmgt --cov-report=xml tests/
     - name: Upload coverage to Codecov
