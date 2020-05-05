@@ -10,7 +10,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Prepare Conda env
-      uses: matthewrmshin/conda-action@v1
+      uses: goanpeca/setup-miniconda@v1
       with:
          activate-environment: osmgt
          environment-file: environment.yml
