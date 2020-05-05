@@ -16,6 +16,8 @@ jobs:
          environment-file: environment.yml
          python-version: 3.8
          auto-activate-base: false
+    - name: Upgrade pip
+      run: pip install --upgrade pip
     - name: Install Pytest libs
       run: pip install pytest pytest-cov
     - name: Run tests
