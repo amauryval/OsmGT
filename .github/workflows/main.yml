@@ -12,4 +12,8 @@ jobs:
     - name: Launch Dockerfile & tests
       uses: ./
       with:
-        args: python -m pytest tests
+        args: python -m pytest --cov=osmgt --cov-report=xml tests/
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
