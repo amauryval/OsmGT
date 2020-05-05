@@ -16,10 +16,6 @@ jobs:
          environment-file: environment.yml
          python-version: 3.8
          auto-activate-base: false
-    - name: Install Pytest libs
-      run: |
-        conda install -y -c anaconda pytest
-        conda install -y -c conda-forge pytest-cov
     - name: Run tests
       run: python -m pytest --cov=osmgt --cov-report=xml tests/
     - name: Upload coverage to Codecov
