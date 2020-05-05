@@ -7,6 +7,7 @@ from graph_tool.draw import sfdp_layout
 class ErrorGraphHelpers(ValueError):
     pass
 
+
 class ExistingVertex(ValueError):
     pass
 
@@ -36,10 +37,10 @@ class GraphHelpers(Graph):
         """
         super(GraphHelpers, self).__init__(directed=False)
 
-        self.vertex_names = self.new_vertex_property('string')
-        self.edge_names = self.new_edge_property('string')
+        self.vertex_names = self.new_vertex_property("string")
+        self.edge_names = self.new_edge_property("string")
 
-        self.edge_weights = self.new_edge_property('double')
+        self.edge_weights = self.new_edge_property("double")
 
         self.vertices_content = {}
         self.edges_content = {}
@@ -49,16 +50,8 @@ class GraphHelpers(Graph):
         vertex = self.find_vertex_from_name(vertex_name)
         if vertex is not None:
             all_edges_found = vertex.all_edges()
-            edges_names = [
-                self.edge_names[edge]
-                for edge in all_edges_found
-            ]
-            edges_exist = list(
-                map(
-                    self.edge_exists_from_name,
-                    edges_names
-                )
-            )
+            edges_names = [self.edge_names[edge] for edge in all_edges_found]
+            edges_exist = list(map(self.edge_exists_from_name, edges_names))
             if all(edges_exist):
                 return edges_names
             else:
@@ -71,10 +64,12 @@ class GraphHelpers(Graph):
             vertex_source_name = self.vertex_names[edge.source()]
             vertex_target_name = self.vertex_names[edge.target()]
 
-            if all([
+            if all(
+                [
                     self.vertex_exists_from_name(vertex_source_name),
                     self.vertex_exists_from_name(vertex_source_name),
-                ]):
+                ]
+            ):
                 return vertex_source_name, vertex_target_name
             else:
                 # if an edge exists, it must have source and target nodes
@@ -133,7 +128,9 @@ class GraphHelpers(Graph):
             edge = super(GraphHelpers, self).add_edge(source, target)
             self.edge_names[edge] = edge_name
             self.edges_content[edge_name] = edge
-            self.edges_vertices_content[edge_name] = frozenset([source_vertex_name, target_vertex_name])
+            self.edges_vertices_content[edge_name] = frozenset(
+                [source_vertex_name, target_vertex_name]
+            )
 
             if weight is not None:
                 self.edge_weights[edge] = weight
@@ -200,10 +197,10 @@ class GraphHelpers(Graph):
         :return: if an edge exists between 2 specific vertices
         :rtype: bool
         """
-        return self.find_edge_from_vertices_name(
-            source_vertex_name,
-            target_vertex_name
-        ) is not None
+        return (
+            self.find_edge_from_vertices_name(source_vertex_name, target_vertex_name)
+            is not None
+        )
 
     def find_vertex_from_name(self, vertex_name):
         """
@@ -246,5 +243,5 @@ class GraphHelpers(Graph):
             edge_color=(1, 0, 0, 1),
             bg_color=(0, 0, 0, 1),
             output_size=[1024, 1024],
-            output=output_file_with_extension
+            output=output_file_with_extension,
         )

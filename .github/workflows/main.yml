@@ -8,8 +8,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v1
-    - name: Launch Dockerfile & tests
-      uses: ./
+      uses: actions/checkout@v2
+    - name: Prepare Conda env
+      uses: goanpeca/setup-miniconda@v1
       with:
-        args: python -m pytest tests
+         miniconda-version: 'latest'
+         activate-environment: osmgt
+         environment-file: environment.yml
+         auto-activate-base: false
+    - name: Run tests
+      shell: bash -l {0}
+      run: python -m pytest --cov=osmgt --cov-report=xml tests/
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}

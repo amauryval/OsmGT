@@ -2,6 +2,7 @@ OsmGT
 ==
 OpenStreetMap based on graph-tools
 
+[![codecov](https://codecov.io/gh/wiralyki/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/wiralyki/osmgt)
 
 # Features
 
@@ -32,3 +33,5 @@ docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
 __(TODO)__
 
 check example.ipynb notebook and the svg output
+
+
