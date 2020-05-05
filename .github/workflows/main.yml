@@ -12,6 +12,7 @@ jobs:
     - name: Prepare Conda env
       uses: goanpeca/setup-miniconda@v1
       with:
+         miniconda-version: 'latest'
          activate-environment: osmgt
          environment-file: environment.yml
          python-version: 3.8
