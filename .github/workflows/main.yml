@@ -15,7 +15,6 @@ jobs:
          miniconda-version: 'latest'
          activate-environment: osmgt
          environment-file: environment.yml
-         python-version: 3.8
          auto-activate-base: false
     - name: Run tests
       shell: bash -l {0}
