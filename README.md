@@ -1,8 +1,14 @@
 OsmGT
-==
+
+
+====
+
+![CI](https://github.com/wiralyki/osmgt/workflows/CI/badge.svg?event=status)
+[![codecov](https://codecov.io/gh/wiralyki/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/wiralyki/osmgt)
+
+
 OpenStreetMap based on graph-tools
 
-[![codecov](https://codecov.io/gh/wiralyki/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/wiralyki/osmgt)
 
 # Features
 
