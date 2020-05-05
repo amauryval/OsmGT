@@ -22,14 +22,8 @@ class OsmGtPoi(OsmGtCore):
     def from_location(self, location_name):
         super().from_location(location_name)
 
-        # location_id = next(iter(NominatimApi(self.logger, q=location_name, limit=1).data()))[
-        #     "osm_id"
-        # ]
-        # location_id = self.location_osm_default_id_computing(location_id)
         request = self.from_location_name_query_builder(self._location_id, self.__shop_query)
-
         raw_data = OverpassApi(self.logger).query(request)["elements"]
-
         self._output_data = self.__build_points(raw_data)
 
         return self
@@ -38,9 +32,7 @@ class OsmGtPoi(OsmGtCore):
         super().from_bbox(bbox_value)
 
         request = self.from_bbox_query_builder(bbox_value, self.__shop_query)
-
         raw_data = OverpassApi(self.logger).query(request)["elements"]
-
         self._output_data = self.__build_points(raw_data)
 
         return self
