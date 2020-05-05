@@ -1,7 +1,7 @@
 OsmGT
 ====
 
-![CI](https://github.com/wiralyki/osmgt/workflows/CI/badge.svg?event=status)
+![CI](https://github.com/wiralyki/osmgt/workflows/CI/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/wiralyki/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/wiralyki/osmgt)
 
 
