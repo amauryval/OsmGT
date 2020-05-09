@@ -30,7 +30,7 @@ class GeomNetworkCleaner:
         self.logger = logger
         self.logger.info("Network cleaning STARTS!")
 
-        self._network_data = self._check_argument(network_data)
+        self._network_data = self._check_inputs(network_data)
         self._additionnal_nodes = additionnal_nodes.__geo_interface__["features"]
 
         self._output = []
@@ -267,9 +267,10 @@ class GeomNetworkCleaner:
 
         return node_by_nearest_lines
 
-    def _check_argument(self, argument):
-        # TODO check argument
-        return argument
+    def _check_inputs(self, inputs):
+        # TODO add assert
+        assert len(inputs) > 0
+        return inputs
 
     @staticmethod
     def _insert_value(list_object, search_value, value_to_add, position=None):
