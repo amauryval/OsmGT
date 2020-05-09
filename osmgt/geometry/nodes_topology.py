@@ -15,7 +15,7 @@ import functools
 import copy
 
 
-class GeomNetworkCleaner:
+class NodesTopology:
 
     __INTERPOLATION_LEVEL = 7
     __NB_OF_NEAREST_ELEMENTS_TO_FIND = 5
@@ -24,6 +24,7 @@ class GeomNetworkCleaner:
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
     __FIELD_ID = "uuid"
+    __CLEANING_FILED_STATUS = "topology"
 
     def __init__(self, logger, network_data, additionnal_nodes):
 
@@ -93,6 +94,7 @@ class GeomNetworkCleaner:
             feature["properties"][self.__FIELD_ID]: {
                 **{"geometry": list(map(tuple, feature["geometry"]["coordinates"]))},
                 **feature["properties"],
+                **{self.__CLEANING_FILED_STATUS: "unchanged"}
             }
             for feature in self._network_data
         }
@@ -143,15 +145,15 @@ class GeomNetworkCleaner:
             if frozenset(connection_coords[0]) != (frozenset(connection_coords[-1])):
                 # update source node geom
                 self._additionnal_nodes[node_key]["geometry"] = connection_coords
-                connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[
-                    node_key
-                ]
+                self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
+
+                connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
                 node_con_stats["connections_added"] += 1
             else:
                 # node_key already on the network, no need to add it on the graph ; line is not split
-
                 # TODO ? here trying to force split line if node is on the network
                 self._additionnal_nodes[node_key]["geometry"] = connection_coords
+                self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
                 connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[
                     node_key
                 ]
@@ -174,6 +176,9 @@ class GeomNetworkCleaner:
                 self._network_data[best_line["original_line_key"]][
                     "geometry"
                 ] = linestring_linked_updated
+                self._network_data[best_line["original_line_key"]][
+                    self.__CLEANING_FILED_STATUS
+                ] = "split"
 
         self._network_data = {**self._network_data, **connections_added}
 
@@ -298,6 +303,7 @@ class GeomNetworkCleaner:
 
 
 def interpolate_curve_based_on_original_points(x, n):
+    # source https://stackoverflow.com/questions/31243002/higher-order-local-interpolation-of-implicit-curves-in-python/31335255
     if n > 1:
         m = 0.5 * (x[:-1] + x[1:])
         if x.ndim == 2:

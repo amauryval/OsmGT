@@ -44,14 +44,7 @@ class OsmGtPoi(OsmGtCore):
         features = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
 
-            try:
-                geometry = ogr_reproject(
-                    Point(feature["lon"], feature["lat"]),
-                    self.epsg_4236,
-                    self.epsg_3857,
-                )
-            except:
-                geometry = Point(feature["lon"], feature["lat"])
+            geometry = Point(feature["lon"], feature["lat"])
             del feature["lon"]
             del feature["lat"]
 

@@ -4,7 +4,7 @@ from osmgt.apis.nominatim import NominatimApi
 from osmgt.apis.overpass import OverpassApi
 
 from osmgt.geometry.reprojection import ogr_reproject
-from osmgt.geometry.geom_network_cleaner import GeomNetworkCleaner
+from osmgt.geometry.nodes_topology import NodesTopology
 
 from shapely.geometry import LineString
 
@@ -52,7 +52,7 @@ class OsmGtRoads(OsmGtCore):
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
-        raw_data_topology_rebuild = GeomNetworkCleaner(
+        raw_data_topology_rebuild = NodesTopology(
             self.logger, raw_data_restructured, additionnal_nodes
         ).run()
 
@@ -64,22 +64,9 @@ class OsmGtRoads(OsmGtCore):
         raw_data = filter(lambda x: x["type"] == "way", raw_data)
         features = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
-            try:
-                # TODO remove ? seems useless
-                geometry = ogr_reproject(
-                    LineString(
-                        [
-                            (coords["lon"], coords["lat"])
-                            for coords in feature["geometry"]
-                        ]
-                    ),
-                    self.epsg_4236,
-                    self.epsg_3857,
-                )
-            except:
-                geometry = LineString(
-                    [(coords["lon"], coords["lat"]) for coords in feature["geometry"]]
-                )
+            geometry = LineString(
+                [(coords["lon"], coords["lat"]) for coords in feature["geometry"]]
+            )
             del feature["geometry"]
 
             feature_build = self._build_feature_from_osm(uuid_enum, geometry, feature)

@@ -1,6 +1,6 @@
 from osmgt.geometry.reprojection import ogr_reproject
 
-from osmgt.geometry.geom_network_cleaner import GeomNetworkCleaner
+from osmgt.geometry.nodes_topology import NodesTopology
 
 from osmgt.compoments.core import OsmGtCore
 
@@ -19,7 +19,7 @@ def test_reprojection_to_an_other_epsg(point_a, epsg_4326, epsg_2154):
 
 
 def test_connect_lines(some_line_features, some_point_features):
-    raw_data_topology_rebuild = GeomNetworkCleaner(
+    raw_data_topology_rebuild = NodesTopology(
         OsmGtCore().logger, some_line_features, some_point_features
     ).run()
     all_uuid = [f["properties"]["uuid"] for f in raw_data_topology_rebuild]
