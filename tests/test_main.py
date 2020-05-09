@@ -10,13 +10,13 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     network_from_web_found = OsmGt.roads_from_location(
         location_name, poi_from_web_found_gdf
     )
-    network_from_web_found_graph = network_from_web_found.get_graph()
+    _ = network_from_web_found.get_graph()
 
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
     # check POI
-    assert poi_from_web_found_gdf.shape[0] == 205
-    assert poi_from_web_found_gdf.shape[-1] == 115
+    assert poi_from_web_found_gdf.shape[0] > 0
+    assert poi_from_web_found_gdf.shape[-1] > 0
     all_values = list(poi_from_web_found_gdf["uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = poi_from_web_found_gdf.columns
@@ -24,8 +24,8 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
         assert colunm_expected in columns_computed
 
     # check network
-    assert network_from_web_found_gdf.shape[0] == 3366
-    assert network_from_web_found_gdf.shape[-1] == 160
+    assert network_from_web_found_gdf.shape[0] > 0
+    assert network_from_web_found_gdf.shape[-1] > 0
     all_values = list(network_from_web_found_gdf["uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = network_from_web_found_gdf.columns
@@ -38,12 +38,12 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(bbox_value, poi_from_web_found_gdf)
-    network_from_web_found_graph = network_from_web_found.get_graph()
+    _ = network_from_web_found.get_graph()
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
     # check POI
-    assert poi_from_web_found_gdf.shape[0] == 341
-    assert poi_from_web_found_gdf.shape[-1] == 133
+    assert poi_from_web_found_gdf.shape[0] > 0
+    assert poi_from_web_found_gdf.shape[-1] > 0
     all_values = list(poi_from_web_found_gdf["uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = poi_from_web_found_gdf.columns
@@ -51,8 +51,8 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
         assert colunm_expected in columns_computed
 
     # check network
-    assert network_from_web_found_gdf.shape[0] == 7085
-    assert network_from_web_found_gdf.shape[-1] == 190
+    assert network_from_web_found_gdf.shape[0] > 0
+    assert network_from_web_found_gdf.shape[-1] > 0
     all_values = list(network_from_web_found_gdf["uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = network_from_web_found_gdf.columns
