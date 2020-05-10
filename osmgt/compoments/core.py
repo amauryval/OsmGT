@@ -68,7 +68,7 @@ class OsmGtCore(Logger):
         self.logger.info(f"Prepare Geodataframe")
         output_gdf = gpd.GeoDataFrame.from_features(self._output_data)
         output_gdf.crs = self.epsg_4236
-        output_gdf = output_gdf.to_crs(self.epsg_3857)
+        # output_gdf = output_gdf.to_crs(self.epsg_3857)
 
         return output_gdf
 
