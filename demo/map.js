@@ -33,7 +33,7 @@ const omvDataSource = new harp.OmvDataSource({
 map.addDataSource(omvDataSource);
 
 /*dispay roads*/
-fetch('https://github.com/wiralyki/osmgt/blob/master/demo/network.geojson')
+fetch('https://wiralyki.github.io/osmgt/demo/network.geojson')
 .then(data => data.json())
 .then(data => {
    const geoJsonDataProvider = new harp.GeoJsonDataProvider("network", data);
@@ -73,7 +73,7 @@ fetch('https://github.com/wiralyki/osmgt/blob/master/demo/network.geojson')
 })
 
 /*dispay poi*/
-fetch('https://github.com/wiralyki/osmgt/blob/master/demo/poi.geojson')
+fetch('https://wiralyki.github.io/osmgt/demo/poi.geojson')
 .then(data => data.json())
 .then(data => {
    const geoJsonDataProvider = new harp.GeoJsonDataProvider("POIs", data);
