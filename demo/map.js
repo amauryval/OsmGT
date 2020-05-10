@@ -1,3 +1,6 @@
+
+const HARP_TOKEN = require(process.env.harpgl_token);
+
 const canvas = document.getElementById('map');
 const map = new harp.MapView({
    canvas,
@@ -26,7 +29,7 @@ const omvDataSource = new harp.OmvDataSource({
    baseUrl: "https://xyz.api.here.com/tiles/herebase.02",
    apiFormat: harp.APIFormat.XYZOMV,
    styleSetName: "tilezen",
-   authenticationCode: secrets.harpgl_token,
+   authenticationCode: HARP_TOKEN,
 });
 
 map.addDataSource(omvDataSource);
