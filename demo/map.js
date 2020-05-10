@@ -1,5 +1,5 @@
 
-const HARP_TOKEN = require(process.env.harpgl_token);
+const HARP_TOKEN = process.env.harpgl_token;
 
 const canvas = document.getElementById('map');
 const map = new harp.MapView({
