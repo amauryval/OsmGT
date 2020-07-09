@@ -10,7 +10,7 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     network_from_web_found = OsmGt.roads_from_location(
         location_name, poi_from_web_found_gdf
     )
-    _ = network_from_web_found.get_graph()
+    # _ = network_from_web_found.get_graph()
 
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
@@ -38,7 +38,7 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(bbox_value, poi_from_web_found_gdf)
-    _ = network_from_web_found.get_graph()
+    # _ = network_from_web_found.get_graph()
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
     # check POI

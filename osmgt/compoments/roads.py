@@ -1,9 +1,7 @@
 from osmgt.compoments.core import OsmGtCore
 
-from osmgt.apis.nominatim import NominatimApi
 from osmgt.apis.overpass import OverpassApi
 
-from osmgt.geometry.reprojection import ogr_reproject
 from osmgt.geometry.nodes_topology import NodesTopology
 
 from shapely.geometry import LineString

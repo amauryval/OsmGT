@@ -109,6 +109,23 @@ def some_point_features():
             "geometry": Point((4.07091681769133018, 46.03699538217645681)),
             "properties": {"uuid": 5, "id": "5"},
         },  # at the middle line point
+        {
+            "geometry": Point((4.070811393410536, 46.036724772414075)),
+            "properties": {"uuid": 6, "id": "6"},
+        },
+        {
+            "geometry": Point((4.07088624242873376, 46.03680095802188532)),
+            "properties": {"uuid": 7, "id": "7"},
+        },
+        {
+            "geometry": Point((4.07103594046512729, 46.03720327149468972)),
+            "properties": {"uuid": 8, "id": "8"},
+        },
+        {
+            "geometry": Point((4.07101188185213569, 46.0373516329414727)),
+            "properties": {"uuid": 9, "id": "9"},
+        }
+
     ]
     output_gdf = build_geojson_features(all_features)
 

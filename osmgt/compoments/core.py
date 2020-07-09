@@ -11,6 +11,7 @@ from osmgt.apis.nominatim import NominatimApi
 class ErrorOsnGtCore(Exception):
     pass
 
+gpd.options.use_pygeos = True
 
 class OsmGtCore(Logger):
 

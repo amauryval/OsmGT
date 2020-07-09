@@ -24,4 +24,4 @@ WORKDIR /home/app/
 
 EXPOSE 8888
 RUN jupyter notebook --generate-config --allow-root
-CMD ["jupyter", "notebook", "--allow-root", "--notebook-dir=.", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
+CMD ["jupyter", "notebook", "--allow-root", "--notebook-dir=.", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''"]

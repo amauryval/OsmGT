@@ -12,13 +12,30 @@ from more_itertools import split_at
 
 import functools
 
-import copy
+import ujson
 
+import concurrent.futures
+
+from itertools import groupby
+
+def deepcopy(variable):
+    return ujson.loads(ujson.dumps(variable))
+
+
+def merge(master, addition):
+    overlap_lens = (i + 1 for i, e in enumerate(addition) if e == master[-1])
+    for overlap_len in overlap_lens:
+        for i in range(overlap_len):
+            if master[-overlap_len + i] != addition[i]:
+                break
+        else:
+            return master + addition[overlap_len:]
+    return master + addition
 
 class NodesTopology:
 
     __INTERPOLATION_LEVEL = 7
-    __NB_OF_NEAREST_ELEMENTS_TO_FIND = 5
+    __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 5
 
     __NUMBER_OF_NODES_INTERSECTIONS = 2
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
@@ -32,7 +49,7 @@ class NodesTopology:
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_inputs(network_data)
-        self._additionnal_nodes = additionnal_nodes.__geo_interface__["features"]
+        self._additionnal_nodes = ujson.loads(additionnal_nodes.to_json())["features"]
 
         self._output = []
 
@@ -44,50 +61,52 @@ class NodesTopology:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
-        intersections_found = self.find_intersections_from_ways()
+        self._intersections_found = self.find_intersections_from_ways()
 
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
-
-            # compare linecoords and intersections points:
-            # careful: frozenset destroy the coords order
-            coordinates_list = frozenset(map(frozenset, feature["geometry"]))
-            points_intersections = coordinates_list.intersection(intersections_found)
-
-            # rebuild linestring
-            lines_coordinates_rebuild = self._topology_builder(
-                feature["geometry"], points_intersections
-            )
-
-            if len(lines_coordinates_rebuild) != 0:
-                for new_suffix_id, line_coordinates in enumerate(
-                    lines_coordinates_rebuild
-                ):
-
-                    new_geometry = LineString(line_coordinates)
-                    new_geometry_length = new_geometry.length
-                    if new_geometry_length > 0:
-
-                        feature_updated = copy.deepcopy(feature)
-                        feature_updated["uuid"] = str(
-                            f"{feature['id']}_{new_suffix_id}"
-                        )
-                        feature_updated["geometry"] = new_geometry
-                        feature_updated["bounds"] = ", ".join(
-                            map(str, new_geometry.bounds)
-                        )
-                        feature_updated["length"] = new_geometry_length
-
-                        self._output.append(self._geojson_formating(feature_updated))
-
-            else:
-                assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
-                # nothing to change
-                feature["geometry"] = LineString(feature["geometry"])
-                feature["length"] = feature["geometry"].length
-                self._output.append(self._geojson_formating(feature))
+            self.build_lines(feature)
 
         return self._output
+
+    def build_lines(self, feature):
+        # compare linecoords and intersections points:
+        # careful: frozenset destroy the coords order
+        coordinates_list = frozenset(map(frozenset, feature["geometry"]))
+        points_intersections = coordinates_list.intersection(self._intersections_found)
+
+        # rebuild linestring
+        lines_coordinates_rebuild = self._topology_builder(
+            feature["geometry"], points_intersections
+        )
+
+        if len(lines_coordinates_rebuild) != 0:
+            for new_suffix_id, line_coordinates in enumerate(
+                lines_coordinates_rebuild
+            ):
+
+                new_geometry = LineString(line_coordinates)
+                new_geometry_length = new_geometry.length
+                if new_geometry_length > 0:
+
+                    feature_updated = deepcopy(feature)
+                    feature_updated["uuid"] = str(
+                        f"{feature['id']}_{new_suffix_id}"
+                    )
+                    feature_updated["geometry"] = new_geometry
+                    feature_updated["bounds"] = ", ".join(
+                        map(str, new_geometry.bounds)
+                    )
+                    feature_updated["length"] = new_geometry_length
+
+                    self._output.append(self._geojson_formating(feature_updated))
+
+        else:
+            assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
+            # nothing to change
+            feature["geometry"] = LineString(feature["geometry"])
+            feature["length"] = feature["geometry"].length
+            self._output.append(self._geojson_formating(feature))
 
     def _prepare_data(self):
         self._network_data = {
@@ -106,86 +125,86 @@ class NodesTopology:
             }
             for feature in self._additionnal_nodes
         }
-        assert True
 
     def compute_added_node_connections(self):
-        node_con_stats = {"connections_added": 0, "line_split": 0}
-        connections_added = {}
+        self.__node_con_stats = {"connections_added": 0, "line_split": 0}
+        self.__connections_added = {}
 
         self.logger.info("Starting: Adding new nodes on the network")
         node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
 
-        for node_key, lines_keys in node_by_nearest_lines.items():
-            node_found = self._additionnal_nodes[node_key]
-            candidates = {}
-            for line_key in lines_keys:
-                interpolated_line_coords = self.__compute_interpolation_on_line(
-                    line_key
-                )
+        self._bestlines_found = []
+        # for node_feature in node_by_nearest_lines.items():
+        #     self.proceed_nodes_on_network(node_feature)
+        with concurrent.futures.ThreadPoolExecutor(4) as executor:
+            executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
 
-                line_tree = spatial.cKDTree(interpolated_line_coords)
-                dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
+        for item in groupby(self._bestlines_found, key=lambda x: x['original_line_key']):
+            self.insert_new_nodes_on_its_line(item)
 
-                new_candidate = {
-                    "interpolated_line": list(map(tuple, interpolated_line_coords)),
-                    "original_line": self._network_data[line_key]["geometry"],
-                    "original_line_key": line_key,
-                    "end_point_found": tuple(
-                        interpolated_line_coords[nearest_line_object_idx]
-                    ),
-                }
-                candidates[dist] = new_candidate
-
-            best_line = candidates[min(candidates.keys())]
-            connection_coords = [
-                tuple(node_found["geometry"]),
-                best_line["end_point_found"],
-            ]
-
-            if frozenset(connection_coords[0]) != (frozenset(connection_coords[-1])):
-                # update source node geom
-                self._additionnal_nodes[node_key]["geometry"] = connection_coords
-                self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
-
-                connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
-                node_con_stats["connections_added"] += 1
-            else:
-                # node_key already on the network, no need to add it on the graph ; line is not split
-                # TODO ? here trying to force split line if node is on the network
-                self._additionnal_nodes[node_key]["geometry"] = connection_coords
-                self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
-                connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[
-                    node_key
-                ]
-
-            # update source line geom
-            linestring_linked_updated = list(
-                filter(
-                    lambda x: tuple(x)
-                    in best_line["original_line"] + [best_line["end_point_found"]],
-                    best_line["interpolated_line"],
-                )
-            )
-
-            if len(linestring_linked_updated) == 1:
-                print(f"no need to update line, because no new node added")
-            if len(linestring_linked_updated) == 0:
-                assert True
-            else:
-                node_con_stats["line_split"] += 1
-                self._network_data[best_line["original_line_key"]][
-                    "geometry"
-                ] = linestring_linked_updated
-                self._network_data[best_line["original_line_key"]][
-                    self.__CLEANING_FILED_STATUS
-                ] = "split"
-
-        self._network_data = {**self._network_data, **connections_added}
+        self._network_data = {**self._network_data, **self.__connections_added}
 
         stats_infos = ", ".join(
-            [f"{key}: {value}" for key, value in node_con_stats.items()]
+            [f"{key}: {value}" for key, value in self.__node_con_stats.items()]
         )
         self.logger.info(f"Done: Adding new nodes on the network ; {stats_infos}")
+
+    def insert_new_nodes_on_its_line(self, item):
+        original_line_key, values = item
+        list_values = list(values)
+
+        interpolated_line = [value["interpolated_line"] for value in list_values][0]  # always the same...
+        end_points_found = list(set([value["end_point_found"] for value in list_values]))
+        linestring_with_new_nodes = self._network_data[original_line_key]["geometry"]
+        # self.__node_con_stats["line_split"] += len(end_points_found)
+        linestring_with_new_nodes.extend(end_points_found)
+        linestring_with_new_nodes = set(linestring_with_new_nodes)
+        self.__node_con_stats["line_split"] += len(linestring_with_new_nodes.intersection(end_points_found))
+
+        linestring_linked_updated = list(
+            filter(
+                lambda x: x in linestring_with_new_nodes,
+                interpolated_line,
+            )
+        )
+        self._network_data[original_line_key]["geometry"] = linestring_linked_updated
+        self._network_data[original_line_key][self.__CLEANING_FILED_STATUS] = "split"
+
+    def proceed_nodes_on_network(self, node_feature):
+        node_key, lines_keys = node_feature
+        node_found = self._additionnal_nodes[node_key]
+        candidates = {}
+        for line_key in lines_keys:
+            interpolated_line_coords = self.__compute_interpolation_on_line(
+                line_key
+            )
+            line_tree = spatial.cKDTree(interpolated_line_coords)
+            dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
+
+            new_candidate = {
+                "interpolated_line": list(map(tuple, interpolated_line_coords)),
+                "original_line_key": line_key,
+                "end_point_found": tuple(
+                    interpolated_line_coords[nearest_line_object_idx]
+                ),
+            }
+            candidates[dist] = new_candidate
+
+        best_line = candidates[min(candidates.keys())]
+        connection_coords = [
+            tuple(node_found["geometry"]),
+            best_line["end_point_found"],
+        ]
+
+        if len(set(connection_coords)) > 1:
+            # else node_key already on the network, no need to add it on the line
+            self.__node_con_stats["connections_added"] += 1
+            self._bestlines_found.append(best_line)
+
+        # to split line at node (and also if node is on the network). it builds intersection used to split slines
+        self._additionnal_nodes[node_key]["geometry"] = connection_coords
+        self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
+        self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
 
     @functools.lru_cache(maxsize=None)
     def __compute_interpolation_on_line(self, line_key):
@@ -264,7 +283,7 @@ class NodesTopology:
                 index_feature
                 for index_feature in tree_index.nearest(
                     tuple(map(float, node["bounds"].split(", "))),
-                    self.__NB_OF_NEAREST_ELEMENTS_TO_FIND,
+                    self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND,
                 )
             ]
             for node_uuid, node in self._additionnal_nodes.items()

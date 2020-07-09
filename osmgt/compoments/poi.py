@@ -2,8 +2,6 @@ from osmgt.compoments.core import OsmGtCore
 
 from osmgt.apis.overpass import OverpassApi
 
-from osmgt.geometry.reprojection import ogr_reproject
-
 from shapely.geometry import Point
 
 

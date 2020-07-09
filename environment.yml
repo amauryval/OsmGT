@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - python=3.8
-  - geopandas
+  - geopandas=0.8.0
   - bokeh
   - Shapely
   - requests
@@ -19,3 +19,6 @@ dependencies:
   - scipy
   - pytest
   - pytest-cov
+  - jupyter
+  - ujson
+  - pygeos=0.7.1
