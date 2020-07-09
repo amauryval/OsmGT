@@ -1,5 +1,3 @@
-from osmgt.geometry.reprojection import ogr_reproject
-
 from osmgt.geometry.nodes_topology import NodesTopology
 
 from osmgt.compoments.core import OsmGtCore
