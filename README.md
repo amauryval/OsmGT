@@ -33,7 +33,7 @@ OpenStreetMap based on graph-tools
 docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
 ```
 
-# How to play 
+# How to install it 
 __(TODO)__
 
 check example.ipynb notebook and the svg output

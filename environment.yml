@@ -1,24 +1,20 @@
 name: osmgt
 channels:
   - conda-forge
+  - amauryval
   - defaults
 dependencies:
   - python=3.8
   - geopandas=0.8.0
-  - bokeh
-  - Shapely
-  - requests
-  - pandas
-  - GDAL
-  - numpy
-  - pyproj
-  - geojson
-  - python-dateutil
+  - easy_map_bokeh=1.0.0
+  - requests=2.23.0
+  - numpy=1.18.1
+  - geojson=2.5.0
+  - python-dateutil=2.8.1
   - graph-tool
   - cairo
-  - scipy
-  - pytest
-  - pytest-cov
-  - jupyter
-  - ujson
-  - pygeos=0.7.1
+  - scipy=1.3.2
+  - pytest=5.4.1
+  - pytest-cov=2.8.1
+  - jupyter=1.0.0
+  - ujson=3.0.0

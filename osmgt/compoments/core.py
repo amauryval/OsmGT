@@ -11,10 +11,9 @@ from osmgt.apis.nominatim import NominatimApi
 class ErrorOsnGtCore(Exception):
     pass
 
-gpd.options.use_pygeos = True
 
 class OsmGtCore(Logger):
-
+    __NOMINATIM_DEFAULT_ID = 3600000000  #  this is it...
     _location_id = None
 
     def __init__(self):
@@ -86,7 +85,7 @@ class OsmGtCore(Logger):
         return 4326
 
     def location_osm_default_id_computing(self, osm_location_id):
-        return osm_location_id + 3600000000  #  this is it...
+        return osm_location_id + self.__NOMINATIM_DEFAULT_ID
 
     def _build_feature_from_osm(self, uuid_enum, geometry, properties):
 

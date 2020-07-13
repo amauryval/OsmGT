@@ -4,24 +4,24 @@ FROM continuumio/miniconda3
 RUN apt-get update
 RUN apt install libgtk-3-0 libgtk-3-dev -y
 
-# prepare env file directory
-ARG temp_dir=/tmp
-ARG conda_file_env=environment.yml
-ARG conda_dir_env=$temp_dir/$conda_file_env
-
-COPY $conda_file_env $conda_dir_env
-WORKDIR $temp_dir
+# prepare app directory
+COPY environment.yml /home/app/
+WORKDIR /home/app/
 
 # conda env creation
-RUN conda env create -f $conda_dir_env
+RUN conda env create -f environment.yml
 RUN echo "source activate osmgt" > ~/.bashrc
 ENV PATH /opt/conda/envs/osmgt/bin:$PATH
+#RUN echo "source activate $(head -1 $conda_dir_env | cut -d' ' -f2)" > ~/.bashrc
+#ENV PATH /opt/conda/envs/$(head -1 $conda_dir_env | cut -d' ' -f2)/bin:$PATH
 
-# copy the library
 COPY . /home/app/
 
-WORKDIR /home/app/
+# Initialize conda in bash config fiiles:
+#RUN conda list -n osmgt
+#RUN python -c "from geo_bokeh import BokehForMap as a"
+
 
 EXPOSE 8888
 RUN jupyter notebook --generate-config --allow-root
-CMD ["jupyter", "notebook", "--allow-root", "--notebook-dir=.", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''"]
+CMD ["conda", "run", "-n", "osmgt", "jupyter", "notebook", "--allow-root", "--notebook-dir=.", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''"]
