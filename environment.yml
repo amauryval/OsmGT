@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python=3.8
   - geopandas=0.8.0
-  - easy_map_bokeh=1.1.0
+  - easy_map_bokeh=1.2.0
   - requests=2.23.0
   - numpy=1.18.1
   - geojson=2.5.0
