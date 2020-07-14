@@ -31,7 +31,6 @@ class GraphHelpers(Graph):
 
     def __init__(self):
         """
-
         :param directed: is directed or not
         :type directed: bool
         """
@@ -229,7 +228,7 @@ class GraphHelpers(Graph):
 
         return self.find_vertex_from_name(vertex_name) is not None
 
-    def plot(self, output_file_with_extension):
+    def plot(self, output_file_with_extension=None):
         pos = sfdp_layout(self)
         graph_draw(
             self,
@@ -239,7 +238,7 @@ class GraphHelpers(Graph):
             vertex_anchor=0,
             vertex_color="white",
             vertex_fill_color=(0, 0, 0, 1),  # normalized values
-            vertex_pen_width=0.6,
+            vertex_pen_width=1,
             edge_color=(1, 0, 0, 1),
             bg_color=(0, 0, 0, 1),
             output_size=[1024, 1024],

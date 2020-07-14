@@ -140,3 +140,10 @@ def pois_default_columns_from_output():
 @pytest.fixture
 def roads_default_columns_from_output():
     return ["id", "uuid", "bounds", "geometry", "length"]
+
+
+@pytest.fixture
+def points_gdf_from_coords():
+    point_a = Point(451754.566, 5786544.841)
+    point_b = Point(454531.361, 5789346.920)
+    return gpd.GeoDataFrame(index=[0, 1], crs="EPSG:3857", geometry=[point_a, point_b])

@@ -13,7 +13,7 @@ class ErrorOsnGtCore(Exception):
 
 
 class OsmGtCore(Logger):
-    __NOMINATIM_DEFAULT_ID = 3600000000  #  this is it...
+    __NOMINATIM_DEFAULT_ID = 3600000000  # this is it
     _location_id = None
 
     def __init__(self):
@@ -23,9 +23,7 @@ class OsmGtCore(Logger):
         self.logger.info(f"From location: {location_name}")
         self.logger.info("Loading data...")
 
-        location_id = next(iter(NominatimApi(self.logger, q=location_name, limit=1).data()))[
-            "osm_id"
-        ]
+        location_id = next(iter(NominatimApi(self.logger, q=location_name, limit=1).data()))["osm_id"]
         self._location_id = self.location_osm_default_id_computing(location_id)
 
     def from_bbox(self, bbox_value):
@@ -78,11 +76,7 @@ class OsmGtCore(Logger):
 
     @property
     def epsg_4236(self):
-        return 4326
-
-    @property
-    def epsg_3857(self):
-        return 4326
+        return "EPSG:4326"
 
     def location_osm_default_id_computing(self, osm_location_id):
         return osm_location_id + self.__NOMINATIM_DEFAULT_ID
@@ -93,7 +87,7 @@ class OsmGtCore(Logger):
         properties_found["id"] = properties["id"]
         properties_found["uuid"] = uuid_enum
         properties_found["bounds"] = ", ".join(map(str, geometry.bounds))
-
+        # TODO add CRS
         feature_build = geojson.Feature(geometry=geometry, properties=properties_found)
 
         return feature_build

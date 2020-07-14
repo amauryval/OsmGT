@@ -5,6 +5,7 @@ from osmgt.apis.overpass import OverpassApi
 from osmgt.geometry.nodes_topology import NodesTopology
 
 from shapely.geometry import LineString
+from shapely.geometry import Point
 
 from osmgt.network.gt_helper import GraphHelpers
 
@@ -41,8 +42,8 @@ class OsmGtRoads(OsmGtCore):
 
         for feature in self._output_data:
             graph.add_edge(
-                feature["geometry"].coords[0],
-                feature["geometry"].coords[-1],
+                Point(feature["geometry"].coords[0]).wkt,
+                Point(feature["geometry"].coords[-1]).wkt,
                 feature["properties"]["uuid"],
                 feature["properties"]["length"],
             )
