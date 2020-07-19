@@ -18,6 +18,7 @@ import concurrent.futures
 
 from itertools import groupby
 
+
 def deepcopy(variable):
     return ujson.loads(ujson.dumps(variable))
 
@@ -40,16 +41,16 @@ class NodesTopology:
     __NUMBER_OF_NODES_INTERSECTIONS = 2
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
-    __FIELD_ID = "uuid"
     __CLEANING_FILED_STATUS = "topology"
 
-    def __init__(self, logger, network_data, additionnal_nodes):
+    def __init__(self, logger, network_data, additionnal_nodes, uuid_field):
 
         self.logger = logger
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_inputs(network_data)
         self._additionnal_nodes = ujson.loads(additionnal_nodes.to_json())["features"]
+        self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
 
         self._output = []
 
@@ -87,8 +88,8 @@ class NodesTopology:
                 lines_coordinates_rebuild
             ):
                 feature_updated = deepcopy(feature)
-                feature_updated["uuid"] = str(
-                    f"{feature['id']}_{new_suffix_id}"
+                feature_updated[self.__FIELD_ID] = str(
+                    f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
                 )
                 feature_updated["geometry"] = LineString(line_coordinates)
                 feature_updated[self.__CLEANING_FILED_STATUS] = "split"
@@ -100,10 +101,11 @@ class NodesTopology:
             # nothing to change
             feature["geometry"] = LineString(feature["geometry"])
             if feature["geometry"].length > 0:
-                feature["uuid"] = feature['id']
+                feature[self.__FIELD_ID] = str(feature[self.__FIELD_ID])
                 self._output.append(self._geojson_formating(feature))
 
     def _prepare_data(self):
+
         self._network_data = {
             feature["properties"][self.__FIELD_ID]: {
                 **{"geometry": list(map(tuple, feature["geometry"]["coordinates"]))},
@@ -199,6 +201,7 @@ class NodesTopology:
         # to split line at node (and also if node is on the network). it builds intersection used to split lines
         self._additionnal_nodes[node_key]["geometry"] = connection_coords
         self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
+        self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
         self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
 
     @functools.lru_cache(maxsize=None)

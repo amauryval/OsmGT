@@ -19,7 +19,7 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     # check POI
     assert poi_from_web_found_gdf.shape[0] > 0
     assert poi_from_web_found_gdf.shape[-1] > 0
-    all_values = list(poi_from_web_found_gdf["uuid"].values)
+    all_values = list(poi_from_web_found_gdf["topo_uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = poi_from_web_found_gdf.columns
     for colunm_expected in pois_default_columns_from_output:
@@ -28,7 +28,7 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     # check network
     assert network_from_web_found_gdf.shape[0] > 0
     assert network_from_web_found_gdf.shape[-1] > 0
-    all_values = list(network_from_web_found_gdf["uuid"].values)
+    all_values = list(network_from_web_found_gdf["topo_uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = network_from_web_found_gdf.columns
     for colunm_expected in roads_default_columns_from_output:
@@ -53,7 +53,7 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     # check POI
     assert poi_from_web_found_gdf.shape[0] > 0
     assert poi_from_web_found_gdf.shape[-1] > 0
-    all_values = list(poi_from_web_found_gdf["uuid"].values)
+    all_values = list(poi_from_web_found_gdf["topo_uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = poi_from_web_found_gdf.columns
     for colunm_expected in pois_default_columns_from_output:
@@ -62,7 +62,7 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     # check network
     assert network_from_web_found_gdf.shape[0] > 0
     assert network_from_web_found_gdf.shape[-1] > 0
-    all_values = list(network_from_web_found_gdf["uuid"].values)
+    all_values = list(network_from_web_found_gdf["topo_uuid"].values)
     assert len(set(all_values)) == len(all_values)
     columns_computed = network_from_web_found_gdf.columns
     for colunm_expected in roads_default_columns_from_output:
@@ -87,8 +87,8 @@ def test_if_graph_works(points_gdf_from_coords):
     graph_computed = network_from_web_found.get_graph()
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
-    start_node = poi_from_web_found_gdf[poi_from_web_found_gdf['uuid'] == 47].iloc[0]["geometry"].wkt
-    end_node = poi_from_web_found_gdf[poi_from_web_found_gdf['uuid'] == 63].iloc[0]["geometry"].wkt
+    start_node = poi_from_web_found_gdf[poi_from_web_found_gdf['topo_uuid'] == 47].iloc[0]["geometry"].wkt
+    end_node = poi_from_web_found_gdf[poi_from_web_found_gdf['topo_uuid'] == 63].iloc[0]["geometry"].wkt
 
     source_vertex = graph_computed.find_vertex_from_name(start_node)
     target_vertex = graph_computed.find_vertex_from_name(end_node)
@@ -106,8 +106,11 @@ def test_if_graph_works(points_gdf_from_coords):
         graph_computed.edge_names[edge]
         for edge in path_edges
     ]
+    assert "added_47" in path_ids[0]
+    assert "added_63" in path_ids[-1]
+
     shortest_path = network_from_web_found_gdf.copy(deep=True)
-    shortest_path = shortest_path[shortest_path['uuid'].isin(path_ids)]
+    shortest_path = shortest_path[shortest_path['topo_uuid'].isin(path_ids)]
 
     assert len(path_ids) == 81
     assert shortest_path.shape[0] == 81

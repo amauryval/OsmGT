@@ -7,7 +7,7 @@ from osmgt.geometry.nodes_topology import NodesTopology
 from shapely.geometry import LineString
 from shapely.geometry import Point
 
-# from osmgt.network.gt_helper import GraphHelpers
+from osmgt.network.gt_helper import GraphHelpers
 
 
 class OsmGtRoads(OsmGtCore):
@@ -36,23 +36,23 @@ class OsmGtRoads(OsmGtCore):
 
         return self
 
-    # def get_graph(self):
-    #     self.check_build_input_data()
-    #     graph = GraphHelpers()
-    #
-    #     for feature in self._output_data:
-    #         graph.add_edge(
-    #             Point(feature["geometry"].coords[0]).wkt,
-    #             Point(feature["geometry"].coords[-1]).wkt,
-    #             feature["properties"]["uuid"],
-    #             feature["geometry"].length  # feature["properties"]["length"],
-    #         )
-    #     return graph
+    def get_graph(self):
+        self.check_build_input_data()
+        graph = GraphHelpers()
+
+        for feature in self._output_data:
+            graph.add_edge(
+                Point(feature["geometry"].coords[0]).wkt,
+                Point(feature["geometry"].coords[-1]).wkt,
+                feature["properties"]["topo_uuid"],
+                feature["geometry"].length  # feature["properties"]["length"],
+            )
+        return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NodesTopology(
-            self.logger, raw_data_restructured, additionnal_nodes
+            self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD
         ).run()
 
         return raw_data_topology_rebuild

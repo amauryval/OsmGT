@@ -14,7 +14,9 @@ class ErrorOsnGtCore(Exception):
 
 class OsmGtCore(Logger):
     __NOMINATIM_DEFAULT_ID = 3600000000  # this is it
+    __USELESS_COLUMNS = []
     _location_id = None
+    TOPO_FIELD = "topo_uuid"
 
     def __init__(self):
         super().__init__()
@@ -65,6 +67,9 @@ class OsmGtCore(Logger):
 
         self.logger.info(f"Prepare Geodataframe")
         output_gdf = gpd.GeoDataFrame.from_features(self._output_data)
+
+        output_gdf = self._clean_attributes(output_gdf)
+
         output_gdf.crs = self.epsg_4236
         # output_gdf = output_gdf.to_crs(self.epsg_3857)
 
@@ -73,6 +78,13 @@ class OsmGtCore(Logger):
     def check_build_input_data(self):
         if self._output_data is None:
             raise ErrorOsnGtCore("Data is empty!")
+
+    def _clean_attributes(self, input_gdf):
+        for col_name in input_gdf.columns:
+            if col_name in self.__USELESS_COLUMNS:
+                input_gdf.drop(columns=[col_name], inplace=True)
+
+        return input_gdf
 
     @property
     def epsg_4236(self):
@@ -85,8 +97,11 @@ class OsmGtCore(Logger):
 
         properties_found = properties.get("tags", {})
         properties_found["id"] = properties["id"]
-        properties_found["uuid"] = uuid_enum
+
+        # used for topology
         properties_found["bounds"] = ", ".join(map(str, geometry.bounds))
+        properties_found[self.TOPO_FIELD] = uuid_enum
+
         # TODO add CRS
         feature_build = geojson.Feature(geometry=geometry, properties=properties_found)
 

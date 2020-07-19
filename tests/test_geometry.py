@@ -5,29 +5,41 @@ from osmgt.compoments.core import OsmGtCore
 
 def test_connect_lines(some_line_features, some_point_features):
     raw_data_topology_rebuild = NodesTopology(
-        OsmGtCore().logger, some_line_features, some_point_features
+        OsmGtCore().logger, some_line_features, some_point_features, "uuid"
     ).run()
-    all_uuid = [f["properties"]["uuid"] for f in raw_data_topology_rebuild]
+    all_uuid = [feature["properties"]["uuid"] for feature in raw_data_topology_rebuild]
 
-    assert len(raw_data_topology_rebuild) == 17
+    assert len(raw_data_topology_rebuild) == 18
     # check duplicated
-    assert len(set(all_uuid)) == len(all_uuid)
-    assert set(all_uuid) == set([
-        "10_0",
-        "10_1",
-        "10_2",
-        "10_3",
-        "10_4",
-        "10_5",
-        "10_6",
-        "10_7",
-        "11_0",
-        "11_1",
-        "3",
-        "1",
-        "2",
-        "8",
-        "9",
-        "7",
-        "6"
+    assert len(all_uuid) == len(all_uuid)
+    assert len(all_uuid) == len(set(all_uuid))
+    assert sorted(all_uuid) == sorted([
+        '10_0',
+        '10_1',
+        '10_2',
+        '10_3',
+        '10_4',
+        '10_5',
+        '10_6',
+        '10_7',
+        '11_0',
+        '11_1',
+        '12',
+        'added_1',
+        'added_2',
+        'added_3',
+        'added_6',
+        'added_7',
+        'added_8',
+        'added_9'
     ])
+
+    for feature in raw_data_topology_rebuild:
+        if feature["properties"]["topology"] == "unchanged":
+            assert "_" not in feature["properties"]["uuid"]
+
+        if feature["properties"]["topology"] == "split":
+            assert "_" in feature["properties"]["uuid"]
+
+        if feature["properties"]["topology"] == "added":
+            assert "added_" in feature["properties"]["uuid"]

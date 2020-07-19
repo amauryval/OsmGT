@@ -15,7 +15,7 @@ lyon_new_points = [
     {"geometry": (4.83314077770076089, 45.75808107370855282), "tags": {"value": 2}},
 ]
 def test_from_web():
-    location = "lyon"
+    location = "roanne"
     poi_output_name = f"{location}_poi"
     network_output_name = f"{location}_network"
 
@@ -24,7 +24,7 @@ def test_from_web():
     # poi_from_web_found.export_to_osmgt_file(poi_output_name)
 
     # poi_from_osmgt_file_found = OsmGt.roads_from_osmgt_file(f"{poi_output_name}.osmgt")
-    poi_gdf = poi_from_web_found.get_gdf()[["uuid", "id", "name", "amenity", "geometry", "bounds"]]
+    poi_gdf = poi_from_web_found.get_gdf()[["topo_uuid", "id", "name", "amenity", "geometry", "bounds"]]
     poi_gdf.to_file(f"{poi_output_name}.shp", driver="ESRI Shapefile")
 
     # get NETWORK
@@ -35,7 +35,7 @@ def test_from_web():
     #     f"{network_output_name}.osmgt"
     # )
 
-    network_from_osmgt_file_found = network_from_web_found.get_gdf()[["uuid", "id", "name", "highway", "geometry", "topology"]]
+    network_from_osmgt_file_found = network_from_web_found.get_gdf()[["topo_uuid", "id", "name", "highway", "geometry", "topology"]]
 
     network_from_osmgt_file_found.to_file(
         f"{network_output_name}.shp", driver="ESRI Shapefile"
