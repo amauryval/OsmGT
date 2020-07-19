@@ -92,23 +92,23 @@ def some_point_features():
         {
             "geometry": Point((4.07083953255024333, 46.03693156996429536)),
             "properties": {"uuid": 1, "id": "1"},
-        },  # on a side
+        },  # outside
         {
             "geometry": Point((4.07089961963211167, 46.03664388029959298)),
             "properties": {"uuid": 2, "id": "2"},
-        },  # on a side
+        },  # outside
         {
             "geometry": Point((4.07097056291628423, 46.03710105075762726)),
             "properties": {"uuid": 3, "id": "3"},
-        },  # on a side
+        },  # outside
         {
             "geometry": Point((4.07114907206290066, 46.03760345278882937)),
             "properties": {"uuid": 4, "id": "4"},
-        },  # at the line start point
+        },  # at the line start node
         {
             "geometry": Point((4.07091681769133018, 46.03699538217645681)),
             "properties": {"uuid": 5, "id": "5"},
-        },  # at the middle line point
+        },  # at one linestring node
         {
             "geometry": Point((4.070811393410536, 46.036724772414075)),
             "properties": {"uuid": 6, "id": "6"},
@@ -134,12 +134,12 @@ def some_point_features():
 
 @pytest.fixture
 def pois_default_columns_from_output():
-    return ["id", "uuid", "bounds", "geometry"]
+    return ["id", "uuid", "geometry"]
 
 
 @pytest.fixture
 def roads_default_columns_from_output():
-    return ["id", "uuid", "bounds", "geometry", "length"]
+    return ["id", "uuid", "geometry"]
 
 
 @pytest.fixture

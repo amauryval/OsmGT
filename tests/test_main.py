@@ -4,8 +4,6 @@ from osmgt import OsmGt
 
 import graph_tool.all as gt
 
-from easy_map_bokeh import EasyMapBokeh
-
 
 def test_run_from_location_name_func(pois_default_columns_from_output, roads_default_columns_from_output):
     location_name = "roanne"

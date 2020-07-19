@@ -65,6 +65,7 @@ class NodesTopology:
 
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
+            del feature["bounds"]
             self.build_lines(feature)
 
         return self._output
@@ -80,33 +81,27 @@ class NodesTopology:
             feature["geometry"], points_intersections
         )
 
-        if len(lines_coordinates_rebuild) != 0:
+        if len(lines_coordinates_rebuild) > 1:
+
             for new_suffix_id, line_coordinates in enumerate(
                 lines_coordinates_rebuild
             ):
+                feature_updated = deepcopy(feature)
+                feature_updated["uuid"] = str(
+                    f"{feature['id']}_{new_suffix_id}"
+                )
+                feature_updated["geometry"] = LineString(line_coordinates)
+                feature_updated[self.__CLEANING_FILED_STATUS] = "split"
 
-                new_geometry = LineString(line_coordinates)
-                new_geometry_length = new_geometry.length
-                if new_geometry_length > 0:
-
-                    feature_updated = deepcopy(feature)
-                    feature_updated["uuid"] = str(
-                        f"{feature['id']}_{new_suffix_id}"
-                    )
-                    feature_updated["geometry"] = new_geometry
-                    feature_updated["bounds"] = ", ".join(
-                        map(str, new_geometry.bounds)
-                    )
-                    feature_updated["length"] = new_geometry_length
-
+                if feature_updated["geometry"].length > 0:
                     self._output.append(self._geojson_formating(feature_updated))
 
         else:
-            assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
             # nothing to change
             feature["geometry"] = LineString(feature["geometry"])
-            feature["length"] = feature["geometry"].length
-            self._output.append(self._geojson_formating(feature))
+            if feature["geometry"].length > 0:
+                feature["uuid"] = feature['id']
+                self._output.append(self._geojson_formating(feature))
 
     def _prepare_data(self):
         self._network_data = {
@@ -168,7 +163,7 @@ class NodesTopology:
             )
         )
         self._network_data[original_line_key]["geometry"] = linestring_linked_updated
-        self._network_data[original_line_key][self.__CLEANING_FILED_STATUS] = "split"
+        # self._network_data[original_line_key][self.__CLEANING_FILED_STATUS] = "split"
 
     def proceed_nodes_on_network(self, node_feature):
         node_key, lines_keys = node_feature
@@ -201,7 +196,7 @@ class NodesTopology:
             self.__node_con_stats["connections_added"] += 1
             self._bestlines_found.append(best_line)
 
-        # to split line at node (and also if node is on the network). it builds intersection used to split slines
+        # to split line at node (and also if node is on the network). it builds intersection used to split lines
         self._additionnal_nodes[node_key]["geometry"] = connection_coords
         self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
         self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
