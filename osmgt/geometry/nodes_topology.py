@@ -78,29 +78,26 @@ class NodesTopology:
         points_intersections = coordinates_list.intersection(self._intersections_found)
 
         # rebuild linestring
-        lines_coordinates_rebuild = self._topology_builder(
-            feature["geometry"], points_intersections
-        )
+        if len(set(feature["geometry"])) > 1:
+            lines_coordinates_rebuild = self._topology_builder(
+                feature["geometry"], points_intersections
+            )
 
-        if len(lines_coordinates_rebuild) > 1:
+            if len(lines_coordinates_rebuild) > 1:
 
-            for new_suffix_id, line_coordinates in enumerate(
-                lines_coordinates_rebuild
-            ):
-                feature_updated = deepcopy(feature)
-                feature_updated[self.__FIELD_ID] = str(
-                    f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
-                )
-                feature_updated["geometry"] = LineString(line_coordinates)
-                feature_updated[self.__CLEANING_FILED_STATUS] = "split"
+                for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
+                    feature_updated = deepcopy(feature)
+                    feature_updated[self.__FIELD_ID] = str(
+                        f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
+                    )
+                    feature_updated["geometry"] = LineString(line_coordinates)
+                    feature_updated[self.__CLEANING_FILED_STATUS] = "split"
 
-                if feature_updated["geometry"].length > 0:
                     self._output.append(self._geojson_formating(feature_updated))
 
-        else:
-            # nothing to change
-            feature["geometry"] = LineString(feature["geometry"])
-            if feature["geometry"].length > 0:
+            else:
+                # nothing to change
+                feature["geometry"] = LineString(feature["geometry"])
                 feature[self.__FIELD_ID] = str(feature[self.__FIELD_ID])
                 self._output.append(self._geojson_formating(feature))
 
@@ -148,22 +145,25 @@ class NodesTopology:
 
     def insert_new_nodes_on_its_line(self, item):
         original_line_key, values = item
-        list_values = list(values)
+        data_to_insert = list(values)
 
-        interpolated_line = [value["interpolated_line"] for value in list_values][0]  # always the same...
-        end_points_found = list(set([value["end_point_found"] for value in list_values]))
+        interpolated_line = [value["interpolated_line"] for value in data_to_insert][0]  # always the same interpolated line...
+        end_points_found = list(set([value["end_point_found"] for value in data_to_insert]))  # multiple points can ben found
+
         linestring_with_new_nodes = self._network_data[original_line_key]["geometry"]
         # self.__node_con_stats["line_split"] += len(end_points_found)
         linestring_with_new_nodes.extend(end_points_found)
         linestring_with_new_nodes = set(linestring_with_new_nodes)
         self.__node_con_stats["line_split"] += len(linestring_with_new_nodes.intersection(end_points_found))
 
+        # build new linestrings
         linestring_linked_updated = list(
             filter(
                 lambda x: x in linestring_with_new_nodes,
                 interpolated_line,
             )
         )
+
         self._network_data[original_line_key]["geometry"] = linestring_linked_updated
         # self._network_data[original_line_key][self.__CLEANING_FILED_STATUS] = "split"
 
@@ -215,6 +215,7 @@ class NodesTopology:
         return interpolated_line_coords
 
     def _topology_builder(self, coordinates, points_intersections):
+
         is_rebuild = False
 
         # split coordinates found at intersection to respect the topology
@@ -258,6 +259,7 @@ class NodesTopology:
                 ],
             )
         )
+
         intersections_found = dict(
             filter(
                 lambda x: x[1] >= self.__NUMBER_OF_NODES_INTERSECTIONS,
