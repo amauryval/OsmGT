@@ -103,11 +103,11 @@ def test_if_graph_works(points_gdf_from_coords):
         weights=graph_computed.edge_weights
     )
 
+    # get path by using edge names
     path_ids = [
         graph_computed.edge_names[edge]
         for edge in path_edges
     ]
-
     shortest_path = network_from_web_found_gdf.copy(deep=True)
     shortest_path = shortest_path[shortest_path['uuid'].isin(path_ids)]
 

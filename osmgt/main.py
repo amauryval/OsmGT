@@ -1,11 +1,9 @@
-# from osmgt.compoments.osm_web_src import OsmGtWebSource
-# from osmgt.compoments.osmgt_file_src import OsmgtFileSource
-
 from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
 
 class OsmGt:
+
     @staticmethod
     def roads_from_location(location_name, additionnal_nodes=None):
         return OsmGtRoads().from_location(location_name, additionnal_nodes)
