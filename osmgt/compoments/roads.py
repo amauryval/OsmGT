@@ -37,6 +37,7 @@ class OsmGtRoads(OsmGtCore):
         return self
 
     def get_graph(self):
+        self.logger.info("Prepare graph")
         self.check_build_input_data()
         graph = GraphHelpers()
 
@@ -44,8 +45,8 @@ class OsmGtRoads(OsmGtCore):
             graph.add_edge(
                 Point(feature["geometry"].coords[0]).wkt,
                 Point(feature["geometry"].coords[-1]).wkt,
-                feature["properties"]["topo_uuid"],
-                feature["geometry"].length  # feature["properties"]["length"],
+                feature["properties"][self.TOPO_FIELD],
+                feature["geometry"].length
             )
         return graph
 

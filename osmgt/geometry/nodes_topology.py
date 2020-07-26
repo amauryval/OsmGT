@@ -33,6 +33,7 @@ def merge(master, addition):
             return master + addition[overlap_len:]
     return master + addition
 
+
 class NodesTopology:
 
     __INTERPOLATION_LEVEL = 7
@@ -49,6 +50,10 @@ class NodesTopology:
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_inputs(network_data)
+
+        if uuid_field not in additionnal_nodes.columns.tolist():
+            additionnal_nodes[uuid_field] = additionnal_nodes.index.apply(lambda x: int(x))
+            print(additionnal_nodes)
         self._additionnal_nodes = ujson.loads(additionnal_nodes.to_json())["features"]
         self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
 
