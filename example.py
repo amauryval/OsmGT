@@ -15,7 +15,7 @@ lyon_new_points = [
     {"geometry": (4.83314077770076089, 45.75808107370855282), "tags": {"value": 2}},
 ]
 def test_from_web():
-    location = "roanne"
+    location = "lyon"
     poi_output_name = f"{location}_poi"
     network_output_name = f"{location}_network"
 
