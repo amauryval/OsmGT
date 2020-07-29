@@ -34,7 +34,7 @@ class GraphHelpers(Graph):
         :param directed: is directed or not
         :type directed: bool
         """
-        super(GraphHelpers, self).__init__(directed=False)
+        super(GraphHelpers, self).__init__(directed=True)
 
         self.vertex_names = self.new_vertex_property("string")
         self.edge_names = self.new_edge_property("string")

@@ -89,7 +89,7 @@ def some_line_features():
                     (4.0724305345710512, 46.03630508066581228)
                 ]
             ),
-            "properties": {"uuid": 12, "id": "12"},
+            "properties": {"uuid": 12, "id": "12", "oneway": "yes"},
         }
     ]
     output_gdf = build_geojson_features(all_features)

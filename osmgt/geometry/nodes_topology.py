@@ -18,7 +18,6 @@ import concurrent.futures
 
 from itertools import groupby
 
-
 def deepcopy(variable):
     return ujson.loads(ujson.dumps(variable))
 
