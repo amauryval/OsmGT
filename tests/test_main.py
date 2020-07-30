@@ -65,8 +65,6 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     assert network_from_web_found_gdf.shape[-1] > 0
     all_uuid_values = list(network_from_web_found_gdf["topo_uuid"].values)
     assert len(set(all_uuid_values)) == len(all_uuid_values)
-    assert "183705011_forward" in all_uuid_values
-    assert "183705011_backward" in all_uuid_values
 
     columns_computed = network_from_web_found_gdf.columns
     for colunm_expected in roads_default_columns_from_output:
@@ -102,10 +100,6 @@ def test_run_from_bbox_func_usa(pois_default_columns_from_output, roads_default_
     assert network_from_web_found_gdf.shape[-1] > 0
     all_uuid_values = list(network_from_web_found_gdf["topo_uuid"].values)
     assert len(set(all_uuid_values)) == len(all_uuid_values)
-
-    all_id_values = list(network_from_web_found_gdf["id"].values)
-    assert "5669279_forward" in all_id_values
-    assert "5669279_backward" in all_id_values
 
     columns_computed = network_from_web_found_gdf.columns
     for colunm_expected in roads_default_columns_from_output:
