@@ -29,8 +29,8 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     assert network_from_web_found_gdf.shape[0] > 0
     print(network_from_web_found_gdf.columns)
     assert network_from_web_found_gdf.shape[-1] > 0
-    all_values = list(network_from_web_found_gdf["topo_uuid"].values)
-    assert len(set(all_values)) == len(all_values)
+    all_uuid_values = list(network_from_web_found_gdf["topo_uuid"].values)
+    assert len(set(all_uuid_values)) == len(all_uuid_values)
     columns_computed = network_from_web_found_gdf.columns
     for colunm_expected in roads_default_columns_from_output:
         assert colunm_expected in columns_computed
@@ -63,8 +63,51 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     # check network
     assert network_from_web_found_gdf.shape[0] > 0
     assert network_from_web_found_gdf.shape[-1] > 0
-    all_values = list(network_from_web_found_gdf["topo_uuid"].values)
+    all_uuid_values = list(network_from_web_found_gdf["topo_uuid"].values)
+    assert len(set(all_uuid_values)) == len(all_uuid_values)
+    assert "183705011_forward" in all_id_values
+    assert "183705011_backward" in all_id_values
+
+    columns_computed = network_from_web_found_gdf.columns
+    for colunm_expected in roads_default_columns_from_output:
+        assert colunm_expected in columns_computed
+
+    #check graph
+    assert len(list(graph_computed.edges())) > 0
+    assert len(list(graph_computed.vertices())) > 0
+    assert type(graph_computed.vertices_content) == dict
+    assert len(graph_computed.vertices_content) > 0
+
+
+def test_run_from_bbox_func_usa(pois_default_columns_from_output, roads_default_columns_from_output):
+    bbox_value = (40.718087, -74.018433, 40.733356, -73.982749)
+    poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
+
+    network_from_web_found = OsmGt.roads_from_bbox(bbox_value, poi_from_web_found_gdf)
+    graph_computed = network_from_web_found.get_graph()
+
+    network_from_web_found_gdf = network_from_web_found.get_gdf()
+
+    # check POI
+    assert poi_from_web_found_gdf.shape[0] > 0
+    assert poi_from_web_found_gdf.shape[-1] > 0
+    all_values = list(poi_from_web_found_gdf["topo_uuid"].values)
     assert len(set(all_values)) == len(all_values)
+    columns_computed = poi_from_web_found_gdf.columns
+    for colunm_expected in pois_default_columns_from_output:
+        assert colunm_expected in columns_computed
+
+    # check network
+    assert network_from_web_found_gdf.shape[0] > 0
+    assert network_from_web_found_gdf.shape[-1] > 0
+    all_uuid_values = list(network_from_web_found_gdf["topo_uuid"].values)
+    assert len(set(all_uuid_values)) == len(all_uuid_values)
+
+    all_id_values = list(network_from_web_found_gdf["id"].values)
+    assert len(set(all_id_values)) == len(all_id_values)
+    assert "5669279_forward" in all_id_values
+    assert "5669279_backward" in all_id_values
+
     columns_computed = network_from_web_found_gdf.columns
     for colunm_expected in roads_default_columns_from_output:
         assert colunm_expected in columns_computed

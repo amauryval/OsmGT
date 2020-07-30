@@ -66,7 +66,7 @@ class NodesTopology:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
-        self._intersections_found = self.find_intersections_from_ways()
+        self._intersections_found = set(self.find_intersections_from_ways())
 
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
@@ -78,7 +78,8 @@ class NodesTopology:
     def build_lines(self, feature):
         # compare linecoords and intersections points:
         # careful: frozenset destroy the coords order
-        coordinates_list = frozenset(map(frozenset, feature["geometry"]))
+        # coordinates_list = frozenset(map(frozenset, feature["geometry"]))
+        coordinates_list = set(feature["geometry"])
         points_intersections = coordinates_list.intersection(self._intersections_found)
 
         # rebuild linestring
@@ -254,14 +255,14 @@ class NodesTopology:
     def find_intersections_from_ways(self):
         self.logger.info("Starting: Find intersections")
         all_coord_points = Counter(
-            map(
-                frozenset,
+            # map(
+            #     frozenset,
                 [
                     coords
                     for feature in self._network_data.values()
                     for coords in feature["geometry"]
                 ],
-            )
+            # )
         )
 
         intersections_found = dict(

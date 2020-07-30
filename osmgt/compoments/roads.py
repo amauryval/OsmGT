@@ -76,7 +76,6 @@ class OsmGtRoads(OsmGtCore):
                 Point(feature["geometry"]["coordinates"][-1]).wkt,
                 feature["properties"][self.TOPO_FIELD],
                 shape(feature["geometry"]).length,
-
             )
         return graph
 
