@@ -152,6 +152,6 @@ def test_if_graph_works(points_gdf_from_coords):
 
     assert "added_47_forward" in path_ids
     assert "489_backward" in path_ids
-    assert len(path_ids) == 87
-    assert shortest_path.shape[0] == 87
+    assert len(path_ids) == 86
+    assert shortest_path.shape[0] == 86
 
