@@ -22,18 +22,8 @@ def deepcopy(variable):
     return ujson.loads(ujson.dumps(variable))
 
 
-def merge(master, addition):
-    overlap_lens = (i + 1 for i, e in enumerate(addition) if e == master[-1])
-    for overlap_len in overlap_lens:
-        for i in range(overlap_len):
-            if master[-overlap_len + i] != addition[i]:
-                break
-        else:
-            return master + addition[overlap_len:]
-    return master + addition
-
-
-class NodesTopology:
+class NetworkTopology:
+    # TODO return topology stats
 
     __INTERPOLATION_LEVEL = 7
     __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 5
@@ -70,12 +60,15 @@ class NodesTopology:
 
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
-            del feature["bounds"]
             self.build_lines(feature)
+        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
+        #     executor.map(self.build_lines, self._network_data.values())
 
         return self._output
 
     def build_lines(self, feature):
+        del feature["bounds"]  # useless now
+
         # compare linecoords and intersections points:
         # careful: frozenset destroy the coords order
         # coordinates_list = frozenset(map(frozenset, feature["geometry"]))
@@ -133,8 +126,6 @@ class NodesTopology:
         node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
 
         self._bestlines_found = []
-        # for node_feature in node_by_nearest_lines.items():
-        #     self.proceed_nodes_on_network(node_feature)
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
 
@@ -170,7 +161,6 @@ class NodesTopology:
         )
 
         self._network_data[original_line_key]["geometry"] = linestring_linked_updated
-        # self._network_data[original_line_key][self.__CLEANING_FILED_STATUS] = "split"
 
     def proceed_nodes_on_network(self, node_feature):
         node_key, lines_keys = node_feature

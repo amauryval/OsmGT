@@ -34,6 +34,10 @@ docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
 ```
 
 # How to install it 
-__(TODO)__
+```
+conda install -c amauryval osmgt
+```
 
 check example.ipynb notebook and the svg output
+
+TEST with bbox : (40.718087,-74.018433,40.733356,-73.982749)

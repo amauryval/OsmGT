@@ -119,4 +119,4 @@ venv.bak/
 .mypy_cache/
 
 conda_build_runner.sh
-Dockerfile
+pkg.Dockerfile

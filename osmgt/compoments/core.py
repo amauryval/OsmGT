@@ -8,7 +8,7 @@ from osmgt.helpers.logger import Logger
 from osmgt.apis.nominatim import NominatimApi
 
 
-class ErrorOsnGtCore(Exception):
+class ErrorOsmGtCore(Exception):
     pass
 
 
@@ -62,22 +62,26 @@ class OsmGtCore(Logger):
         with open(output_path, "wb") as output_file:
             pickle.dump(self._output_data, output_file)
 
-    def get_gdf(self):
-        self.check_build_input_data()
+    def get_gdf(self, verbose=True):
+        if verbose:
+            self.logger.info(f"Prepare Geodataframe")
 
-        self.logger.info(f"Prepare Geodataframe")
-        output_gdf = gpd.GeoDataFrame.from_features(self._output_data)
+        if not isinstance(self._output_data, gpd.GeoDataFrame):
+            self.check_build_input_data()
+
+            output_gdf = gpd.GeoDataFrame.from_features(self._output_data)
+            output_gdf.crs = self.epsg_4236
+
+        else:
+            output_gdf = self._output_data
 
         output_gdf = self._clean_attributes(output_gdf)
-
-        output_gdf.crs = self.epsg_4236
-        # output_gdf = output_gdf.to_crs(self.epsg_3857)
 
         return output_gdf
 
     def check_build_input_data(self):
         if self._output_data is None:
-            raise ErrorOsnGtCore("Data is empty!")
+            raise ErrorOsmGtCore("Data is empty!")
 
     def _clean_attributes(self, input_gdf):
         for col_name in input_gdf.columns:

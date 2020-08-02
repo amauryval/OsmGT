@@ -2,12 +2,12 @@ from osmgt.compoments.core import OsmGtCore
 
 from osmgt.apis.overpass import OverpassApi
 
-from osmgt.geometry.nodes_topology import NodesTopology
+from osmgt.geometry.network_topology import NetworkTopology
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.wkt import loads
-from osmgt.network.gt_helper import GraphHelpers
+# from osmgt.network.gt_helper import GraphHelpers
 import geopandas as gpd
 from shapely.geometry import shape
 
@@ -27,7 +27,7 @@ class OsmGtRoads(OsmGtCore):
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
         #TODO ugly
-        self._output_data = self.__post_processing().__geo_interface__["features"]
+        self._output_data = self.__direction_processing()
 
         return self
 
@@ -38,26 +38,35 @@ class OsmGtRoads(OsmGtCore):
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
         #TODO ugly
-        self._output_data = self.__post_processing().__geo_interface__["features"]
+        self._output_data = self.__direction_processing()
 
         return self
 
-    def __post_processing(self):
-        output_gdf = super().get_gdf()
+    def __direction_processing(self):
+        output_gdf = super().get_gdf(verbose=False)
 
         # build backward and forward roads
-        output_gdf.loc[output_gdf['oneway'] == "yes", "direction"] = "forward"
-        output_gdf.loc[output_gdf['oneway'] != "yes", "direction"] = "forward;backward"
+        # by default
+        output_gdf.loc[:, "direction"] = "forward;backward"
+        if "oneway" in output_gdf.columns.to_list():
+            output_gdf.loc[output_gdf['oneway'] == "yes", "direction"] = "forward"
+            output_gdf.loc[output_gdf['oneway'] != "yes", "direction"] = "forward;backward"
+
+        if "junction" in output_gdf.columns.to_list():
+            output_gdf.loc[output_gdf['junction'].isin(["roundabout", "jughandle"]), "direction"] = "forward"
+
         output_gdf["geometry"] = output_gdf["geometry"].apply(lambda x: x.wkt)
+        assert True
         output_gdf = (
             output_gdf.set_index(output_gdf.columns.to_list()[:-1])[output_gdf.columns.to_list()[-1]]
             .str.split(';', expand=True)
             .stack()
-            .reset_index(level=2, drop=True)
             .reset_index(name='direction')
         )
-        output_gdf["topo_uuid"] = output_gdf.apply(lambda x: f"{x['topo_uuid']}_{x['direction']}", axis=1)
-        output_gdf["id"] = output_gdf.apply(lambda x: f"{x['id']}_{x['direction']}", axis=1)
+        underscore_concat = lambda a, b: f"{a}_{b}"
+        output_gdf["topo_uuid"] = output_gdf["topo_uuid"].combine(output_gdf["direction"], underscore_concat)
+        output_gdf["id"] = output_gdf["id"].combine(output_gdf["direction"], underscore_concat)
+
         output_gdf["geometry"] = output_gdf.apply(lambda x: loads(x["geometry"]) if x["direction"] == "forward" else LineString(loads(x["geometry"]).coords[::-1]), axis=1)
         output_gdf = gpd.GeoDataFrame(output_gdf, geometry='geometry')
         output_gdf.set_crs(epsg=4326)
@@ -65,23 +74,27 @@ class OsmGtRoads(OsmGtCore):
 
         return output_gdf
 
-    def get_graph(self):
-        self.logger.info("Prepare graph")
-        self.check_build_input_data()
-        graph = GraphHelpers()
+    def __vectorized(self, input_data, condition, new_column, value):
+        input_data.loc[condition, new_column] = value
 
-        for feature in self._output_data:
-            graph.add_edge(
-                Point(feature["geometry"]["coordinates"][0]).wkt,
-                Point(feature["geometry"]["coordinates"][-1]).wkt,
-                feature["properties"][self.TOPO_FIELD],
-                shape(feature["geometry"]).length,
-            )
-        return graph
+    # def get_graph(self):
+    #     self.logger.info("Prepare graph")
+    #     self.check_build_input_data()
+    #     graph = GraphHelpers()
+    #
+    #     network_reprojected = self._output_data.set_crs(epsg=3857)
+    #     for feature in network_reprojected:
+    #         graph.add_edge(
+    #             Point(feature["geometry"]["coordinates"][0]).wkt,
+    #             Point(feature["geometry"]["coordinates"][-1]).wkt,
+    #             feature["properties"][self.TOPO_FIELD],
+    #             shape(feature["geometry"]).length,
+    #         )
+    #     return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
-        raw_data_topology_rebuild = NodesTopology(
+        raw_data_topology_rebuild = NetworkTopology(
             self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD
         ).run()
 
