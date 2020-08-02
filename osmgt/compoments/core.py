@@ -70,11 +70,11 @@ class OsmGtCore(Logger):
             self.check_build_input_data()
 
             output_gdf = gpd.GeoDataFrame.from_features(self._output_data)
-            output_gdf.crs = self.epsg_4236
 
         else:
             output_gdf = self._output_data
 
+        output_gdf.crs = self.epsg_4236
         output_gdf = self._clean_attributes(output_gdf)
 
         return output_gdf
@@ -104,7 +104,7 @@ class OsmGtCore(Logger):
 
         # used for topology
         properties_found["bounds"] = ", ".join(map(str, geometry.bounds))
-        properties_found[self.TOPO_FIELD] = uuid_enum
+        properties_found[self.TOPO_FIELD] = uuid_enum  # do not cast to str, because topology processing need integer...
 
         # TODO add CRS
         feature_build = geojson.Feature(geometry=geometry, properties=properties_found)

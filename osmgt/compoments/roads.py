@@ -82,8 +82,7 @@ class OsmGtRoads(OsmGtCore):
         self.check_build_input_data()
         graph = GraphHelpers()
 
-        network_reprojected = self._output_data.set_crs(epsg=3857)
-        for feature in network_reprojected:
+        for feature in self._output_data.__geo_interface__["features"]:
             graph.add_edge(
                 Point(feature["geometry"]["coordinates"][0]).wkt,
                 Point(feature["geometry"]["coordinates"][-1]).wkt,
