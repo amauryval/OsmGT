@@ -7,7 +7,7 @@ from osmgt.geometry.network_topology import NetworkTopology
 from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.wkt import loads
-# from osmgt.network.gt_helper import GraphHelpers
+from osmgt.network.gt_helper import GraphHelpers
 import geopandas as gpd
 from shapely.geometry import shape
 
@@ -77,20 +77,20 @@ class OsmGtRoads(OsmGtCore):
     def __vectorized(self, input_data, condition, new_column, value):
         input_data.loc[condition, new_column] = value
 
-    # def get_graph(self):
-    #     self.logger.info("Prepare graph")
-    #     self.check_build_input_data()
-    #     graph = GraphHelpers()
-    #
-    #     network_reprojected = self._output_data.set_crs(epsg=3857)
-    #     for feature in network_reprojected:
-    #         graph.add_edge(
-    #             Point(feature["geometry"]["coordinates"][0]).wkt,
-    #             Point(feature["geometry"]["coordinates"][-1]).wkt,
-    #             feature["properties"][self.TOPO_FIELD],
-    #             shape(feature["geometry"]).length,
-    #         )
-    #     return graph
+    def get_graph(self):
+        self.logger.info("Prepare graph")
+        self.check_build_input_data()
+        graph = GraphHelpers()
+
+        network_reprojected = self._output_data.set_crs(epsg=3857)
+        for feature in network_reprojected:
+            graph.add_edge(
+                Point(feature["geometry"]["coordinates"][0]).wkt,
+                Point(feature["geometry"]["coordinates"][-1]).wkt,
+                feature["properties"][self.TOPO_FIELD],
+                shape(feature["geometry"]).length,
+            )
+        return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
