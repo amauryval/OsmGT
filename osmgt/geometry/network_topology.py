@@ -59,19 +59,17 @@ class NetworkTopology:
         self._intersections_found = set(self.find_intersections_from_ways())
 
         self.logger.info("Starting: build lines")
-        for feature in self._network_data.values():
-            self.build_lines(feature)
-        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
-        #     executor.map(self.build_lines, self._network_data.values())
+        # for feature in self._network_data.values():
+        #     self.build_lines(feature)
+        with concurrent.futures.ThreadPoolExecutor(4) as executor:
+            executor.map(self.build_lines, self._network_data.values())
 
         return self._output
 
     def build_lines(self, feature):
         del feature["bounds"]  # useless now
 
-        # compare linecoords and intersections points:
-        # careful: frozenset destroy the coords order
-        # coordinates_list = frozenset(map(frozenset, feature["geometry"]))
+        # compare linecoords and intersections points
         coordinates_list = set(feature["geometry"])
         points_intersections = coordinates_list.intersection(self._intersections_found)
 
@@ -167,9 +165,7 @@ class NetworkTopology:
         node_found = self._additionnal_nodes[node_key]
         candidates = {}
         for line_key in lines_keys:
-            interpolated_line_coords = self.__compute_interpolation_on_line(
-                line_key
-            )
+            interpolated_line_coords = self.__compute_interpolation_on_line(line_key)
             line_tree = spatial.cKDTree(interpolated_line_coords)
             dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
 
@@ -222,7 +218,7 @@ class NetworkTopology:
                 # we get the middle values from coordinates to avoid to catch the first and last value when editing
 
                 middle_coordinates_values = self._insert_value(
-                    middle_coordinates_values, point_intersection, point_intersection
+                    middle_coordinates_values, point_intersection, tuple([point_intersection])
                 )
 
                 middle_coordinates_values = self._insert_value(
@@ -245,14 +241,11 @@ class NetworkTopology:
     def find_intersections_from_ways(self):
         self.logger.info("Starting: Find intersections")
         all_coord_points = Counter(
-            # map(
-            #     frozenset,
-                [
-                    coords
-                    for feature in self._network_data.values()
-                    for coords in feature["geometry"]
-                ],
-            # )
+            [
+                coords
+                for feature in self._network_data.values()
+                for coords in feature["geometry"]
+            ],
         )
 
         intersections_found = dict(
@@ -302,9 +295,11 @@ class NetworkTopology:
             index_increment = 1
 
         try:
-            list_object.insert(
-                list_object.index(search_value) + index_increment, value_to_add
-            )
+            index = list_object.index(search_value) + index_increment
+            list_object[index:index] = value_to_add
+            # list_object.insert(
+            #     list_object.index(search_value) + index_increment, value_to_add
+            # )
             return list_object
         except ValueError:
             raise ValueError(f"{search_value} not found")
