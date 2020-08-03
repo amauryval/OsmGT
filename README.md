@@ -7,27 +7,6 @@ OsmGT
 
 OpenStreetMap based on graph-tools
 
-
-# Features
-
-* __Find data processing:__
-  * ☑ Find all roads network  from a location area
-  * ☑ Find all points of interest (POIs) from a location area
-
-* __Topology processing:__
-  * ☑ Clean roads network topology
-  * ☑ Build topology between roads network and POIs
-
-* __Export processing:__
-  * ☑ Create a geodataframe from network and POIs
-  * ☑ Create a graph from the clean network topology ; All graph-tool are available on the output graph
-  * ☑ Easy matching between graph and geodataframe features
-  * ☐  Export data to a binary file 
-
-* __Data viz feature:__
-  * ☑ Easy graph plotting
-  * ☐ Easy geodataframe plotting
-
 # How to test it 
 ```
 docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
@@ -38,6 +17,4 @@ docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
 conda install -c amauryval osmgt
 ```
 
-check example.ipynb notebook and the svg output
-
-TEST with bbox : (40.718087,-74.018433,40.733356,-73.982749)
+check example.html example (doc is coming)
