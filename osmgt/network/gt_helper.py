@@ -29,7 +29,7 @@ class GraphHelpers(Graph):
     - find_vertex_names_from_edge_name()
     """
 
-    def __init__(self, is_directed):
+    def __init__(self, is_directed=True):
         """
         :param is_directed: is directed or not
         :type is_directed: bool

@@ -5,7 +5,7 @@ from osmgt.compoments.core import OsmGtCore
 
 def test_connect_lines(some_line_features, some_point_features):
     raw_data_topology_rebuild = NetworkTopology(
-        OsmGtCore().logger, some_line_features, some_point_features, "uuid"
+        OsmGtCore().logger, some_line_features, some_point_features, "uuid", "pedestrian"
     ).run()
     all_uuid = [feature["properties"]["uuid"] for feature in raw_data_topology_rebuild]
 

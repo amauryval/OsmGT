@@ -115,6 +115,7 @@ class NetworkTopology:
                 self.__backward_direction(input_feature)
 
         elif self._mode_post_processing == "pedestrian":
+            # it's the default behavior in fact
             feature = deepcopy(input_feature)
             feature["geometry"] = LineString(feature["geometry"])
             feature["topo_uuid"] = f"{feature['topo_uuid']}"
