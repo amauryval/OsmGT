@@ -117,3 +117,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+conda_build_runner.sh
+pkg.Dockerfile

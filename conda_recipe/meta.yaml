@@ -1,0 +1,31 @@
+{% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
+
+package:
+  name: {{ data.get('name') }}
+  version: {{ data.get('version') }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+
+requirements:
+  host:
+    - python {{ data.get('python_requires') }}
+  build:
+    - python {{ data.get('python_requires') }}
+    - pip
+  run:
+    - python {{ data.get('python_requires') }}
+
+    {% for dep in data.get('install_requires') %}
+    - {{ dep.lower() }}
+    {% endfor %}
+
+about:
+  home: {{ data.get('url') }}
+  license: {{ data.get('license') }}
+  license_family: {{ data.get('license') }}
+  summary: {{ data.get('description') }}
+  license_file: LICENSE

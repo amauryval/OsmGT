@@ -1,6 +1,7 @@
 name: osmgt
 channels:
   - conda-forge
+  - anaconda
   - amauryval
   - defaults
 dependencies:
@@ -13,8 +14,10 @@ dependencies:
   - python-dateutil=2.8.1
   - graph-tool
   - cairo
-  - scipy=1.3.2
+  - scipy=1.5.0
   - pytest=5.4.1
   - pytest-cov=2.8.1
   - jupyter=1.0.0
   - ujson=3.0.0
+  - flask=1.1.2
+  - flask-cors=3.0.8

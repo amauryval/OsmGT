@@ -22,17 +22,8 @@ def deepcopy(variable):
     return ujson.loads(ujson.dumps(variable))
 
 
-def merge(master, addition):
-    overlap_lens = (i + 1 for i, e in enumerate(addition) if e == master[-1])
-    for overlap_len in overlap_lens:
-        for i in range(overlap_len):
-            if master[-overlap_len + i] != addition[i]:
-                break
-        else:
-            return master + addition[overlap_len:]
-    return master + addition
-
-class NodesTopology:
+class NetworkTopology:
+    # TODO return topology stats
 
     __INTERPOLATION_LEVEL = 7
     __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 5
@@ -40,16 +31,21 @@ class NodesTopology:
     __NUMBER_OF_NODES_INTERSECTIONS = 2
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
-    __FIELD_ID = "uuid"
     __CLEANING_FILED_STATUS = "topology"
 
-    def __init__(self, logger, network_data, additionnal_nodes):
+    def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
 
         self.logger = logger
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_inputs(network_data)
+        self._mode_post_processing = mode_post_processing
+
+        if uuid_field not in additionnal_nodes.columns.tolist():
+            additionnal_nodes[uuid_field] = additionnal_nodes.index.apply(lambda x: int(x))
+            print(additionnal_nodes)
         self._additionnal_nodes = ujson.loads(additionnal_nodes.to_json())["features"]
+        self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
 
         self._output = []
 
@@ -61,54 +57,89 @@ class NodesTopology:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
-        self._intersections_found = self.find_intersections_from_ways()
+        self._intersections_found = set(self.find_intersections_from_ways())
 
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
             self.build_lines(feature)
+        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
+        #     executor.map(self.build_lines, self._network_data.values())
 
         return self._output
 
     def build_lines(self, feature):
-        # compare linecoords and intersections points:
-        # careful: frozenset destroy the coords order
-        coordinates_list = frozenset(map(frozenset, feature["geometry"]))
+        del feature["bounds"]  # useless now
+
+        # compare linecoords and intersections points
+        coordinates_list = set(feature["geometry"])
         points_intersections = coordinates_list.intersection(self._intersections_found)
 
         # rebuild linestring
-        lines_coordinates_rebuild = self._topology_builder(
-            feature["geometry"], points_intersections
-        )
+        if len(set(feature["geometry"])) > 1:
+            lines_coordinates_rebuild = self._topology_builder(
+                feature["geometry"], points_intersections
+            )
 
-        if len(lines_coordinates_rebuild) != 0:
-            for new_suffix_id, line_coordinates in enumerate(
-                lines_coordinates_rebuild
-            ):
+            if len(lines_coordinates_rebuild) > 1:
 
-                new_geometry = LineString(line_coordinates)
-                new_geometry_length = new_geometry.length
-                if new_geometry_length > 0:
-
+                for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
                     feature_updated = deepcopy(feature)
-                    feature_updated["uuid"] = str(
-                        f"{feature['id']}_{new_suffix_id}"
+                    feature_updated[self.__FIELD_ID] = str(
+                        f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
                     )
-                    feature_updated["geometry"] = new_geometry
-                    feature_updated["bounds"] = ", ".join(
-                        map(str, new_geometry.bounds)
-                    )
-                    feature_updated["length"] = new_geometry_length
+                    feature_updated[self.__CLEANING_FILED_STATUS] = "split"
+                    feature_updated["geometry"] = line_coordinates
 
-                    self._output.append(self._geojson_formating(feature_updated))
+                    self.mode_processing(feature_updated)
 
-        else:
-            assert set(feature["geometry"]) == set(lines_coordinates_rebuild[0])
-            # nothing to change
+            else:
+                # nothing to change
+                feature[self.__FIELD_ID] = str(feature[self.__FIELD_ID])
+                self.mode_processing(feature)
+
+    def mode_processing(self, input_feature):
+
+        if self._mode_post_processing == "vehicle":
+            # by default
+            self.__forward_direction(input_feature)
+
+            if "junction" in input_feature:
+                if input_feature["junction"] in ["roundabout", "jughandle"]:
+                    return
+
+            if "oneway" in input_feature:
+                if input_feature["oneway"] != "yes":
+                    self.__backward_direction(input_feature)
+
+            else:
+                self.__backward_direction(input_feature)
+
+        elif self._mode_post_processing == "pedestrian":
+            # it's the default behavior in fact
+            feature = deepcopy(input_feature)
             feature["geometry"] = LineString(feature["geometry"])
-            feature["length"] = feature["geometry"].length
+            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
+            feature["id"] = f"{feature['id']}"
             self._output.append(self._geojson_formating(feature))
 
+    def __forward_direction(self, input_feature):
+        feature = deepcopy(input_feature)
+        feature["direction"] = "forward"
+        feature["geometry"] = LineString(feature["geometry"])
+        feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{feature['direction']}"
+        feature["id"] = f"{feature['id']}_{feature['direction']}"
+        self._output.append(self._geojson_formating(feature))
+
+    def __backward_direction(self, input_feature):
+        feature = deepcopy(input_feature)
+        feature["geometry"] = LineString(feature["geometry"][::-1])
+        feature["direction"] = "backward"
+        feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{feature['direction']}"
+        feature["id"] = f"{feature['id']}_{feature['direction']}"
+        self._output.append(self._geojson_formating(feature))
+
     def _prepare_data(self):
+
         self._network_data = {
             feature["properties"][self.__FIELD_ID]: {
                 **{"geometry": list(map(tuple, feature["geometry"]["coordinates"]))},
@@ -134,8 +165,6 @@ class NodesTopology:
         node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
 
         self._bestlines_found = []
-        # for node_feature in node_by_nearest_lines.items():
-        #     self.proceed_nodes_on_network(node_feature)
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
 
@@ -151,33 +180,33 @@ class NodesTopology:
 
     def insert_new_nodes_on_its_line(self, item):
         original_line_key, values = item
-        list_values = list(values)
+        data_to_insert = list(values)
 
-        interpolated_line = [value["interpolated_line"] for value in list_values][0]  # always the same...
-        end_points_found = list(set([value["end_point_found"] for value in list_values]))
+        interpolated_line = [value["interpolated_line"] for value in data_to_insert][0]  # always the same interpolated line...
+        end_points_found = list(set([value["end_point_found"] for value in data_to_insert]))  # multiple points can ben found
+
         linestring_with_new_nodes = self._network_data[original_line_key]["geometry"]
         # self.__node_con_stats["line_split"] += len(end_points_found)
         linestring_with_new_nodes.extend(end_points_found)
         linestring_with_new_nodes = set(linestring_with_new_nodes)
         self.__node_con_stats["line_split"] += len(linestring_with_new_nodes.intersection(end_points_found))
 
+        # build new linestrings
         linestring_linked_updated = list(
             filter(
                 lambda x: x in linestring_with_new_nodes,
                 interpolated_line,
             )
         )
+
         self._network_data[original_line_key]["geometry"] = linestring_linked_updated
-        self._network_data[original_line_key][self.__CLEANING_FILED_STATUS] = "split"
 
     def proceed_nodes_on_network(self, node_feature):
         node_key, lines_keys = node_feature
         node_found = self._additionnal_nodes[node_key]
         candidates = {}
         for line_key in lines_keys:
-            interpolated_line_coords = self.__compute_interpolation_on_line(
-                line_key
-            )
+            interpolated_line_coords = self.__compute_interpolation_on_line(line_key)
             line_tree = spatial.cKDTree(interpolated_line_coords)
             dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
 
@@ -201,9 +230,10 @@ class NodesTopology:
             self.__node_con_stats["connections_added"] += 1
             self._bestlines_found.append(best_line)
 
-        # to split line at node (and also if node is on the network). it builds intersection used to split slines
+        # to split line at node (and also if node is on the network). it builds intersection used to split lines
         self._additionnal_nodes[node_key]["geometry"] = connection_coords
         self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
+        self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
         self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
 
     @functools.lru_cache(maxsize=None)
@@ -217,6 +247,7 @@ class NodesTopology:
         return interpolated_line_coords
 
     def _topology_builder(self, coordinates, points_intersections):
+
         is_rebuild = False
 
         # split coordinates found at intersection to respect the topology
@@ -228,7 +259,7 @@ class NodesTopology:
                 # we get the middle values from coordinates to avoid to catch the first and last value when editing
 
                 middle_coordinates_values = self._insert_value(
-                    middle_coordinates_values, point_intersection, point_intersection
+                    middle_coordinates_values, point_intersection, tuple([point_intersection])
                 )
 
                 middle_coordinates_values = self._insert_value(
@@ -251,15 +282,13 @@ class NodesTopology:
     def find_intersections_from_ways(self):
         self.logger.info("Starting: Find intersections")
         all_coord_points = Counter(
-            map(
-                frozenset,
-                [
-                    coords
-                    for feature in self._network_data.values()
-                    for coords in feature["geometry"]
-                ],
-            )
+            [
+                coords
+                for feature in self._network_data.values()
+                for coords in feature["geometry"]
+            ],
         )
+
         intersections_found = dict(
             filter(
                 lambda x: x[1] >= self.__NUMBER_OF_NODES_INTERSECTIONS,
@@ -307,9 +336,11 @@ class NodesTopology:
             index_increment = 1
 
         try:
-            list_object.insert(
-                list_object.index(search_value) + index_increment, value_to_add
-            )
+            index = list_object.index(search_value) + index_increment
+            list_object[index:index] = value_to_add
+            # list_object.insert(
+            #     list_object.index(search_value) + index_increment, value_to_add
+            # )
             return list_object
         except ValueError:
             raise ValueError(f"{search_value} not found")

@@ -29,12 +29,12 @@ class GraphHelpers(Graph):
     - find_vertex_names_from_edge_name()
     """
 
-    def __init__(self):
+    def __init__(self, is_directed=True):
         """
-        :param directed: is directed or not
-        :type directed: bool
+        :param is_directed: is directed or not
+        :type is_directed: bool
         """
-        super(GraphHelpers, self).__init__(directed=False)
+        super(GraphHelpers, self).__init__(directed=is_directed)
 
         self.vertex_names = self.new_vertex_property("string")
         self.edge_names = self.new_edge_property("string")
