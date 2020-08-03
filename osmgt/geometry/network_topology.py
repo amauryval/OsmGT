@@ -33,12 +33,13 @@ class NetworkTopology:
 
     __CLEANING_FILED_STATUS = "topology"
 
-    def __init__(self, logger, network_data, additionnal_nodes, uuid_field):
+    def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
 
         self.logger = logger
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_inputs(network_data)
+        self._mode_post_processing = mode_post_processing
 
         if uuid_field not in additionnal_nodes.columns.tolist():
             additionnal_nodes[uuid_field] = additionnal_nodes.index.apply(lambda x: int(x))
@@ -59,10 +60,10 @@ class NetworkTopology:
         self._intersections_found = set(self.find_intersections_from_ways())
 
         self.logger.info("Starting: build lines")
-        # for feature in self._network_data.values():
-        #     self.build_lines(feature)
-        with concurrent.futures.ThreadPoolExecutor(4) as executor:
-            executor.map(self.build_lines, self._network_data.values())
+        for feature in self._network_data.values():
+            self.build_lines(feature)
+        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
+        #     executor.map(self.build_lines, self._network_data.values())
 
         return self._output
 
@@ -86,16 +87,48 @@ class NetworkTopology:
                     feature_updated[self.__FIELD_ID] = str(
                         f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
                     )
-                    feature_updated["geometry"] = LineString(line_coordinates)
                     feature_updated[self.__CLEANING_FILED_STATUS] = "split"
+                    feature_updated["geometry"] = line_coordinates
 
-                    self._output.append(self._geojson_formating(feature_updated))
+                    self.mode_processing(feature_updated)
 
             else:
                 # nothing to change
-                feature["geometry"] = LineString(feature["geometry"])
                 feature[self.__FIELD_ID] = str(feature[self.__FIELD_ID])
-                self._output.append(self._geojson_formating(feature))
+                self.mode_processing(feature)
+
+    def mode_processing(self, feature_updated):
+
+        if self._mode_post_processing == "car":
+            # by default
+            self.__forward_direction(feature_updated)
+
+            if "junction" in feature_updated:
+                if feature_updated["junction"] in ["roundabout", "jughandle"]:
+                    return
+
+            if "oneway" in feature_updated:
+                if feature_updated["oneway"] != "yes":
+                    self.__backward_direction(feature_updated)
+
+            else:
+                self.__backward_direction(feature_updated)
+
+    def __forward_direction(self, input_feature):
+        feature = deepcopy(input_feature)
+        feature["direction"] = "forward"
+        feature["geometry"] = LineString(feature["geometry"])
+        feature["topo_uuid"] = f"{feature['topo_uuid']}_{feature['direction']}"
+        feature["id"] = f"{feature['id']}_{feature['direction']}"
+        self._output.append(self._geojson_formating(feature))
+
+    def __backward_direction(self, input_feature):
+        feature = deepcopy(input_feature)
+        feature["geometry"] = LineString(feature["geometry"][::-1])
+        feature["direction"] = "backward"
+        feature["topo_uuid"] = f"{feature['topo_uuid']}_{feature['direction']}"
+        feature["id"] = f"{feature['id']}_{feature['direction']}"
+        self._output.append(self._geojson_formating(feature))
 
     def _prepare_data(self):
 

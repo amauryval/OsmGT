@@ -20,25 +20,27 @@ class OsmGtRoads(OsmGtCore):
     def __init__(self):
         super().__init__()
 
-    def from_location(self, location_name, additionnal_nodes=None):
+    def from_location(self, location_name, additionnal_nodes=None, mode="car"):
         super().from_location(location_name)
+        self._mode = mode
 
         request = self.from_location_name_query_builder(self._location_id, self.__roads_query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
         #TODO ugly
-        self._output_data = self.__direction_processing()
+        # self._output_data = self.__direction_processing()
 
         return self
 
-    def from_bbox(self, bbox_value, additionnal_nodes=None):
+    def from_bbox(self, bbox_value, additionnal_nodes=None, mode="car"):
         super().from_bbox(bbox_value)
+        self._mode = mode
 
         request = self.from_bbox_query_builder(bbox_value, self.__roads_query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
         #TODO ugly
-        self._output_data = self.__direction_processing()
+        # self._output_data = self.__direction_processing()
 
         return self
 
@@ -56,7 +58,7 @@ class OsmGtRoads(OsmGtCore):
             output_gdf.loc[output_gdf['junction'].isin(["roundabout", "jughandle"]), "direction"] = "forward"
 
         output_gdf["geometry"] = output_gdf["geometry"].apply(lambda x: x.wkt)
-        assert True
+
         output_gdf = (
             output_gdf.set_index(output_gdf.columns.to_list()[:-1])[output_gdf.columns.to_list()[-1]]
             .str.split(';', expand=True)
@@ -82,7 +84,7 @@ class OsmGtRoads(OsmGtCore):
         self.check_build_input_data()
         graph = GraphHelpers()
 
-        for feature in self._output_data.__geo_interface__["features"]:
+        for feature in self._output_data:
             graph.add_edge(
                 Point(feature["geometry"]["coordinates"][0]).wkt,
                 Point(feature["geometry"]["coordinates"][-1]).wkt,
@@ -94,7 +96,7 @@ class OsmGtRoads(OsmGtCore):
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
-            self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD
+            self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD, self._mode
         ).run()
 
         return raw_data_topology_rebuild
