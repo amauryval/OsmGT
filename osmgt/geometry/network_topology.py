@@ -118,7 +118,7 @@ class NetworkTopology:
             # it's the default behavior in fact
             feature = deepcopy(input_feature)
             feature["geometry"] = LineString(feature["geometry"])
-            feature["topo_uuid"] = f"{feature['topo_uuid']}"
+            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
             feature["id"] = f"{feature['id']}"
             self._output.append(self._geojson_formating(feature))
 
@@ -126,7 +126,7 @@ class NetworkTopology:
         feature = deepcopy(input_feature)
         feature["direction"] = "forward"
         feature["geometry"] = LineString(feature["geometry"])
-        feature["topo_uuid"] = f"{feature['topo_uuid']}_{feature['direction']}"
+        feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{feature['direction']}"
         feature["id"] = f"{feature['id']}_{feature['direction']}"
         self._output.append(self._geojson_formating(feature))
 
@@ -134,7 +134,7 @@ class NetworkTopology:
         feature = deepcopy(input_feature)
         feature["geometry"] = LineString(feature["geometry"][::-1])
         feature["direction"] = "backward"
-        feature["topo_uuid"] = f"{feature['topo_uuid']}_{feature['direction']}"
+        feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{feature['direction']}"
         feature["id"] = f"{feature['id']}_{feature['direction']}"
         self._output.append(self._geojson_formating(feature))
 

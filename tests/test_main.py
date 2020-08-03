@@ -11,7 +11,7 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     poi_from_web_found_gdf = OsmGt.poi_from_location(location_name).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_location(
-        location_name, poi_from_web_found_gdf, "pedestrian"
+        location_name, "pedestrian", poi_from_web_found_gdf
     )
     graph_computed = network_from_web_found.get_graph()
 
@@ -47,7 +47,7 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     bbox_value = (46.019674567761, 4.0237426757812, 46.072575637028, 4.1220188140869)
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
 
-    network_from_web_found = OsmGt.roads_from_bbox(bbox_value, poi_from_web_found_gdf, "vehicle")
+    network_from_web_found = OsmGt.roads_from_bbox(bbox_value, "vehicle", poi_from_web_found_gdf)
     graph_computed = network_from_web_found.get_graph()
 
     network_from_web_found_gdf = network_from_web_found.get_gdf()
@@ -82,7 +82,7 @@ def test_run_from_bbox_func_usa(pois_default_columns_from_output, roads_default_
     bbox_value = (40.718087, -74.018433, 40.733356, -73.982749)
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
 
-    network_from_web_found = OsmGt.roads_from_bbox(bbox_value, poi_from_web_found_gdf)
+    network_from_web_found = OsmGt.roads_from_bbox(bbox_value, additionnal_nodes=poi_from_web_found_gdf)
     graph_computed = network_from_web_found.get_graph()
 
     network_from_web_found_gdf = network_from_web_found.get_gdf()
@@ -119,7 +119,7 @@ def test_if_path_can_be_computed(points_gdf_from_coords):
     poi_from_web_found_gdf = OsmGt.poi_from_location(location_name).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_location(
-        location_name, poi_from_web_found_gdf, "vehicle"
+        location_name, "vehicle", poi_from_web_found_gdf
     )
 
     graph_computed = network_from_web_found.get_graph()
