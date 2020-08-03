@@ -148,7 +148,7 @@ def test_if_path_can_be_computed(points_gdf_from_coords):
     assert "added_63" in path_ids[-1]
 
     network_data = network_from_web_found_gdf.copy(deep=True)
-    network_data = network_data[shortest_path['topo_uuid'].isin(path_ids)]
+    network_data = network_data[network_data['topo_uuid'].isin(path_ids)]
 
     assert "added_47_forward" in path_ids
     assert "489_backward" in path_ids
