@@ -65,7 +65,7 @@ def some_line_features():
                     (4.07079583285433966, 46.03660928470699787),
                 ]
             ),
-            "properties": {"uuid": 10, "id": "10"},
+            "properties": {"topo_uuid": 10, "id": "10"},
         },
         {
             "geometry": LineString(
@@ -78,7 +78,7 @@ def some_line_features():
                     (4.07098587207512264, 46.03662323153146474),
                 ]
             ),
-            "properties": {"uuid": 11, "id": "11"},
+            "properties": {"topo_uuid": 11, "id": "11"},
         },
         {
             "geometry": LineString(
@@ -89,7 +89,7 @@ def some_line_features():
                     (4.0724305345710512, 46.03630508066581228)
                 ]
             ),
-            "properties": {"uuid": 12, "id": "12", "oneway": "yes"},
+            "properties": {"topo_uuid": 12, "id": "12", "oneway": "yes"},
         }
     ]
     output_gdf = build_geojson_features(all_features)
@@ -102,39 +102,39 @@ def some_point_features():
     all_features = [
         {
             "geometry": Point((4.07083953255024333, 46.03693156996429536)),
-            "properties": {"uuid": 1, "id": "1"},
+            "properties": {"topo_uuid": 1, "id": "1"},
         },  # outside
         {
             "geometry": Point((4.07089961963211167, 46.03664388029959298)),
-            "properties": {"uuid": 2, "id": "2"},
+            "properties": {"topo_uuid": 2, "id": "2"},
         },  # outside
         {
             "geometry": Point((4.07097056291628423, 46.03710105075762726)),
-            "properties": {"uuid": 3, "id": "3"},
+            "properties": {"topo_uuid": 3, "id": "3"},
         },  # outside
         {
             "geometry": Point((4.07114907206290066, 46.03760345278882937)),
-            "properties": {"uuid": 4, "id": "4"},
+            "properties": {"topo_uuid": 4, "id": "4"},
         },  # at the line start node
         {
             "geometry": Point((4.07091681769133018, 46.03699538217645681)),
-            "properties": {"uuid": 5, "id": "5"},
+            "properties": {"topo_uuid": 5, "id": "5"},
         },  # at one linestring node
         {
             "geometry": Point((4.070811393410536, 46.036724772414075)),
-            "properties": {"uuid": 6, "id": "6"},
+            "properties": {"topo_uuid": 6, "id": "6"},
         },
         {
             "geometry": Point((4.07088624242873376, 46.03680095802188532)),
-            "properties": {"uuid": 7, "id": "7"},
+            "properties": {"topo_uuid": 7, "id": "7"},
         },
         {
             "geometry": Point((4.07103594046512729, 46.03720327149468972)),
-            "properties": {"uuid": 8, "id": "8"},
+            "properties": {"topo_uuid": 8, "id": "8"},
         },
         {
             "geometry": Point((4.07101188185213569, 46.0373516329414727)),
-            "properties": {"uuid": 9, "id": "9"},
+            "properties": {"topo_uuid": 9, "id": "9"},
         }
 
     ]
