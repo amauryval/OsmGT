@@ -7,44 +7,45 @@ from osmgt.geometry.network_topology import NetworkTopology
 from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.wkt import loads
-from osmgt.network.gt_helper import GraphHelpers
+# from osmgt.network.gt_helper import GraphHelpers
 import geopandas as gpd
 from shapely.geometry import shape
+
+from osmgt.core.global_values import network_queries
 
 
 class OsmGtRoads(OsmGtCore):
 
     __DATA_NAME = "network"
     _output_data = None
+    __QUERY_MODES = ["vehicle", "pedestrian"]
 
     def __init__(self):
         super().__init__()
 
-    def from_location(self, location_name, additionnal_nodes=None, mode="car"):
+    def from_location(self, location_name, additionnal_nodes=None, mode="vehicle"):
         super().from_location(location_name)
         self._mode = mode
 
-        request = self.from_location_name_query_builder(self._location_id, self.__roads_query)
+        query = self.get_query_from_mode(mode)
+        request = self.from_location_name_query_builder(self._location_id, query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
-        #TODO ugly
-        # self._output_data = self.__direction_processing()
 
         return self
 
-    def from_bbox(self, bbox_value, additionnal_nodes=None, mode="car"):
+    def from_bbox(self, bbox_value, additionnal_nodes=None, mode="vehicle"):
         super().from_bbox(bbox_value)
         self._mode = mode
 
-        request = self.from_bbox_query_builder(bbox_value, self.__roads_query)
+        query = self.get_query_from_mode(mode)
+        request = self.from_bbox_query_builder(bbox_value, query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
-        #TODO ugly
-        # self._output_data = self.__direction_processing()
 
         return self
 
-    def __direction_processing(self):
+    def __DEPRECATED_direction_processing(self):
         output_gdf = super().get_gdf(verbose=False)
 
         # build backward and forward roads
@@ -76,22 +77,23 @@ class OsmGtRoads(OsmGtCore):
 
         return output_gdf
 
-    def __vectorized(self, input_data, condition, new_column, value):
-        input_data.loc[condition, new_column] = value
-
-    def get_graph(self):
-        self.logger.info("Prepare graph")
-        self.check_build_input_data()
-        graph = GraphHelpers()
-
-        for feature in self._output_data:
-            graph.add_edge(
-                Point(feature["geometry"]["coordinates"][0]).wkt,
-                Point(feature["geometry"]["coordinates"][-1]).wkt,
-                feature["properties"][self.TOPO_FIELD],
-                shape(feature["geometry"]).length,
-            )
-        return graph
+    # def get_graph(self):
+    #     self.logger.info("Prepare graph")
+    #     self.check_build_input_data()
+    #
+    #     if self._mode == "vehicle":
+    #         graph = GraphHelpers(is_directed=True)
+    #     elif self._mode == "pedestrian":
+    #         graph = GraphHelpers(is_directed=False)
+    #
+    #     for feature in self._output_data:
+    #         graph.add_edge(
+    #             Point(feature["geometry"].coords[0]).wkt,
+    #             Point(feature["geometry"].coords[-1]).wkt,
+    #             feature["properties"][self.TOPO_FIELD],
+    #             shape(feature["geometry"]).length,
+    #         )
+    #     return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
@@ -117,6 +119,20 @@ class OsmGtRoads(OsmGtCore):
 
         return features
 
-    def __roads_query(self, geo_filter):
-        query = f'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]({geo_filter});'
-        return query
+    def get_query_from_mode(self, mode):
+        assert mode in network_queries.keys()
+        return network_queries[mode]
+        # if mode == "car":
+        #     query = self.__vehicule_path_query()
+        # elif mode == "pedestrian":
+        #     query = self.__pedestrian_path_query()
+        #
+        # return query
+
+    # def __vehicule_path_query(self, geo_filter):
+    #     query = f'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]({geo_filter});'
+    #     return query
+    #
+    # def __pedestrian_path_query(self, geo_filter):
+    #     query = f'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]({geo_filter});'
+    #     return query

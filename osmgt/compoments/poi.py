@@ -4,6 +4,8 @@ from osmgt.apis.overpass import OverpassApi
 
 from shapely.geometry import Point
 
+from osmgt.core.global_values import poi_query
+
 
 class ErrorPoiData(Exception):
     pass
@@ -20,7 +22,7 @@ class OsmGtPoi(OsmGtCore):
     def from_location(self, location_name):
         super().from_location(location_name)
 
-        request = self.from_location_name_query_builder(self._location_id, self.__shop_query)
+        request = self.from_location_name_query_builder(self._location_id, poi_query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_points(raw_data)
 
@@ -29,7 +31,7 @@ class OsmGtPoi(OsmGtCore):
     def from_bbox(self, bbox_value):
         super().from_bbox(bbox_value)
 
-        request = self.from_bbox_query_builder(bbox_value, self.__shop_query)
+        request = self.from_bbox_query_builder(bbox_value, poi_query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
         self._output_data = self.__build_points(raw_data)
 
@@ -50,6 +52,3 @@ class OsmGtPoi(OsmGtCore):
             features.append(feature_build)
 
         return features
-
-    def __shop_query(self, geo_filter):
-        return f'node["amenity"]({geo_filter});node[shop]({geo_filter});'

@@ -97,22 +97,29 @@ class NetworkTopology:
                 feature[self.__FIELD_ID] = str(feature[self.__FIELD_ID])
                 self.mode_processing(feature)
 
-    def mode_processing(self, feature_updated):
+    def mode_processing(self, input_feature):
 
-        if self._mode_post_processing == "car":
+        if self._mode_post_processing == "vehicle":
             # by default
-            self.__forward_direction(feature_updated)
+            self.__forward_direction(input_feature)
 
-            if "junction" in feature_updated:
-                if feature_updated["junction"] in ["roundabout", "jughandle"]:
+            if "junction" in input_feature:
+                if input_feature["junction"] in ["roundabout", "jughandle"]:
                     return
 
-            if "oneway" in feature_updated:
-                if feature_updated["oneway"] != "yes":
-                    self.__backward_direction(feature_updated)
+            if "oneway" in input_feature:
+                if input_feature["oneway"] != "yes":
+                    self.__backward_direction(input_feature)
 
             else:
-                self.__backward_direction(feature_updated)
+                self.__backward_direction(input_feature)
+
+        elif self._mode_post_processing == "pedestrian":
+            feature = deepcopy(input_feature)
+            feature["geometry"] = LineString(feature["geometry"])
+            feature["topo_uuid"] = f"{feature['topo_uuid']}"
+            feature["id"] = f"{feature['id']}"
+            self._output.append(self._geojson_formating(feature))
 
     def __forward_direction(self, input_feature):
         feature = deepcopy(input_feature)

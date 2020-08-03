@@ -5,12 +5,12 @@ from osmgt.compoments.poi import OsmGtPoi
 class OsmGt:
 
     @staticmethod
-    def roads_from_location(location_name, additionnal_nodes=None):
-        return OsmGtRoads().from_location(location_name, additionnal_nodes)
+    def roads_from_location(location_name, mode="pedestrian", additionnal_nodes=None):
+        return OsmGtRoads().from_location(location_name, additionnal_nodes, mode)
 
     @staticmethod
-    def roads_from_bbox(bbox_value, additionnal_nodes=None):
-        return OsmGtRoads().from_bbox(bbox_value, additionnal_nodes)
+    def roads_from_bbox(bbox_value, mode="pedestrian", additionnal_nodes=None):
+        return OsmGtRoads().from_bbox(bbox_value, additionnal_nodes, mode)
 
     @staticmethod
     def roads_from_osmgt_file(osmgt_file_name):

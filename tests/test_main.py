@@ -3,6 +3,7 @@ import pytest
 from osmgt import OsmGt
 
 import graph_tool.all as gt
+from graph_tool.topology import shortest_path
 
 
 def test_run_from_location_name_func(pois_default_columns_from_output, roads_default_columns_from_output):
@@ -10,7 +11,7 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     poi_from_web_found_gdf = OsmGt.poi_from_location(location_name).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_location(
-        location_name, poi_from_web_found_gdf
+        location_name, poi_from_web_found_gdf, "pedestrian"
     )
     graph_computed = network_from_web_found.get_graph()
 
@@ -46,7 +47,7 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     bbox_value = (46.019674567761, 4.0237426757812, 46.072575637028, 4.1220188140869)
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
 
-    network_from_web_found = OsmGt.roads_from_bbox(bbox_value, poi_from_web_found_gdf)
+    network_from_web_found = OsmGt.roads_from_bbox(bbox_value, poi_from_web_found_gdf, "vehicle")
     graph_computed = network_from_web_found.get_graph()
 
     network_from_web_found_gdf = network_from_web_found.get_gdf()
@@ -112,13 +113,13 @@ def test_run_from_bbox_func_usa(pois_default_columns_from_output, roads_default_
     assert len(graph_computed.vertices_content) > 0
 
 
-def test_if_graph_works(points_gdf_from_coords):
+def test_if_path_can_be_computed(points_gdf_from_coords):
 
     location_name = "roanne"
     poi_from_web_found_gdf = OsmGt.poi_from_location(location_name).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_location(
-        location_name, poi_from_web_found_gdf
+        location_name, poi_from_web_found_gdf, "vehicle"
     )
 
     graph_computed = network_from_web_found.get_graph()
@@ -129,8 +130,7 @@ def test_if_graph_works(points_gdf_from_coords):
 
     source_vertex = graph_computed.find_vertex_from_name(start_node)
     target_vertex = graph_computed.find_vertex_from_name(end_node)
-    print(start_node, end_node)
-    from graph_tool.topology import shortest_path
+
     path_vertices, path_edges = shortest_path(
         graph_computed,
         source=source_vertex,
@@ -147,11 +147,11 @@ def test_if_graph_works(points_gdf_from_coords):
     assert "added_47" in path_ids[0]
     assert "added_63" in path_ids[-1]
 
-    shortest_path = network_from_web_found_gdf.copy(deep=True)
-    shortest_path = shortest_path[shortest_path['topo_uuid'].isin(path_ids)]
+    network_data = network_from_web_found_gdf.copy(deep=True)
+    network_data = network_data[shortest_path['topo_uuid'].isin(path_ids)]
 
     assert "added_47_forward" in path_ids
     assert "489_backward" in path_ids
     assert len(path_ids) == 86
-    assert shortest_path.shape[0] == 86
+    assert network_data.shape[0] == 86
 
