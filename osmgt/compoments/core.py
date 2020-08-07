@@ -75,14 +75,22 @@ class OsmGtCore(Logger):
 
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             self.check_build_input_data()
-
-            output_gdf = gpd.GeoDataFrame.from_features(self._output_data)
+            import pandas as pd
+            # more performance comparing .from_features() method
+            df = pd.DataFrame(self._output_data)
+            output_gdf = gpd.GeoDataFrame(
+                df["properties"].to_list(),
+                crs=self.epsg_4236,
+                geometry=df["geometry"].to_list()
+            )
+            # output_gdf = gpd.GeoDataFrame.from_features(self._output_data, crs=self.epsg_4236)
 
         else:
             output_gdf = self._output_data
 
-        output_gdf.crs = self.epsg_4236
-        output_gdf = self._clean_attributes(output_gdf)
+        # output_gdf.crs = self.epsg_4236
+        # output_gdf = self._clean_attributes(output_gdf)
+        self.logger.info(f"Geodataframe Ready")
 
         return output_gdf
 

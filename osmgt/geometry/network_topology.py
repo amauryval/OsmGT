@@ -156,18 +156,22 @@ class NetworkTopology:
         }
 
     def compute_added_node_connections(self):
+        self.logger.info("Starting: Adding new nodes on the network")
         self.__node_con_stats = {"connections_added": 0, "line_split": 0}
         self.__connections_added = {}
 
-        self.logger.info("Starting: Adding new nodes on the network")
+        self.logger.info("Find nearest line for each node")
         node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
 
+        self.logger.info("Prepare line to be split")
         self._bestlines_found = []
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
 
+        self.logger.info("Insert new node on its nearest line")
         for item in groupby(self._bestlines_found, key=lambda x: x['original_line_key']):
             self.insert_new_nodes_on_its_line(item)
+
         self._network_data = {**self._network_data, **self.__connections_added}
 
         stats_infos = ", ".join(
@@ -177,10 +181,10 @@ class NetworkTopology:
 
     def insert_new_nodes_on_its_line(self, item):
         original_line_key, values = item
-        data_to_insert = list(values)
+        data_to_insert = tuple(values)
 
         interpolated_line = [value["interpolated_line"] for value in data_to_insert][0]  # always the same interpolated line...
-        end_points_found = list(set([value["end_point_found"] for value in data_to_insert]))  # multiple points can ben found
+        end_points_found = tuple(set([value["end_point_found"] for value in data_to_insert]))  # multiple points can ben found
 
         linestring_with_new_nodes = self._network_data[original_line_key]["geometry"]
         linestring_with_new_nodes.extend(end_points_found)
@@ -200,7 +204,6 @@ class NetworkTopology:
     def proceed_nodes_on_network(self, node_feature):
         node_key, nearest_line_key = node_feature
         node_found = self._additionnal_nodes[node_key]
-
 
         interpolated_line_coords = self.__compute_interpolation_on_line(nearest_line_key)
         line_tree = spatial.cKDTree(interpolated_line_coords)
@@ -225,6 +228,7 @@ class NetworkTopology:
             self._bestlines_found.append(line_updater)
 
         # to split line at node (and also if node is on the network). it builds intersection used to split lines
+        # additionnal are converted to lines
         self._additionnal_nodes[node_key]["geometry"] = connection_coords
         self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
         self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
