@@ -62,8 +62,6 @@ class NetworkTopology:
         self.logger.info("Starting: build lines")
         for feature in self._network_data.values():
             self.build_lines(feature)
-        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
-        #     executor.map(self.build_lines, self._network_data.values())
 
         return self._output
 
@@ -162,17 +160,14 @@ class NetworkTopology:
         self.__connections_added = {}
 
         self.logger.info("Starting: Adding new nodes on the network")
-        self.logger.info("a")
         node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
-        self.logger.info("b")
 
         self._bestlines_found = []
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
-        self.logger.info("c")
+
         for item in groupby(self._bestlines_found, key=lambda x: x['original_line_key']):
             self.insert_new_nodes_on_its_line(item)
-        self.logger.info("d")
         self._network_data = {**self._network_data, **self.__connections_added}
 
         stats_infos = ", ".join(
@@ -188,7 +183,6 @@ class NetworkTopology:
         end_points_found = list(set([value["end_point_found"] for value in data_to_insert]))  # multiple points can ben found
 
         linestring_with_new_nodes = self._network_data[original_line_key]["geometry"]
-        # self.__node_con_stats["line_split"] += len(end_points_found)
         linestring_with_new_nodes.extend(end_points_found)
         linestring_with_new_nodes = set(linestring_with_new_nodes)
         self.__node_con_stats["line_split"] += len(linestring_with_new_nodes.intersection(end_points_found))
