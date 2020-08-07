@@ -7,7 +7,7 @@ from osmgt.geometry.network_topology import NetworkTopology
 from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.wkt import loads
-from osmgt.network.gt_helper import GraphHelpers
+# from osmgt.network.gt_helper import GraphHelpers
 import geopandas as gpd
 from shapely.geometry import shape
 
@@ -77,23 +77,23 @@ class OsmGtRoads(OsmGtCore):
 
         return output_gdf
 
-    def get_graph(self):
-        self.logger.info("Prepare graph")
-        self.check_build_input_data()
-
-        if self._mode == "vehicle":
-            graph = GraphHelpers(is_directed=True)
-        elif self._mode == "pedestrian":
-            graph = GraphHelpers(is_directed=False)
-
-        for feature in self._output_data:
-            graph.add_edge(
-                Point(feature["geometry"].coords[0]).wkt,
-                Point(feature["geometry"].coords[-1]).wkt,
-                feature["properties"][self.TOPO_FIELD],
-                shape(feature["geometry"]).length,
-            )
-        return graph
+    # def get_graph(self):
+    #     self.logger.info("Prepare graph")
+    #     self.check_build_input_data()
+    #
+    #     if self._mode == "vehicle":
+    #         graph = GraphHelpers(is_directed=True)
+    #     elif self._mode == "pedestrian":
+    #         graph = GraphHelpers(is_directed=False)
+    #
+    #     for feature in self._output_data:
+    #         graph.add_edge(
+    #             Point(feature["geometry"].coords[0]).wkt,
+    #             Point(feature["geometry"].coords[-1]).wkt,
+    #             feature["properties"][self.TOPO_FIELD],
+    #             shape(feature["geometry"]).length,
+    #         )
+    #     return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
         raw_data_restructured = self.__rebuild_network_data(raw_data)
@@ -120,19 +120,5 @@ class OsmGtRoads(OsmGtCore):
         return features
 
     def get_query_from_mode(self, mode):
-        assert mode in network_queries.keys()
+        assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"
         return network_queries[mode]
-        # if mode == "car":
-        #     query = self.__vehicule_path_query()
-        # elif mode == "pedestrian":
-        #     query = self.__pedestrian_path_query()
-        #
-        # return query
-
-    # def __vehicule_path_query(self, geo_filter):
-    #     query = f'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]({geo_filter});'
-    #     return query
-    #
-    # def __pedestrian_path_query(self, geo_filter):
-    #     query = f'way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|track|bus_guideway|escape|raceway|road|footway|bridleway|steps|corridor|path)$"]["area"!~"."]({geo_filter});'
-    #     return query

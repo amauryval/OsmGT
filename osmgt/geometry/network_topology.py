@@ -26,7 +26,7 @@ class NetworkTopology:
     # TODO return topology stats
 
     __INTERPOLATION_LEVEL = 7
-    __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 5
+    __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 10
 
     __NUMBER_OF_NODES_INTERSECTIONS = 2
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
@@ -162,15 +162,17 @@ class NetworkTopology:
         self.__connections_added = {}
 
         self.logger.info("Starting: Adding new nodes on the network")
+        self.logger.info("a")
         node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
+        self.logger.info("b")
 
         self._bestlines_found = []
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
-
+        self.logger.info("c")
         for item in groupby(self._bestlines_found, key=lambda x: x['original_line_key']):
             self.insert_new_nodes_on_its_line(item)
-
+        self.logger.info("d")
         self._network_data = {**self._network_data, **self.__connections_added}
 
         stats_infos = ", ".join(
@@ -202,33 +204,31 @@ class NetworkTopology:
         self._network_data[original_line_key]["geometry"] = linestring_linked_updated
 
     def proceed_nodes_on_network(self, node_feature):
-        node_key, lines_keys = node_feature
+        node_key, nearest_line_key = node_feature
         node_found = self._additionnal_nodes[node_key]
-        candidates = {}
-        for line_key in lines_keys:
-            interpolated_line_coords = self.__compute_interpolation_on_line(line_key)
-            line_tree = spatial.cKDTree(interpolated_line_coords)
-            dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
 
-            new_candidate = {
-                "interpolated_line": list(map(tuple, interpolated_line_coords)),
-                "original_line_key": line_key,
-                "end_point_found": tuple(
-                    interpolated_line_coords[nearest_line_object_idx]
-                ),
-            }
-            candidates[dist] = new_candidate
 
-        best_line = candidates[min(candidates.keys())]
+        interpolated_line_coords = self.__compute_interpolation_on_line(nearest_line_key)
+        line_tree = spatial.cKDTree(interpolated_line_coords)
+        dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
+
+        line_updater = {
+            "interpolated_line": list(map(tuple, interpolated_line_coords)),
+            "original_line_key": nearest_line_key,
+            "end_point_found": tuple(
+                interpolated_line_coords[nearest_line_object_idx]
+            ),
+        }
+
         connection_coords = [
             tuple(node_found["geometry"]),
-            best_line["end_point_found"],
+            line_updater["end_point_found"],
         ]
 
         if len(set(connection_coords)) > 1:
             # else node_key already on the network, no need to add it on the line
             self.__node_con_stats["connections_added"] += 1
-            self._bestlines_found.append(best_line)
+            self._bestlines_found.append(line_updater)
 
         # to split line at node (and also if node is on the network). it builds intersection used to split lines
         self._additionnal_nodes[node_key]["geometry"] = connection_coords
@@ -236,7 +236,7 @@ class NetworkTopology:
         self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
         self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
 
-    @functools.lru_cache(maxsize=None)
+    @functools.lru_cache(maxsize=8388608)
     def __compute_interpolation_on_line(self, line_key):
 
         line_found = self._network_data[line_key]
@@ -307,18 +307,36 @@ class NetworkTopology:
                 int(fid), tuple(map(float, feature["bounds"].split(", ")))
             )
 
-        node_by_nearest_lines = {
-            node_uuid: [
-                index_feature
-                for index_feature in tree_index.nearest(
-                    tuple(map(float, node["bounds"].split(", "))),
-                    self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND,
-                )
-            ]
-            for node_uuid, node in self._additionnal_nodes.items()
-        }
+        # find nearest line
+        from shapely.geometry import Point
+        node_by_nearest_lines = {}
+        for node_uuid, node in self._additionnal_nodes.items():
+            distances_computed = []
+            node_geom = Point(node["geometry"])
+            for index_feature in tree_index.nearest(tuple(map(float, node["bounds"].split(", "))), self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
+
+                line_geom = LineString(self._network_data[index_feature]["geometry"])
+                distance_from_node_to_line = node_geom.distance(line_geom)
+                distances_computed.append((distance_from_node_to_line, index_feature))
+                if distance_from_node_to_line == 0:
+                    # means that we node is on the network, looping is not necessary anymore
+                    break
+
+            _, min_index = min(distances_computed)
+            node_by_nearest_lines[node_uuid] = min_index
 
         return node_by_nearest_lines
+
+    @staticmethod
+    def find_nearest_geometry(point, geometries):
+        min_dist , min_index = (
+            min(
+                (point.distance(geom), k)
+                for (k , geom) in enumerate(geometries)
+            )
+        )
+
+        return geometries[min_index] , min_dist , min_index
 
     def _check_inputs(self, inputs):
         # TODO add assert
@@ -338,9 +356,7 @@ class NetworkTopology:
         try:
             index = list_object.index(search_value) + index_increment
             list_object[index:index] = value_to_add
-            # list_object.insert(
-            #     list_object.index(search_value) + index_increment, value_to_add
-            # )
+
             return list_object
         except ValueError:
             raise ValueError(f"{search_value} not found")
