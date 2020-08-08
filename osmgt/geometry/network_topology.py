@@ -1,5 +1,6 @@
 from scipy import spatial
 
+from shapely.geometry import Point
 from shapely.geometry import LineString
 
 import rtree
@@ -14,9 +15,14 @@ import functools
 
 import ujson
 
+from numba import jit
+from numba import int32
+from numba import types as nb_types
+
 import concurrent.futures
 
 from itertools import groupby
+
 
 def deepcopy(variable):
     return ujson.loads(ujson.dumps(variable))
@@ -32,6 +38,7 @@ class NetworkTopology:
     __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
 
     __CLEANING_FILED_STATUS = "topology"
+    __GEOMETRY_FIELD = "geometry"
 
     def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
 
@@ -69,78 +76,73 @@ class NetworkTopology:
         del feature["bounds"]  # useless now
 
         # compare linecoords and intersections points
-        coordinates_list = set(feature["geometry"])
+        coordinates_list = set(feature[self.__GEOMETRY_FIELD])
         points_intersections = coordinates_list.intersection(self._intersections_found)
 
         # rebuild linestring
-        if len(set(feature["geometry"])) > 1:
+        if len(set(feature[self.__GEOMETRY_FIELD])) > 1:
             lines_coordinates_rebuild = self._topology_builder(
-                feature["geometry"], points_intersections
+                feature[self.__GEOMETRY_FIELD], points_intersections
             )
 
             if len(lines_coordinates_rebuild) > 1:
 
                 for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
                     feature_updated = deepcopy(feature)
-                    feature_updated[self.__FIELD_ID] = str(
-                        f"{feature[self.__FIELD_ID]}_{new_suffix_id}"
-                    )
+                    feature_updated[self.__FIELD_ID] = f"{feature_updated[self.__FIELD_ID]}_{new_suffix_id}"
                     feature_updated[self.__CLEANING_FILED_STATUS] = "split"
-                    feature_updated["geometry"] = line_coordinates
+                    feature_updated[self.__GEOMETRY_FIELD] = line_coordinates
 
-                    self.mode_processing(feature_updated)
-
+                    new_features = self.mode_processing(feature_updated)
+                    self._output.extend(new_features)
             else:
                 # nothing to change
-                feature[self.__FIELD_ID] = str(feature[self.__FIELD_ID])
-                self.mode_processing(feature)
+                feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
+                new_features = self.mode_processing(feature)
+                self._output.extend(new_features)
 
     def mode_processing(self, input_feature):
+        new_elements = []
 
         if self._mode_post_processing == "vehicle":
             # by default
-            self.__forward_direction(input_feature)
+            new_forward_feature = self._direction_processing(input_feature, "forward")
+            new_elements.append(new_forward_feature)
+            if input_feature.get("junction", None) in ["roundabout", "jughandle"]:
+                return new_elements
 
-            if "junction" in input_feature:
-                if input_feature["junction"] in ["roundabout", "jughandle"]:
-                    return
-
-            if "oneway" in input_feature:
-                if input_feature["oneway"] != "yes":
-                    self.__backward_direction(input_feature)
-
-            else:
-                self.__backward_direction(input_feature)
+            if input_feature.get("oneway", None) != "yes":
+                new_backward_feature = self._direction_processing(input_feature, "backward")
+                new_elements.append(new_backward_feature)
 
         elif self._mode_post_processing == "pedestrian":
             # it's the default behavior in fact
-            feature = deepcopy(input_feature)
-            feature["geometry"] = LineString(feature["geometry"])
+            feature = self._direction_processing(input_feature)
+            new_elements.append(feature)
+
+        return new_elements
+
+    def _direction_processing(self, input_feature, direction=None):
+        feature = deepcopy(input_feature)
+        # feature["direction"] = direction
+        if direction == "backward":
+            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__GEOMETRY_FIELD][::-1])
+        elif direction in ["forward", None]:
+            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__GEOMETRY_FIELD])
+
+        if direction is not None:
+            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{direction}"
+        else:
             feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
-            feature["id"] = f"{feature['id']}"
-            self._output.append(self._geojson_formating(feature))
 
-    def __forward_direction(self, input_feature):
-        feature = deepcopy(input_feature)
-        feature["direction"] = "forward"
-        feature["geometry"] = LineString(feature["geometry"])
-        feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{feature['direction']}"
-        feature["id"] = f"{feature['id']}_{feature['direction']}"
-        self._output.append(self._geojson_formating(feature))
-
-    def __backward_direction(self, input_feature):
-        feature = deepcopy(input_feature)
-        feature["geometry"] = LineString(feature["geometry"][::-1])
-        feature["direction"] = "backward"
-        feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{feature['direction']}"
-        feature["id"] = f"{feature['id']}_{feature['direction']}"
-        self._output.append(self._geojson_formating(feature))
+        feature["id"] = f"{feature['id']}"
+        return self._geojson_formating(feature)
 
     def _prepare_data(self):
 
         self._network_data = {
             feature["properties"][self.__FIELD_ID]: {
-                **{"geometry": list(map(tuple, feature["geometry"]["coordinates"]))},
+                **{self.__GEOMETRY_FIELD: list(map(tuple, feature[self.__GEOMETRY_FIELD]["coordinates"]))},
                 **feature["properties"],
                 **{self.__CLEANING_FILED_STATUS: "unchanged"}
             }
@@ -149,7 +151,7 @@ class NetworkTopology:
 
         self._additionnal_nodes = {
             feature["properties"][self.__FIELD_ID]: {
-                **{"geometry": feature["geometry"]["coordinates"]},
+                **{self.__GEOMETRY_FIELD: feature[self.__GEOMETRY_FIELD]["coordinates"]},
                 **feature["properties"],
             }
             for feature in self._additionnal_nodes
@@ -165,8 +167,10 @@ class NetworkTopology:
 
         self.logger.info("Prepare line to be split")
         self._bestlines_found = []
-        with concurrent.futures.ThreadPoolExecutor(4) as executor:
-            executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
+        for f in node_by_nearest_lines.items():
+            self.proceed_nodes_on_network(f)
+        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
+        #     executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
 
         self.logger.info("Insert new node on its nearest line")
         for item in groupby(self._bestlines_found, key=lambda x: x['original_line_key']):
@@ -186,7 +190,7 @@ class NetworkTopology:
         interpolated_line = [value["interpolated_line"] for value in data_to_insert][0]  # always the same interpolated line...
         end_points_found = tuple(set([value["end_point_found"] for value in data_to_insert]))  # multiple points can ben found
 
-        linestring_with_new_nodes = self._network_data[original_line_key]["geometry"]
+        linestring_with_new_nodes = self._network_data[original_line_key][self.__GEOMETRY_FIELD]
         linestring_with_new_nodes.extend(end_points_found)
         linestring_with_new_nodes = set(linestring_with_new_nodes)
         self.__node_con_stats["line_split"] += len(linestring_with_new_nodes.intersection(end_points_found))
@@ -199,26 +203,26 @@ class NetworkTopology:
             )
         )
 
-        self._network_data[original_line_key]["geometry"] = linestring_linked_updated
+        self._network_data[original_line_key][self.__GEOMETRY_FIELD] = linestring_linked_updated
 
     def proceed_nodes_on_network(self, node_feature):
         node_key, nearest_line_key = node_feature
         node_found = self._additionnal_nodes[node_key]
+        line_found = np.array(self._network_data[nearest_line_key][self.__GEOMETRY_FIELD])
 
-        interpolated_line_coords = self.__compute_interpolation_on_line(nearest_line_key)
+        interpolated_line_coords = compute_interpolation_on_line(line_found, self.__INTERPOLATION_LEVEL)
         line_tree = spatial.cKDTree(interpolated_line_coords)
-        dist, nearest_line_object_idx = line_tree.query(node_found["geometry"])
+        dist, nearest_line_object_idx = line_tree.query(node_found[self.__GEOMETRY_FIELD])
 
+        interpolated_line_coords = list(map(tuple, interpolated_line_coords))
         line_updater = {
-            "interpolated_line": list(map(tuple, interpolated_line_coords)),
+            "interpolated_line": interpolated_line_coords,
             "original_line_key": nearest_line_key,
-            "end_point_found": tuple(
-                interpolated_line_coords[nearest_line_object_idx]
-            ),
+            "end_point_found": interpolated_line_coords[nearest_line_object_idx],
         }
 
         connection_coords = [
-            tuple(node_found["geometry"]),
+            tuple(node_found[self.__GEOMETRY_FIELD]),
             line_updater["end_point_found"],
         ]
 
@@ -229,20 +233,20 @@ class NetworkTopology:
 
         # to split line at node (and also if node is on the network). it builds intersection used to split lines
         # additionnal are converted to lines
-        self._additionnal_nodes[node_key]["geometry"] = connection_coords
+        self._additionnal_nodes[node_key][self.__GEOMETRY_FIELD] = connection_coords
         self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
         self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
         self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
 
-    @functools.lru_cache(maxsize=8388608)
-    def __compute_interpolation_on_line(self, line_key):
-
-        line_found = self._network_data[line_key]
-        interpolated_line_coords = interpolate_curve_based_on_original_points(
-            np.vstack(list(zip(*line_found["geometry"]))).T, self.__INTERPOLATION_LEVEL
-        ).tolist()
-
-        return interpolated_line_coords
+    # @functools.lru_cache(maxsize=8388608)
+    # @jit(nopython=True)
+    # def __compute_interpolation_on_line(self, line_found):
+    #
+    #     interpolated_line_coords = interpolate_curve_based_on_original_points(
+    #         np.vstack(list(zip(*line_found[self.__GEOMETRY_FIELD]))).T, self.__INTERPOLATION_LEVEL
+    #     ).tolist()
+    #
+    #     return interpolated_line_coords
 
     def _topology_builder(self, coordinates, points_intersections):
 
@@ -283,7 +287,7 @@ class NetworkTopology:
             [
                 coords
                 for feature in self._network_data.values()
-                for coords in feature["geometry"]
+                for coords in feature[self.__GEOMETRY_FIELD]
             ],
         )
 
@@ -306,14 +310,13 @@ class NetworkTopology:
             )
 
         # find nearest line
-        from shapely.geometry import Point
         node_by_nearest_lines = {}
         for node_uuid, node in self._additionnal_nodes.items():
             distances_computed = []
-            node_geom = Point(node["geometry"])
+            node_geom = Point(node[self.__GEOMETRY_FIELD])
             for index_feature in tree_index.nearest(tuple(map(float, node["bounds"].split(", "))), self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
 
-                line_geom = LineString(self._network_data[index_feature]["geometry"])
+                line_geom = LineString(self._network_data[index_feature][self.__GEOMETRY_FIELD])
                 distance_from_node_to_line = node_geom.distance(line_geom)
                 distances_computed.append((distance_from_node_to_line, index_feature))
                 if distance_from_node_to_line == 0:
@@ -348,24 +351,32 @@ class NetworkTopology:
         index_increment = 0
         if position == "before":
             index_increment = -1
-        if position == "after":
+        elif position == "after":
             index_increment = 1
 
-        try:
-            index = list_object.index(search_value) + index_increment
-            list_object[index:index] = value_to_add
+        index = list_object.index(search_value) + index_increment
+        list_object[index:index] = value_to_add
 
-            return list_object
-        except ValueError:
-            raise ValueError(f"{search_value} not found")
+        return list_object
+
 
     def _geojson_formating(self, input_data):
-        geometry = input_data["geometry"]
-        del input_data["geometry"]
-        properties = input_data
-        return {"geometry": geometry, "properties": properties}
+        properties_fields = list(input_data.keys())
+        properties_fields.remove("geometry")
+        geometry, properties = map(lambda keys: {x: input_data[x] for x in keys}, [[self.__GEOMETRY_FIELD], properties_fields])
+        return {**geometry, "properties": properties}
 
 
+@jit(nopython=True, nogil=True, cache=True)
+def compute_interpolation_on_line(line_found, interpolation_level):
+
+    interpolated_line_coords = interpolate_curve_based_on_original_points(
+        line_found, interpolation_level
+    )
+
+    return interpolated_line_coords
+
+@jit(nopython=True, nogil=True, cache=True)
 def interpolate_curve_based_on_original_points(x, n):
     # source https://stackoverflow.com/questions/31243002/higher-order-local-interpolation-of-implicit-curves-in-python/31335255
     if n > 1:
