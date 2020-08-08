@@ -163,18 +163,17 @@ class NetworkTopology:
         self.__connections_added = {}
 
         self.logger.info("Find nearest line for each node")
-        node_by_nearest_lines = self.__find_nearest_line_for_each_key_nodes()
+        nearest_line_and_its_nodes = self.__find_nearest_line_for_each_key_nodes()
 
-        self.logger.info("Prepare line to be split")
+        self.logger.info("Split line")
         self._bestlines_found = []
-        for f in node_by_nearest_lines.items():
-            self.proceed_nodes_on_network(f)
+        for nearest_line_content in nearest_line_and_its_nodes.items():
+            default_line_updater = self.proceed_nodes_on_network(nearest_line_content)
+            if default_line_updater is not None:
+                self.insert_new_nodes_on_its_line(default_line_updater)
         # with concurrent.futures.ThreadPoolExecutor(4) as executor:
-        #     executor.map(self.proceed_nodes_on_network, node_by_nearest_lines.items())
+        #     executor.map(self.proceed_nodes_on_network, nearest_line_and_its_nodes.items())
 
-        self.logger.info("Insert new node on its nearest line")
-        for item in groupby(self._bestlines_found, key=lambda x: x['original_line_key']):
-            self.insert_new_nodes_on_its_line(item)
 
         self._network_data = {**self._network_data, **self.__connections_added}
 
@@ -184,11 +183,9 @@ class NetworkTopology:
         self.logger.info(f"Done: Adding new nodes on the network ; {stats_infos}")
 
     def insert_new_nodes_on_its_line(self, item):
-        original_line_key, values = item
-        data_to_insert = tuple(values)
-
-        interpolated_line = [value["interpolated_line"] for value in data_to_insert][0]  # always the same interpolated line...
-        end_points_found = tuple(set([value["end_point_found"] for value in data_to_insert]))  # multiple points can ben found
+        original_line_key = item["original_line_key"]
+        interpolated_line = item["interpolated_line"]
+        end_points_found = item["end_points_found"]
 
         linestring_with_new_nodes = self._network_data[original_line_key][self.__GEOMETRY_FIELD]
         linestring_with_new_nodes.extend(end_points_found)
@@ -205,48 +202,50 @@ class NetworkTopology:
 
         self._network_data[original_line_key][self.__GEOMETRY_FIELD] = linestring_linked_updated
 
-    def proceed_nodes_on_network(self, node_feature):
-        node_key, nearest_line_key = node_feature
-        node_found = self._additionnal_nodes[node_key]
-        line_found = np.array(self._network_data[nearest_line_key][self.__GEOMETRY_FIELD])
+    def proceed_nodes_on_network(self, nearest_line_content):
+        nearest_line_key, node_keys = nearest_line_content
 
-        interpolated_line_coords = compute_interpolation_on_line(line_found, self.__INTERPOLATION_LEVEL)
+        # interpolated_line_coords = self.__compute_interpolation_on_line(nearest_line_key, self.__INTERPOLATION_LEVEL)
+        interpolated_line_coords = interpolate_curve_based_on_original_points(
+            np.array(self._network_data[nearest_line_key][self.__GEOMETRY_FIELD]),
+            self.__INTERPOLATION_LEVEL
+        )
         line_tree = spatial.cKDTree(interpolated_line_coords)
-        dist, nearest_line_object_idx = line_tree.query(node_found[self.__GEOMETRY_FIELD])
+        interpolated_line_coords_reformated = list(map(tuple, interpolated_line_coords))
 
-        interpolated_line_coords = list(map(tuple, interpolated_line_coords))
-        line_updater = {
-            "interpolated_line": interpolated_line_coords,
+        default_line_updater = {
+            "interpolated_line": interpolated_line_coords_reformated,
             "original_line_key": nearest_line_key,
-            "end_point_found": interpolated_line_coords[nearest_line_object_idx],
+            "end_points_found": []
         }
 
-        connection_coords = [
-            tuple(node_found[self.__GEOMETRY_FIELD]),
-            line_updater["end_point_found"],
-        ]
+        for node_key in node_keys:
+            node_found = self._additionnal_nodes[node_key]
 
-        if len(set(connection_coords)) > 1:
-            # else node_key already on the network, no need to add it on the line
-            self.__node_con_stats["connections_added"] += 1
-            self._bestlines_found.append(line_updater)
+            dist, nearest_line_object_idx = line_tree.query(node_found[self.__GEOMETRY_FIELD])
+            end_point_found = interpolated_line_coords_reformated[nearest_line_object_idx]
 
-        # to split line at node (and also if node is on the network). it builds intersection used to split lines
-        # additionnal are converted to lines
-        self._additionnal_nodes[node_key][self.__GEOMETRY_FIELD] = connection_coords
-        self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
-        self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
-        self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
+            connection_coords = [
+                tuple(node_found[self.__GEOMETRY_FIELD]),
+                end_point_found,
+            ]
 
-    # @functools.lru_cache(maxsize=8388608)
-    # @jit(nopython=True)
-    # def __compute_interpolation_on_line(self, line_found):
-    #
-    #     interpolated_line_coords = interpolate_curve_based_on_original_points(
-    #         np.vstack(list(zip(*line_found[self.__GEOMETRY_FIELD]))).T, self.__INTERPOLATION_LEVEL
-    #     ).tolist()
-    #
-    #     return interpolated_line_coords
+            if len(set(connection_coords)) > 1:
+                # else node_key already on the network, no need to add it on the line
+                self.__node_con_stats["connections_added"] += 1
+                default_line_updater["end_points_found"].append(end_point_found)
+
+            # to split line at node (and also if node is on the network). it builds intersection used to split lines
+            # additionnal are converted to lines
+            self._additionnal_nodes[node_key][self.__GEOMETRY_FIELD] = connection_coords
+            self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
+            self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
+            self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
+
+        if len(default_line_updater["end_points_found"]) > 0:
+            return default_line_updater
+
+        return None
 
     def _topology_builder(self, coordinates, points_intersections):
 
@@ -323,8 +322,11 @@ class NetworkTopology:
                     # means that we node is on the network, looping is not necessary anymore
                     break
 
-            _, min_index = min(distances_computed)
-            node_by_nearest_lines[node_uuid] = min_index
+            _, line_min_index = min(distances_computed)
+            if line_min_index not in node_by_nearest_lines:
+                node_by_nearest_lines[line_min_index] = [node_uuid]
+            else:
+                node_by_nearest_lines[line_min_index].append(node_uuid)
 
         return node_by_nearest_lines
 
@@ -366,8 +368,16 @@ class NetworkTopology:
         geometry, properties = map(lambda keys: {x: input_data[x] for x in keys}, [[self.__GEOMETRY_FIELD], properties_fields])
         return {**geometry, "properties": properties}
 
+    @functools.lru_cache(maxsize=2097152)
+    def __compute_interpolation_on_line(self, line_key_found, interpolation_level):
 
-@jit(nopython=True, nogil=True, cache=True)
+        interpolated_line_coords = interpolate_curve_based_on_original_points(
+            np.array(self._network_data[line_key_found][self.__GEOMETRY_FIELD]), interpolation_level
+        )
+
+        return interpolated_line_coords
+
+# @jit(nopython=True, nogil=True, cache=True)
 def compute_interpolation_on_line(line_found, interpolation_level):
 
     interpolated_line_coords = interpolate_curve_based_on_original_points(
@@ -376,7 +386,8 @@ def compute_interpolation_on_line(line_found, interpolation_level):
 
     return interpolated_line_coords
 
-@jit(nopython=True, nogil=True, cache=True)
+signature_interpolation_func = nb_types.Array(nb_types.float64, 2, 'C')(nb_types.Array(nb_types.float64, 2, 'C'), nb_types.int64)
+@jit(signature_interpolation_func, nopython=True, nogil=True, cache=True)
 def interpolate_curve_based_on_original_points(x, n):
     # source https://stackoverflow.com/questions/31243002/higher-order-local-interpolation-of-implicit-curves-in-python/31335255
     if n > 1:
