@@ -302,33 +302,37 @@ class NetworkTopology:
 
     def __find_nearest_line_for_each_key_nodes(self):
         # find the nereast network arc to interpolate
-        tree_index = rtree.index.Index()
+        self.__tree_index = rtree.index.Index()
         for fid, feature in self._network_data.items():
-            tree_index.insert(
+            self.__tree_index.insert(
                 int(fid), tuple(map(float, feature["bounds"].split(", ")))
             )
 
         # find nearest line
-        node_by_nearest_lines = {}
-        for node_uuid, node in self._additionnal_nodes.items():
-            distances_computed = []
-            node_geom = Point(node[self.__GEOMETRY_FIELD])
-            for index_feature in tree_index.nearest(tuple(map(float, node["bounds"].split(", "))), self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
+        self.__node_by_nearest_lines = {}
+        for node_info in self._additionnal_nodes.items():
+            self.__get_nearest_line(node_info)
 
-                line_geom = LineString(self._network_data[index_feature][self.__GEOMETRY_FIELD])
-                distance_from_node_to_line = node_geom.distance(line_geom)
-                distances_computed.append((distance_from_node_to_line, index_feature))
-                if distance_from_node_to_line == 0:
-                    # means that we node is on the network, looping is not necessary anymore
-                    break
+        return self.__node_by_nearest_lines
 
-            _, line_min_index = min(distances_computed)
-            if line_min_index not in node_by_nearest_lines:
-                node_by_nearest_lines[line_min_index] = [node_uuid]
-            else:
-                node_by_nearest_lines[line_min_index].append(node_uuid)
+    def __get_nearest_line(self, node_info):
+        node_uuid , node = node_info
+        distances_computed = []
+        node_geom = Point(node[self.__GEOMETRY_FIELD])
+        for index_feature in self.__tree_index.nearest(tuple(map(float , node["bounds"].split(", "))), self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
 
-        return node_by_nearest_lines
+            line_geom = LineString(self._network_data[index_feature][self.__GEOMETRY_FIELD])
+            distance_from_node_to_line = node_geom.distance(line_geom)
+            distances_computed.append((distance_from_node_to_line , index_feature))
+            if distance_from_node_to_line == 0:
+                # means that we node is on the network, looping is not necessary anymore
+                break
+
+        _, line_min_index = min(distances_computed)
+        if line_min_index not in self.__node_by_nearest_lines:
+            self.__node_by_nearest_lines[line_min_index] = [node_uuid]
+        else:
+            self.__node_by_nearest_lines[line_min_index].append(node_uuid)
 
     @staticmethod
     def find_nearest_geometry(point, geometries):

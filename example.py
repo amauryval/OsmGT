@@ -18,7 +18,7 @@ def test_from_web():
     poi_gdf.to_file(f"{poi_output_name}.shp", driver="ESRI Shapefile")
 
     # get NETWORK
-    network_from_web_found = OsmGt.roads_from_location(location, additionnal_nodes=poi_gdf, mode="vehicle")
+    network_from_web_found = OsmGt.roads_from_location(location, additionnal_nodes=poi_gdf, mode="pedestrian")
     # network_from_web_found = OsmGt.roads_from_bbox(bbox, poi_gdf)
 
     # network_from_web_found.export_to_osmgt_file(network_output_name)
