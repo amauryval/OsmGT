@@ -6,6 +6,7 @@ import geojson
 from osmgt.helpers.logger import Logger
 
 from osmgt.apis.nominatim import NominatimApi
+from shapely.geometry import mapping
 
 
 class ErrorOsmGtCore(Exception):
@@ -78,10 +79,12 @@ class OsmGtCore(Logger):
             import pandas as pd
             # more performance comparing .from_features() method
             df = pd.DataFrame(self._output_data)
+            geometry = df["geometry"]
+            properties = df.drop(["geometry"], axis=1)
             output_gdf = gpd.GeoDataFrame(
-                df["properties"].to_list(),
+                properties,
                 crs=self.epsg_4236,
-                geometry=df["geometry"].to_list()
+                geometry=geometry.to_list()
             )
             # output_gdf = gpd.GeoDataFrame.from_features(self._output_data, crs=self.epsg_4236)
 
@@ -118,10 +121,11 @@ class OsmGtCore(Logger):
         properties_found["id"] = properties["id"]
 
         # used for topology
-        properties_found["bounds"] = ", ".join(map(str, geometry.bounds))
+        # properties_found["bounds"] = geometry.bounds
         properties_found[self.TOPO_FIELD] = uuid_enum  # do not cast to str, because topology processing need integer...
+        properties_found["geometry"] = geometry
 
         # TODO add CRS
-        feature_build = geojson.Feature(geometry=geometry, properties=properties_found)
+        feature_build = properties_found
 
         return feature_build

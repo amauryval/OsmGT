@@ -3,7 +3,7 @@ import geopandas
 from osmgt import OsmGt
 
 def test_from_web():
-    location = "lyon"
+    location = "Lyon"
     poi_output_name = f"{location}_poi"
     network_output_name = f"{location}_network"
     bbox = (40.718087, -74.018433, 40.733356, -73.982749)
@@ -14,7 +14,7 @@ def test_from_web():
     # poi_from_web_found.export_to_osmgt_file(poi_output_name)
 
     # poi_from_osmgt_file_found = OsmGt.roads_from_osmgt_file(f"{poi_output_name}.osmgt")
-    poi_gdf = poi_from_web_found.get_gdf()[["topo_uuid", "id", "name", "amenity", "geometry", "bounds"]]
+    poi_gdf = poi_from_web_found.get_gdf()[["topo_uuid", "id", "name", "amenity", "geometry"]]
     poi_gdf.to_file(f"{poi_output_name}.shp", driver="ESRI Shapefile")
 
     # get NETWORK

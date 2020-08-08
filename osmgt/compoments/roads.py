@@ -9,7 +9,7 @@ from shapely.geometry import Point
 from shapely.wkt import loads
 from osmgt.network.gt_helper import GraphHelpers
 import geopandas as gpd
-from shapely.geometry import shape
+
 
 from osmgt.core.global_values import network_queries
 
@@ -45,38 +45,6 @@ class OsmGtRoads(OsmGtCore):
 
         return self
 
-    def __DEPRECATED_direction_processing(self):
-        output_gdf = super().get_gdf(verbose=False)
-
-        # build backward and forward roads
-        # by default
-        output_gdf.loc[:, "direction"] = "forward;backward"
-        if "oneway" in output_gdf.columns.to_list():
-            output_gdf.loc[output_gdf['oneway'] == "yes", "direction"] = "forward"
-            output_gdf.loc[output_gdf['oneway'] != "yes", "direction"] = "forward;backward"
-
-        if "junction" in output_gdf.columns.to_list():
-            output_gdf.loc[output_gdf['junction'].isin(["roundabout", "jughandle"]), "direction"] = "forward"
-
-        output_gdf["geometry"] = output_gdf["geometry"].apply(lambda x: x.wkt)
-
-        output_gdf = (
-            output_gdf.set_index(output_gdf.columns.to_list()[:-1])[output_gdf.columns.to_list()[-1]]
-            .str.split(';', expand=True)
-            .stack()
-            .reset_index(name='direction')
-        )
-        underscore_concat = lambda a, b: f"{a}_{b}"
-        output_gdf["topo_uuid"] = output_gdf["topo_uuid"].combine(output_gdf["direction"], underscore_concat)
-        output_gdf["id"] = output_gdf["id"].combine(output_gdf["direction"], underscore_concat)
-
-        output_gdf["geometry"] = output_gdf.apply(lambda x: loads(x["geometry"]) if x["direction"] == "forward" else LineString(loads(x["geometry"]).coords[::-1]), axis=1)
-        output_gdf = gpd.GeoDataFrame(output_gdf, geometry='geometry')
-        output_gdf.set_crs(epsg=4326)
-        output_gdf.drop(columns=output_gdf.columns.to_list()[-2:], inplace=True)
-
-        return output_gdf
-
     def get_graph(self):
         self.logger.info("Prepare graph")
         self.check_build_input_data()
@@ -96,6 +64,12 @@ class OsmGtRoads(OsmGtCore):
         return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes):
+
+        if additionnal_nodes is not None:
+            if self.TOPO_FIELD not in additionnal_nodes.columns.tolist():
+                additionnal_nodes[self.TOPO_FIELD] = additionnal_nodes.index.apply(lambda x: int(x))
+            additionnal_nodes = additionnal_nodes.to_dict("records")
+
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
             self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD, self._mode

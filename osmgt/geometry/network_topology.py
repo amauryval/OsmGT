@@ -16,7 +16,6 @@ import functools
 import ujson
 
 from numba import jit
-from numba import int32
 from numba import types as nb_types
 
 import concurrent.futures
@@ -39,6 +38,7 @@ class NetworkTopology:
 
     __CLEANING_FILED_STATUS = "topology"
     __GEOMETRY_FIELD = "geometry"
+    __COORDINATES_FIELD = "coordinates"
 
     def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
 
@@ -46,12 +46,9 @@ class NetworkTopology:
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_inputs(network_data)
+        self._additionnal_nodes = additionnal_nodes
         self._mode_post_processing = mode_post_processing
 
-        if uuid_field not in additionnal_nodes.columns.tolist():
-            additionnal_nodes[uuid_field] = additionnal_nodes.index.apply(lambda x: int(x))
-            print(additionnal_nodes)
-        self._additionnal_nodes = ujson.loads(additionnal_nodes.to_json())["features"]
         self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
 
         self._output = []
@@ -73,16 +70,17 @@ class NetworkTopology:
         return self._output
 
     def build_lines(self, feature):
-        del feature["bounds"]  # useless now
+        # del feature["bounds"]  # useless now
+        del feature[self.__GEOMETRY_FIELD]  # useless now
 
         # compare linecoords and intersections points
-        coordinates_list = set(feature[self.__GEOMETRY_FIELD])
+        coordinates_list = set(feature[self.__COORDINATES_FIELD])
         points_intersections = coordinates_list.intersection(self._intersections_found)
 
         # rebuild linestring
-        if len(set(feature[self.__GEOMETRY_FIELD])) > 1:
+        if len(set(feature[self.__COORDINATES_FIELD])) > 1:
             lines_coordinates_rebuild = self._topology_builder(
-                feature[self.__GEOMETRY_FIELD], points_intersections
+                feature[self.__COORDINATES_FIELD], points_intersections
             )
 
             if len(lines_coordinates_rebuild) > 1:
@@ -91,7 +89,7 @@ class NetworkTopology:
                     feature_updated = deepcopy(feature)
                     feature_updated[self.__FIELD_ID] = f"{feature_updated[self.__FIELD_ID]}_{new_suffix_id}"
                     feature_updated[self.__CLEANING_FILED_STATUS] = "split"
-                    feature_updated[self.__GEOMETRY_FIELD] = line_coordinates
+                    feature_updated[self.__COORDINATES_FIELD] = line_coordinates
 
                     new_features = self.mode_processing(feature_updated)
                     self._output.extend(new_features)
@@ -117,18 +115,19 @@ class NetworkTopology:
 
         elif self._mode_post_processing == "pedestrian":
             # it's the default behavior in fact
+
             feature = self._direction_processing(input_feature)
             new_elements.append(feature)
 
         return new_elements
 
     def _direction_processing(self, input_feature, direction=None):
-        feature = deepcopy(input_feature)
+        feature = dict(input_feature)
         # feature["direction"] = direction
         if direction == "backward":
-            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__GEOMETRY_FIELD][::-1])
+            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__COORDINATES_FIELD][::-1])
         elif direction in ["forward", None]:
-            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__GEOMETRY_FIELD])
+            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__COORDINATES_FIELD])
 
         if direction is not None:
             feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{direction}"
@@ -136,26 +135,28 @@ class NetworkTopology:
             feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
 
         feature["id"] = f"{feature['id']}"
-        return self._geojson_formating(feature)
+        del feature[self.__COORDINATES_FIELD]
+        # return self._geojson_formating(feature)
+        return feature
 
     def _prepare_data(self):
 
         self._network_data = {
-            feature["properties"][self.__FIELD_ID]: {
-                **{self.__GEOMETRY_FIELD: list(map(tuple, feature[self.__GEOMETRY_FIELD]["coordinates"]))},
-                **feature["properties"],
+            feature[self.__FIELD_ID]: {
+                **{self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[:]},
+                **feature,
                 **{self.__CLEANING_FILED_STATUS: "unchanged"}
             }
             for feature in self._network_data
         }
-
-        self._additionnal_nodes = {
-            feature["properties"][self.__FIELD_ID]: {
-                **{self.__GEOMETRY_FIELD: feature[self.__GEOMETRY_FIELD]["coordinates"]},
-                **feature["properties"],
+        if self._additionnal_nodes is not None:
+            self._additionnal_nodes = {
+                feature[self.__FIELD_ID]: {
+                    **{self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[0]},
+                    **feature,
+                }
+                for feature in self._additionnal_nodes
             }
-            for feature in self._additionnal_nodes
-        }
 
     def compute_added_node_connections(self):
         self.logger.info("Starting: Adding new nodes on the network")
@@ -187,7 +188,7 @@ class NetworkTopology:
         interpolated_line = item["interpolated_line"]
         end_points_found = item["end_points_found"]
 
-        linestring_with_new_nodes = self._network_data[original_line_key][self.__GEOMETRY_FIELD]
+        linestring_with_new_nodes = self._network_data[original_line_key][self.__COORDINATES_FIELD]
         linestring_with_new_nodes.extend(end_points_found)
         linestring_with_new_nodes = set(linestring_with_new_nodes)
         self.__node_con_stats["line_split"] += len(linestring_with_new_nodes.intersection(end_points_found))
@@ -200,14 +201,14 @@ class NetworkTopology:
             )
         )
 
-        self._network_data[original_line_key][self.__GEOMETRY_FIELD] = linestring_linked_updated
+        self._network_data[original_line_key][self.__COORDINATES_FIELD] = linestring_linked_updated
 
     def proceed_nodes_on_network(self, nearest_line_content):
         nearest_line_key, node_keys = nearest_line_content
 
         # interpolated_line_coords = self.__compute_interpolation_on_line(nearest_line_key, self.__INTERPOLATION_LEVEL)
         interpolated_line_coords = interpolate_curve_based_on_original_points(
-            np.array(self._network_data[nearest_line_key][self.__GEOMETRY_FIELD]),
+            np.array(self._network_data[nearest_line_key][self.__COORDINATES_FIELD]),
             self.__INTERPOLATION_LEVEL
         )
         line_tree = spatial.cKDTree(interpolated_line_coords)
@@ -216,33 +217,34 @@ class NetworkTopology:
         default_line_updater = {
             "interpolated_line": interpolated_line_coords_reformated,
             "original_line_key": nearest_line_key,
-            "end_points_found": []
+            "end_points_found": None
         }
 
-        for node_key in node_keys:
-            node_found = self._additionnal_nodes[node_key]
+        nodes_coords = [self._additionnal_nodes[node_key]["coordinates"] for node_key in node_keys]
+        _, nearest_line_object_idxes = line_tree.query(nodes_coords)
+        end_points_found = [interpolated_line_coords_reformated[nearest_line_key] for nearest_line_key in nearest_line_object_idxes]
+        default_line_updater["end_points_found"] = end_points_found
 
-            dist, nearest_line_object_idx = line_tree.query(node_found[self.__GEOMETRY_FIELD])
-            end_point_found = interpolated_line_coords_reformated[nearest_line_object_idx]
+        connections_coords = list(
+            zip(
+                node_keys,
+                list(zip(nodes_coords, end_points_found))
+            )
+        )
+        self.__node_con_stats["connections_added"] += len(connections_coords)
 
-            connection_coords = [
-                tuple(node_found[self.__GEOMETRY_FIELD]),
-                end_point_found,
-            ]
-
-            if len(set(connection_coords)) > 1:
-                # else node_key already on the network, no need to add it on the line
-                self.__node_con_stats["connections_added"] += 1
-                default_line_updater["end_points_found"].append(end_point_found)
+        connections_coords_valid = list(filter(lambda x: len(set(x[-1])) > 0, connections_coords))
+        for node_key, connection in connections_coords_valid:
 
             # to split line at node (and also if node is on the network). it builds intersection used to split lines
             # additionnal are converted to lines
-            self._additionnal_nodes[node_key][self.__GEOMETRY_FIELD] = connection_coords
+            self._additionnal_nodes[node_key][self.__COORDINATES_FIELD] = connection
             self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
             self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
+
             self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
 
-        if len(default_line_updater["end_points_found"]) > 0:
+        if default_line_updater["end_points_found"] is not None:
             return default_line_updater
 
         return None
@@ -256,6 +258,7 @@ class NetworkTopology:
         for point_intersection in points_intersections:
 
             point_intersection = tuple(point_intersection)
+
             if point_intersection in middle_coordinates_values:
                 # we get the middle values from coordinates to avoid to catch the first and last value when editing
 
@@ -286,7 +289,7 @@ class NetworkTopology:
             [
                 coords
                 for feature in self._network_data.values()
-                for coords in feature[self.__GEOMETRY_FIELD]
+                for coords in feature[self.__COORDINATES_FIELD]
             ],
         )
 
@@ -305,7 +308,7 @@ class NetworkTopology:
         self.__tree_index = rtree.index.Index()
         for fid, feature in self._network_data.items():
             self.__tree_index.insert(
-                int(fid), tuple(map(float, feature["bounds"].split(", ")))
+                int(fid), feature[self.__GEOMETRY_FIELD].bounds
             )
 
         # find nearest line
@@ -319,9 +322,9 @@ class NetworkTopology:
         node_uuid , node = node_info
         distances_computed = []
         node_geom = Point(node[self.__GEOMETRY_FIELD])
-        for index_feature in self.__tree_index.nearest(tuple(map(float , node["bounds"].split(", "))), self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
+        for index_feature in self.__tree_index.nearest(node[self.__GEOMETRY_FIELD].bounds, self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
 
-            line_geom = LineString(self._network_data[index_feature][self.__GEOMETRY_FIELD])
+            line_geom = LineString(self._network_data[index_feature][self.__COORDINATES_FIELD])
             distance_from_node_to_line = node_geom.distance(line_geom)
             distances_computed.append((distance_from_node_to_line , index_feature))
             if distance_from_node_to_line == 0:
@@ -365,18 +368,17 @@ class NetworkTopology:
 
         return list_object
 
-
     def _geojson_formating(self, input_data):
         properties_fields = list(input_data.keys())
         properties_fields.remove("geometry")
-        geometry, properties = map(lambda keys: {x: input_data[x] for x in keys}, [[self.__GEOMETRY_FIELD], properties_fields])
+        geometry, properties = map(lambda keys: {x: input_data[x] for x in keys} , [[self.__COORDINATES_FIELD], properties_fields])
         return {**geometry, "properties": properties}
 
     @functools.lru_cache(maxsize=2097152)
     def __compute_interpolation_on_line(self, line_key_found, interpolation_level):
 
         interpolated_line_coords = interpolate_curve_based_on_original_points(
-            np.array(self._network_data[line_key_found][self.__GEOMETRY_FIELD]), interpolation_level
+            np.array(self._network_data[line_key_found][self.__COORDINATES_FIELD]), interpolation_level
         )
 
         return interpolated_line_coords
