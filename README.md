@@ -7,14 +7,15 @@ OsmGT
 
 OpenStreetMap based on graph-tools
 
-# How to test it 
-```
-docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
-```
-
 # How to install it 
 ```
 conda install -c amauryval osmgt
+```
+
+
+# How to test it 
+```
+docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
 ```
 
 check example.html example (doc is coming)
