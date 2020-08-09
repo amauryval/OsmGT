@@ -44,7 +44,7 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
 
 
 def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_columns_from_output):
-    bbox_value = (46.019674567761, 4.0237426757812, 46.072575637028, 4.1220188140869)
+    bbox_value = (4.0237426757812, 46.019674567761, 4.1220188140869, 46.072575637028)
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(bbox_value, "vehicle", poi_from_web_found_gdf)
@@ -79,7 +79,7 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
 
 
 def test_run_from_bbox_func_usa(pois_default_columns_from_output, roads_default_columns_from_output):
-    bbox_value = (40.718087, -74.018433, 40.733356, -73.982749)
+    bbox_value = (-74.018433, 40.718087, -73.982749, 40.733356)
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_value).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(bbox_value, additionnal_nodes=poi_from_web_found_gdf)
