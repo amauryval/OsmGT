@@ -1,7 +1,6 @@
 from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
-
 class OsmGt:
 
     @staticmethod

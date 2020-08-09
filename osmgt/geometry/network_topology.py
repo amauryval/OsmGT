@@ -21,6 +21,7 @@ from numba import types as nb_types
 import concurrent.futures
 
 from itertools import groupby
+import math
 
 
 def deepcopy(variable):
@@ -29,6 +30,7 @@ def deepcopy(variable):
 
 class NetworkTopology:
     # TODO return topology stats
+    # TODO oneway field to arg
 
     __INTERPOLATION_LEVEL = 7
     __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 10
@@ -39,6 +41,7 @@ class NetworkTopology:
     __CLEANING_FILED_STATUS = "topology"
     __GEOMETRY_FIELD = "geometry"
     __COORDINATES_FIELD = "coordinates"
+    __ONEWAY_FIELD = "oneway"
 
     def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
         """
@@ -116,7 +119,7 @@ class NetworkTopology:
             if input_feature.get("junction", None) in ["roundabout", "jughandle"]:
                 return new_elements
 
-            if input_feature.get("oneway", None) != "yes":
+            if input_feature.get(self.__ONEWAY_FIELD, None) != "yes":
                 new_backward_feature = self._direction_processing(input_feature, "backward")
                 new_elements.append(new_backward_feature)
 
@@ -129,7 +132,7 @@ class NetworkTopology:
         return new_elements
 
     def _direction_processing(self, input_feature, direction=None):
-        feature = dict(input_feature)
+        feature = deepcopy(input_feature)
         # feature["direction"] = direction
         if direction == "backward":
             feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__COORDINATES_FIELD][::-1])

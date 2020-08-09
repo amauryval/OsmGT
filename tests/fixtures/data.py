@@ -25,7 +25,7 @@ def build_geojson_features(input_data):
         )
         all_geojson_features.append(feature)
     output_gdf = gpd.GeoDataFrame.from_features(all_geojson_features)
-
+    output_gdf = output_gdf.fillna(value="None")
     return output_gdf
 
 

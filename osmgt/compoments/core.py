@@ -5,6 +5,8 @@ from osmgt.helpers.logger import Logger
 
 from osmgt.apis.nominatim import NominatimApi
 
+from osmgt.core.global_values import network_queries
+
 
 class ErrorOsmGtCore(Exception):
     pass
@@ -69,6 +71,8 @@ class OsmGtCore(Logger):
     def check_topology_field(self , input_gdf):
         if self.TOPO_FIELD not in input_gdf.columns.tolist():
             input_gdf[self.TOPO_FIELD] = input_gdf.index.apply(lambda x: int(x))
+            input_gdf = input_gdf.fillna(value="None")
+
         return input_gdf
 
     def get_gdf(self, verbose=True):
@@ -127,3 +131,6 @@ class OsmGtCore(Logger):
         feature_build = properties_found
 
         return feature_build
+
+    def check_transport_mode(self, mode):
+        assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"

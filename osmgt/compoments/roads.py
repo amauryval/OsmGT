@@ -6,9 +6,7 @@ from osmgt.geometry.network_topology import NetworkTopology
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
-from shapely.wkt import loads
 from osmgt.network.gt_helper import GraphHelpers
-import geopandas as gpd
 from shapely.geometry import shape
 
 from osmgt.core.global_values import network_queries
@@ -24,6 +22,7 @@ class OsmGtRoads(OsmGtCore):
         super().__init__()
 
     def from_location(self, location_name, additionnal_nodes=None, mode="vehicle"):
+        self.check_transport_mode(mode)
         super().from_location(location_name)
         self._mode = mode
 
@@ -35,9 +34,9 @@ class OsmGtRoads(OsmGtCore):
         return self
 
     def from_bbox(self, bbox_value, additionnal_nodes=None, mode="vehicle"):
+        self.check_transport_mode(mode)
         super().from_bbox(bbox_value)
         self._mode = mode
-
         query = self.get_query_from_mode(mode)
         request = self.from_bbox_query_builder(bbox_value, query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
@@ -47,6 +46,7 @@ class OsmGtRoads(OsmGtCore):
 
     def from_gdf(self, network_gdf, additionnal_nodes=None, mode="vehicle"):
         # TODO to tests
+        self.check_transport_mode(mode)
         raw_data = super().network_from_gdf(network_gdf)
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
 
@@ -71,6 +71,7 @@ class OsmGtRoads(OsmGtCore):
         return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes, mode):
+        assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"
 
         if additionnal_nodes is not None:
             additionnal_nodes = self.check_topology_field(additionnal_nodes)
@@ -100,5 +101,6 @@ class OsmGtRoads(OsmGtCore):
         return features
 
     def get_query_from_mode(self, mode):
-        assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"
         return network_queries[mode]
+
+
