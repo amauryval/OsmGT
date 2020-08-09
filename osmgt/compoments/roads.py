@@ -6,7 +6,13 @@ from osmgt.geometry.network_topology import NetworkTopology
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
-from osmgt.network.gt_helper import GraphHelpers
+
+# to facilitate debugging
+try:
+    from osmgt.network.gt_helper import GraphHelpers
+except:
+    pass
+
 from shapely.geometry import shape
 
 from osmgt.core.global_values import network_queries

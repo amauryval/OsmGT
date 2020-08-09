@@ -71,8 +71,8 @@ class OsmGtCore(Logger):
     def check_topology_field(self , input_gdf):
         if self.TOPO_FIELD not in input_gdf.columns.tolist():
             input_gdf[self.TOPO_FIELD] = input_gdf.index.apply(lambda x: int(x))
-            input_gdf = input_gdf.fillna(value="None")
 
+        input_gdf = input_gdf.fillna("None")
         return input_gdf
 
     def get_gdf(self, verbose=True):

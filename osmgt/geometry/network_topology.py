@@ -20,9 +20,6 @@ from numba import types as nb_types
 
 import concurrent.futures
 
-from itertools import groupby
-import math
-
 
 def deepcopy(variable):
     return ujson.loads(ujson.dumps(variable))
@@ -133,7 +130,6 @@ class NetworkTopology:
 
     def _direction_processing(self, input_feature, direction=None):
         feature = deepcopy(input_feature)
-        # feature["direction"] = direction
         if direction == "backward":
             feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__COORDINATES_FIELD][::-1])
         elif direction in ["forward", None]:
