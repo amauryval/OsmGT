@@ -40,6 +40,13 @@ class NetworkTopology:
     __COORDINATES_FIELD = "coordinates"
     __ONEWAY_FIELD = "oneway"
 
+    # ugly footway processing...
+    # __PLACE_NODE_FIELD = "amenity"
+    # __PLACE_NODE_DEFAULT_VALUE = "park_node"
+    # __FOOTWAY_VALUE = "footway"
+    # __TRUNK_VALUE = "trunk"
+    # __HIGHWAY_FIELD = "highway"
+
     def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
         """
 
@@ -53,8 +60,14 @@ class NetworkTopology:
         self.logger.info("Network cleaning STARTS!")
 
         self._network_data = self._check_inputs(network_data)
-        self._additionnal_nodes = additionnal_nodes
         self._mode_post_processing = mode_post_processing
+
+        self._additionnal_nodes = additionnal_nodes
+        if self._additionnal_nodes is None:
+            self._additionnal_nodes = {}
+
+        # ugly footway processing...
+        self._force_footway_connection = False
 
         self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
 
@@ -63,8 +76,11 @@ class NetworkTopology:
     def run(self):
         self._prepare_data()
 
+        if self._force_footway_connection:
+            self.prepare_footway_nodes()
+
         # connect all the added nodes
-        if self._additionnal_nodes is not None:
+        if len(self._additionnal_nodes) > 0:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
@@ -75,6 +91,64 @@ class NetworkTopology:
             self.build_lines(feature)
 
         return self._output
+
+    # def prepare_footway_nodes(self):
+    #     import itertools
+    #
+    #     # # add this into __get_nearest_line method
+    #     # if node.get(self.__HIGHWAY_FIELD , None) not in [self.__FOOTWAY_VALUE , self.__TRUNK_VALUE]:
+    #     #     self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 2
+    #     # else:
+    #     #     self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 1
+    #
+    #     network_data_footway = list(
+    #         filter(lambda x: x[self.__HIGHWAY_FIELD] == self.__FOOTWAY_VALUE if self.__HIGHWAY_FIELD in x else None, self._network_data.values()))
+    #
+    #     all_fl_coord_points_footway = list(itertools.chain(*[
+    #         feature[self.__COORDINATES_FIELD][::len(feature[self.__COORDINATES_FIELD]) - 1]
+    #         for feature in network_data_footway
+    #     ]))
+    #     all_fl_coord_points_footway2 = Counter(all_fl_coord_points_footway)
+    #     coord_fl_points_footway_intersections_found = list(
+    #         filter(
+    #             lambda x: x[1] == 1 ,
+    #             all_fl_coord_points_footway2.items() ,
+    #         )
+    #     )
+    #     all_unique_fl_points = [
+    #         value[0]
+    #         for value in coord_fl_points_footway_intersections_found
+    #     ]
+    #     ########
+    #
+    #     all_coord_points_footway = list(itertools.chain(*[
+    #         feature[self.__COORDINATES_FIELD]
+    #         for feature in network_data_footway
+    #     ]))
+    #
+    #     all_coord_points_footway2 = Counter(all_coord_points_footway)
+    #     coord_points_footway_intersections_found = list(
+    #         filter(
+    #             lambda x: x[1] == 1 ,
+    #             all_coord_points_footway2.items() ,
+    #         )
+    #     )
+    #     all_unique_points = [
+    #         value[0]
+    #         for value in coord_points_footway_intersections_found
+    #     ]
+    #
+    #     nodes_footway_bounds = set(all_unique_points).intersection(set(all_unique_fl_points))
+    #     footway_additional_nodes = {
+    #         len(self._additionnal_nodes) + idx: {
+    #             self.__COORDINATES_FIELD: coords,
+    #             self.__FIELD_ID: len(self._additionnal_nodes) + idx,
+    #             self.__GEOMETRY_FIELD: Point([coords]),
+    #             self.__PLACE_NODE_FIELD: self.__PLACE_NODE_DEFAULT_VALUE
+    #         }
+    #         for idx, coords in enumerate(nodes_footway_bounds , start=1)  # take care if additionnal node is none
+    #     }
+    #     self._additionnal_nodes = {**self._additionnal_nodes , **footway_additional_nodes}
 
     def build_lines(self, feature):
         # del feature["bounds"]  # useless now

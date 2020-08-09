@@ -3,9 +3,9 @@ import geopandas
 from osmgt import OsmGt
 
 def test_from_web():
-    location = "Lyon"
+    location = "roanne"
     poi_output_name = f"{location}_poi"
-    network_output_name = f"{location}_network"
+    network_output_name = f"{location}_network2"
     bbox = (40.718087, -74.018433, 40.733356, -73.982749)
 
     # get POI
