@@ -71,7 +71,7 @@ class OsmGtRoads(OsmGtCore):
             graph.add_edge(
                 Point(feature["geometry"].coords[0]).wkt,
                 Point(feature["geometry"].coords[-1]).wkt,
-                feature["properties"][self.TOPO_FIELD],
+                feature[self.TOPO_FIELD],
                 shape(feature["geometry"]).length,
             )
         return graph
