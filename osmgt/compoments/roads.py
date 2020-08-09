@@ -9,7 +9,7 @@ from shapely.geometry import Point
 from shapely.wkt import loads
 from osmgt.network.gt_helper import GraphHelpers
 import geopandas as gpd
-
+from shapely.geometry import shape
 
 from osmgt.core.global_values import network_queries
 
@@ -30,7 +30,7 @@ class OsmGtRoads(OsmGtCore):
         query = self.get_query_from_mode(mode)
         request = self.from_location_name_query_builder(self._location_id, query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
-        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
+        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
 
         return self
 
@@ -41,7 +41,14 @@ class OsmGtRoads(OsmGtCore):
         query = self.get_query_from_mode(mode)
         request = self.from_bbox_query_builder(bbox_value, query)
         raw_data = OverpassApi(self.logger).query(request)["elements"]
-        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes)
+        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
+
+        return self
+
+    def from_gdf(self, network_gdf, additionnal_nodes=None, mode="vehicle"):
+        # TODO to tests
+        raw_data = super().network_from_gdf(network_gdf)
+        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
 
         return self
 
@@ -63,16 +70,15 @@ class OsmGtRoads(OsmGtCore):
             )
         return graph
 
-    def __build_network_topology(self, raw_data, additionnal_nodes):
+    def __build_network_topology(self, raw_data, additionnal_nodes, mode):
 
         if additionnal_nodes is not None:
-            if self.TOPO_FIELD not in additionnal_nodes.columns.tolist():
-                additionnal_nodes[self.TOPO_FIELD] = additionnal_nodes.index.apply(lambda x: int(x))
+            additionnal_nodes = self.__check_topology_field(additionnal_nodes)
             additionnal_nodes = additionnal_nodes.to_dict("records")
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
-            self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD, self._mode
+            self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD, mode
         ).run()
 
         return raw_data_topology_rebuild

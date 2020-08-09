@@ -13,8 +13,8 @@ class OsmGt:
         return OsmGtRoads().from_bbox(bbox_value, additionnal_nodes, mode)
 
     @staticmethod
-    def roads_from_osmgt_file(osmgt_file_name):
-        return OsmGtRoads().from_osmgt_file(osmgt_file_name)
+    def roads_from_gdf(input_gdf, additionnal_nodes=None, mode="vehicle"):
+        return OsmGtRoads().from_gdf(input_gdf, additionnal_nodes, mode)
 
     @staticmethod
     def poi_from_location(location_name):
@@ -23,8 +23,3 @@ class OsmGt:
     @staticmethod
     def poi_from_bbox(bbox_value):
         return OsmGtPoi().from_bbox(bbox_value)
-
-    @staticmethod
-    def poi_from_osmgt_file(osmgt_file_name):
-        return OsmGtPoi().from_osmgt_file(osmgt_file_name)
-

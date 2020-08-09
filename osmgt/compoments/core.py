@@ -1,15 +1,16 @@
-import pickle
-
+import pandas as pd
 import geopandas as gpd
-import geojson
 
 from osmgt.helpers.logger import Logger
 
 from osmgt.apis.nominatim import NominatimApi
-from shapely.geometry import mapping
 
 
 class ErrorOsmGtCore(Exception):
+    pass
+
+
+class IncompatibleFormat(Exception):
     pass
 
 
@@ -46,6 +47,17 @@ class OsmGtCore(Logger):
         query = query.format(geo_filter=geo_tag_query)
         return f"area({location_osm_id})->.searchArea;({query});out geom;(._;>;);"
 
+    def network_from_gdf(self, input_gdf):
+
+        if isinstance(input_gdf, gpd.GeoDataFrame):
+            input_gdf = self.__check_topology_field(input_gdf)
+            raw_data = input_gdf.to_dict("records")
+
+        else:
+            raise IncompatibleFormat(f"{type(input_gdf)} type not supported. Use a geodataframe.")
+
+        return raw_data
+
     @staticmethod
     def from_bbox_query_builder(bbox_value, query):
         assert isinstance(bbox_value, tuple)
@@ -54,21 +66,10 @@ class OsmGtCore(Logger):
         query = query.format(geo_filter=bbox_value_formated)
         return f"({query});out geom;(._;>;);"
 
-    def from_osmgt_file(self, osmgt_file_path):
-        assert ".osmgt" in osmgt_file_path
-
-        self.logger.info(f"Opening from {osmgt_file_path}...")
-        with open(osmgt_file_path, "rb") as input_file:
-            self._output_data = pickle.load(input_file)
-
-        return self
-
-    def export_to_osmgt_file(self, output_file_name):
-        output_path = f"{output_file_name}.osmgt"
-        self.logger.info(f"Exporting to {output_path}...")
-
-        with open(output_path, "wb") as output_file:
-            pickle.dump(self._output_data, output_file)
+    def __check_topology_field(self, input_gdf):
+        if self.TOPO_FIELD not in input_gdf.columns.tolist():
+            input_gdf[self.TOPO_FIELD] = input_gdf.index.apply(lambda x: int(x))
+        return input_gdf
 
     def get_gdf(self, verbose=True):
         if verbose:
@@ -76,7 +77,6 @@ class OsmGtCore(Logger):
 
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             self.check_build_input_data()
-            import pandas as pd
             # more performance comparing .from_features() method
             df = pd.DataFrame(self._output_data)
             geometry = df["geometry"]
@@ -86,13 +86,11 @@ class OsmGtCore(Logger):
                 crs=self.epsg_4236,
                 geometry=geometry.to_list()
             )
-            # output_gdf = gpd.GeoDataFrame.from_features(self._output_data, crs=self.epsg_4236)
 
         else:
             output_gdf = self._output_data
 
-        # output_gdf.crs = self.epsg_4236
-        # output_gdf = self._clean_attributes(output_gdf)
+        output_gdf = self._clean_attributes(output_gdf)
         self.logger.info(f"Geodataframe Ready")
 
         return output_gdf

@@ -94,7 +94,7 @@ def some_line_features():
     ]
     output_gdf = build_geojson_features(all_features)
 
-    return output_gdf.__geo_interface__["features"]
+    return output_gdf.to_dict("records")
 
 
 @pytest.fixture
