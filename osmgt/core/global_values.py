@@ -1,4 +1,6 @@
 
+default_epsg = "EPSG:4326"
+
 # transport modes
 transport_modes = ["vehicle", "pedestrian"]
 
@@ -8,9 +10,12 @@ poi_query = 'node[~"^(amenity)$"~"(' \
             ')"]({geo_filter});' \
             'node[~"^(shop)$"~"."]({geo_filter});'
 
+out_geom_query = "out geom;(._;>;)"
+
 # network overpass queries
 network_queries = {
-    "vehicle": 'way["highway"~"^('
+    "vehicle": {
+        "query": 'way["highway"~"^('
                 'motorway|'
                 'trunk|'
                 'primary|'
@@ -35,29 +40,34 @@ network_queries = {
                 'corridor|'
                 'path'
                 ')$"]["area"!~"."]({geo_filter});',
-    "pedestrian": 'way["highway"~"^('
-                  'motorway|'
-                  'cycleway|'
-                  'primary|'
-                  'secondary|'
-                  'tertiary|'
-                  'unclassified|'
-                  'residential|'
-                  'pedestrian|'
-                  'motorway_link|'
-                  'primary_link|'
-                  'secondary_link|'
-                  'tertiary_link|'
-                  'living_street|'
-                  'service|'
-                  'track|'
-                  'bus_guideway|'
-                  'escape|'
-                  'road|'
-                  'footway|'
-                  'bridleway|'
-                  'steps|'
-                  'corridor|'
-                  'path'
-                  ')$"]["area"!~"."]({geo_filter});'
+        "directed_graph": True
+    },
+    "pedestrian": {
+        "query": 'way["highway"~"^('
+              'motorway|'
+              'cycleway|'
+              'primary|'
+              'secondary|'
+              'tertiary|'
+              'unclassified|'
+              'residential|'
+              'pedestrian|'
+              'motorway_link|'
+              'primary_link|'
+              'secondary_link|'
+              'tertiary_link|'
+              'living_street|'
+              'service|'
+              'track|'
+              'bus_guideway|'
+              'escape|'
+              'road|'
+              'footway|'
+              'bridleway|'
+              'steps|'
+              'corridor|'
+              'path'
+              ')$"]["area"!~"."]({geo_filter});',
+        "directed_graph": False
+    }
 }

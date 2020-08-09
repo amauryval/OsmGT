@@ -1,6 +1,7 @@
 from osmgt.compoments.core import OsmGtCore
 
 from osmgt.apis.overpass import OverpassApi
+from geopandas.tools import sjoin
 
 from osmgt.geometry.network_topology import NetworkTopology
 
@@ -18,74 +19,81 @@ from shapely.geometry import shape
 from osmgt.core.global_values import network_queries
 
 
+class NetWorkGeomIncompatible(Exception):
+    pass
+
+
 class OsmGtRoads(OsmGtCore):
 
-    __DATA_NAME = "network"
     _output_data = None
-    __QUERY_MODES = ["vehicle", "pedestrian"]
+    _FEATURE_OSM_TYPE = "way"
 
     def __init__(self):
         super().__init__()
 
     def from_location(self, location_name, additionnal_nodes=None, mode="vehicle"):
-        self.check_transport_mode(mode)
+        self._check_transport_mode(mode)
         super().from_location(location_name)
         self._mode = mode
 
-        query = self.get_query_from_mode(mode)
-        request = self.from_location_name_query_builder(self._location_id, query)
-        raw_data = OverpassApi(self.logger).query(request)["elements"]
+        query = self._get_query_from_mode(mode)
+        request = self._from_location_name_query_builder(self._location_id, query)
+        raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
 
         return self
 
     def from_bbox(self, bbox_value, additionnal_nodes=None, mode="vehicle"):
-        self.check_transport_mode(mode)
+        self._check_transport_mode(mode)
         super().from_bbox(bbox_value)
         self._mode = mode
-        query = self.get_query_from_mode(mode)
-        request = self.from_bbox_query_builder(bbox_value, query)
-        raw_data = OverpassApi(self.logger).query(request)["elements"]
+
+        query = self._get_query_from_mode(mode)
+        request = self._from_bbox_query_builder(self._bbox_value, query)
+        raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
 
         return self
 
     def from_gdf(self, network_gdf, additionnal_nodes=None, mode="vehicle"):
-        # TODO to tests
-        self.check_transport_mode(mode)
-        raw_data = super().network_from_gdf(network_gdf)
+        # TODO ? to roads data from others sources
+        self._check_transport_mode(mode)
+        geometry_found = set(network_gdf[self._GEOMETRY_FIELD].to_list())
+        if geometry_found != {"LineString"}:
+            raise NetWorkGeomIncompatible(f"Input geodataframe does not contains only LineString: {geometry_found}")
+
+        raw_data = super()._build_network_from_gdf(network_gdf)
         self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
 
         return self
 
     def get_graph(self):
         self.logger.info("Prepare graph")
-        self.check_build_input_data()
+        self._check_build_input_data()
 
-        if self._mode == "vehicle":
-            graph = GraphHelpers(is_directed=True)
-        elif self._mode == "pedestrian":
-            graph = GraphHelpers(is_directed=False)
+        graph = GraphHelpers(is_directed=network_queries[self._mode]["directed_graph"])
 
         for feature in self._output_data:
+            geom_coords = feature[self._GEOMETRY_FIELD].coords
             graph.add_edge(
-                Point(feature["geometry"].coords[0]).wkt,
-                Point(feature["geometry"].coords[-1]).wkt,
-                feature[self.TOPO_FIELD],
-                shape(feature["geometry"]).length,
+                Point(geom_coords[0]).wkt,
+                Point(geom_coords[-1]).wkt,
+                feature[self._TOPO_FIELD],
+                shape(feature[self._GEOMETRY_FIELD]).length,
             )
         return graph
 
     def __build_network_topology(self, raw_data, additionnal_nodes, mode):
-        assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"
-
         if additionnal_nodes is not None:
-            additionnal_nodes = self.check_topology_field(additionnal_nodes)
+            additionnal_nodes = self._check_topology_field(additionnal_nodes)
+            # filter nodes from study_area_geom
+            additionnal_nodes_mask = additionnal_nodes.intersects(self.study_area_geom)
+            additionnal_nodes = additionnal_nodes.loc[additionnal_nodes_mask]
             additionnal_nodes = additionnal_nodes.to_dict("records")
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
-            self.logger, raw_data_restructured, additionnal_nodes, self.TOPO_FIELD, mode
+            self.logger, raw_data_restructured, additionnal_nodes, self._TOPO_FIELD, mode
         ).run()
 
         return raw_data_topology_rebuild
@@ -93,20 +101,20 @@ class OsmGtRoads(OsmGtCore):
     def __rebuild_network_data(self, raw_data):
         self.logger.info("Formating data")
 
-        raw_data = filter(lambda x: x["type"] == "way", raw_data)
+        raw_data = filter(lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE, raw_data)
         features = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
             geometry = LineString(
-                [(coords["lon"], coords["lat"]) for coords in feature["geometry"]]
+                [(coords[self._LNG_FIELD], coords[self._LAT_FIELD]) for coords in feature[self._GEOMETRY_FIELD]]
             )
-            del feature["geometry"]
+            del feature[self._GEOMETRY_FIELD]
 
             feature_build = self._build_feature_from_osm(uuid_enum, geometry, feature)
             features.append(feature_build)
 
         return features
 
-    def get_query_from_mode(self, mode):
-        return network_queries[mode]
+    def _get_query_from_mode(self, mode):
+        return network_queries[mode]["query"]
 
 

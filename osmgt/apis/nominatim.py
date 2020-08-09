@@ -19,8 +19,11 @@ class NominatimApi(ApiCore):
         "country",
         "postalcode",
     }
-
-    format_parameter = {"format": "json"}
+    format_parameter = {
+        "format": "json",
+        "polygon": "1",
+        "polygon_geojson": "1"
+    }
 
     _output = []
 
