@@ -73,7 +73,7 @@ class OsmGtRoads(OsmGtCore):
     def __build_network_topology(self, raw_data, additionnal_nodes, mode):
 
         if additionnal_nodes is not None:
-            additionnal_nodes = self.__check_topology_field(additionnal_nodes)
+            additionnal_nodes = self.check_topology_field(additionnal_nodes)
             additionnal_nodes = additionnal_nodes.to_dict("records")
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)

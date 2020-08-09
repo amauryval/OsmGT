@@ -50,7 +50,7 @@ class OsmGtCore(Logger):
     def network_from_gdf(self, input_gdf):
 
         if isinstance(input_gdf, gpd.GeoDataFrame):
-            input_gdf = self.__check_topology_field(input_gdf)
+            input_gdf = self.check_topology_field(input_gdf)
             raw_data = input_gdf.to_dict("records")
 
         else:
@@ -66,7 +66,7 @@ class OsmGtCore(Logger):
         query = query.format(geo_filter=bbox_value_formated)
         return f"({query});out geom;(._;>;);"
 
-    def __check_topology_field(self, input_gdf):
+    def check_topology_field(self , input_gdf):
         if self.TOPO_FIELD not in input_gdf.columns.tolist():
             input_gdf[self.TOPO_FIELD] = input_gdf.index.apply(lambda x: int(x))
         return input_gdf

@@ -140,7 +140,7 @@ def some_point_features():
     ]
     output_gdf = build_geojson_features(all_features)
 
-    return output_gdf
+    return output_gdf.to_dict("records")
 
 
 @pytest.fixture

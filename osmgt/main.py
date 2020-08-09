@@ -6,6 +6,19 @@ class OsmGt:
 
     @staticmethod
     def roads_from_location(location_name, mode="pedestrian", additionnal_nodes=None):
+        """
+        Get OpenStreetMap roads from a location name
+
+        :param location_name: the name of the location
+        :type location_name: the name of the location
+        :param mode: the transport mode
+        :type mode: str, default 'pedestrian', one of :
+        :param additionnal_nodes: Addtionnals nodes to connect on the network
+        :type additionnal_nodes: geopandas.GeoDataFrame
+        :return: OsmGtRoads class
+        :rtype: OsmGtRoads
+        """
+
         return OsmGtRoads().from_location(location_name, additionnal_nodes, mode)
 
     @staticmethod

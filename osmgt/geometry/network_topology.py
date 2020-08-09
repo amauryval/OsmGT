@@ -41,7 +41,14 @@ class NetworkTopology:
     __COORDINATES_FIELD = "coordinates"
 
     def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
+        """
 
+        :param logger:
+        :type network_data: list of dict
+        :type additionnal_nodes: list of dict
+        :type uuid_field: str
+        :type mode_post_processing: str
+        """
         self.logger = logger
         self.logger.info("Network cleaning STARTS!")
 
@@ -134,9 +141,7 @@ class NetworkTopology:
         else:
             feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
 
-        feature["id"] = f"{feature['id']}"
         del feature[self.__COORDINATES_FIELD]
-        # return self._geojson_formating(feature)
         return feature
 
     def _prepare_data(self):
