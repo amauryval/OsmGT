@@ -7,7 +7,15 @@ OsmGT
 
 OpenStreetMap based on graph-tools
 
+# Check the jupyter notebook output
+
+[Open the example](https://amauryval.github.io/osmgt/)
+
+
 # How to install it 
+
+Only on Linux
+
 ```
 conda install -c amauryval osmgt
 ```
@@ -53,6 +61,10 @@ roads_from_bbox = OsmGt.roads_from_bbox(
 roads_study_area_data_wkt = roads_from_location.study_area_geom()  # to get the shapely Polygon of the study data
 roads_gdf = roads_from_location.get_gdf()  # to get the geodataframe containing all the roads
 roads_graph = roads_from_location.get_graph()  # to get the graph (graph-tool graph) of the osm network 
+
+# 1 sub-method [more info will coming soon] can be found with the graph object:
+roads_graph.plot()  # in order to generate a graph png output
+
 ```
 
 # How to use the graph ? 
