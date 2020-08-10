@@ -25,7 +25,7 @@ def build_geojson_features(input_data):
         )
         all_geojson_features.append(feature)
     output_gdf = gpd.GeoDataFrame.from_features(all_geojson_features)
-
+    output_gdf = output_gdf.fillna(value="None")
     return output_gdf
 
 
@@ -94,7 +94,7 @@ def some_line_features():
     ]
     output_gdf = build_geojson_features(all_features)
 
-    return output_gdf.__geo_interface__["features"]
+    return output_gdf.to_dict("records")
 
 
 @pytest.fixture
@@ -140,7 +140,7 @@ def some_point_features():
     ]
     output_gdf = build_geojson_features(all_features)
 
-    return output_gdf
+    return output_gdf.to_dict("records")
 
 
 @pytest.fixture

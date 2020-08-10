@@ -7,11 +7,12 @@ requirements = [
     "numpy ==1.18.1",
     "geojson ==2.5.0",
     "python-dateutil ==2.8.1",
-    "graph-tool",
-    "cairo",
+    "graph-tool ==2.33",
+    "cairo ==1.16.0",
     "scipy ==1.3.2",
     "ujson ==3.0.0",
-    "more-itertools ==8.4.0"
+    "more-itertools ==8.4.0",
+    "numba ==0.48.0"
 ]
 
 setup_requirements = []
@@ -22,7 +23,7 @@ setup(
     author="amauryval",
     author_email='amauryval@gmail.com',
     url="https://github.com/amauryval/osmgt",
-    version='0.5.6',
+    version='0.5.9',
     description="A library to play with OSM roads and POIs data using graph tool network library",
     entry_points={},
     install_requires=requirements,

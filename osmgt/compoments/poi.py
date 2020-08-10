@@ -1,6 +1,5 @@
 from osmgt.compoments.core import OsmGtCore
 
-from osmgt.apis.overpass import OverpassApi
 
 from shapely.geometry import Point
 
@@ -13,8 +12,7 @@ class ErrorPoiData(Exception):
 
 class OsmGtPoi(OsmGtCore):
 
-    __DATA_NAME = "network"
-    _output_data = None
+    _FEATURE_OSM_TYPE = "node"
 
     def __init__(self):
         super().__init__()
@@ -22,8 +20,8 @@ class OsmGtPoi(OsmGtCore):
     def from_location(self, location_name):
         super().from_location(location_name)
 
-        request = self.from_location_name_query_builder(self._location_id, poi_query)
-        raw_data = OverpassApi(self.logger).query(request)["elements"]
+        request = self._from_location_name_query_builder(self._location_id, poi_query)
+        raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_points(raw_data)
 
         return self
@@ -31,8 +29,8 @@ class OsmGtPoi(OsmGtCore):
     def from_bbox(self, bbox_value):
         super().from_bbox(bbox_value)
 
-        request = self.from_bbox_query_builder(bbox_value, poi_query)
-        raw_data = OverpassApi(self.logger).query(request)["elements"]
+        request = self._from_bbox_query_builder(self._bbox_value, poi_query)
+        raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_points(raw_data)
 
         return self
@@ -40,13 +38,13 @@ class OsmGtPoi(OsmGtCore):
     def __build_points(self, raw_data):
         self.logger.info("Formating data")
 
-        raw_data = filter(lambda x: x["type"] == "node", raw_data)
+        raw_data = filter(lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE, raw_data)
         features = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
 
-            geometry = Point(feature["lon"], feature["lat"])
-            del feature["lon"]
-            del feature["lat"]
+            geometry = Point(feature[self._LNG_FIELD], feature[self._LAT_FIELD])
+            del feature[self._LNG_FIELD]
+            del feature[self._LAT_FIELD]
 
             feature_build = self._build_feature_from_osm(uuid_enum, geometry, feature)
             features.append(feature_build)

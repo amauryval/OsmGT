@@ -7,7 +7,7 @@ def test_connect_lines(some_line_features, some_point_features):
     raw_data_topology_rebuild = NetworkTopology(
         OsmGtCore().logger, some_line_features, some_point_features, "uuid", "pedestrian"
     ).run()
-    all_uuid = [feature["properties"]["uuid"] for feature in raw_data_topology_rebuild]
+    all_uuid = [feature["uuid"] for feature in raw_data_topology_rebuild]
 
     assert len(raw_data_topology_rebuild) == 18
     # check duplicated
@@ -35,11 +35,11 @@ def test_connect_lines(some_line_features, some_point_features):
     ])
 
     for feature in raw_data_topology_rebuild:
-        if feature["properties"]["topology"] == "unchanged":
-            assert "_" not in feature["properties"]["uuid"]
+        if feature["topology"] == "unchanged":
+            assert "_" not in feature["uuid"]
 
-        if feature["properties"]["topology"] == "split":
-            assert "_" in feature["properties"]["uuid"]
+        if feature["topology"] == "split":
+            assert "_" in feature["uuid"]
 
-        if feature["properties"]["topology"] == "added":
-            assert "added_" in feature["properties"]["uuid"]
+        if feature["topology"] == "added":
+            assert "added_" in feature["uuid"]
