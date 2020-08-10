@@ -74,10 +74,9 @@ class OsmGtRoads(OsmGtCore):
         graph = GraphHelpers(is_directed=network_queries[self._mode]["directed_graph"])
 
         for feature in self._output_data:
-            geom_coords = feature[self._GEOMETRY_FIELD].coords
             graph.add_edge(
-                Point(geom_coords[0]).wkt,
-                Point(geom_coords[-1]).wkt,
+                Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
+                Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
                 feature[self._TOPO_FIELD],
                 shape(feature[self._GEOMETRY_FIELD]).length,
             )

@@ -72,8 +72,9 @@ class OsmGtCore(Logger):
         self._bbox_mode = True
         self.logger.info(f"From bbox: {bbox_value}")
         self.logger.info("Loading data...")
+        self.study_area_geom = box(*bbox_value, ccw=True)
+        # reordered because of nominatim
         self._bbox_value = (bbox_value[1], bbox_value[0], bbox_value[3], bbox_value[2])
-        self.study_area_geom = box(*self._bbox_value, ccw=True)
 
     def _get_study_area_from_bbox(self, bbox):
         return

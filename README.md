@@ -32,7 +32,7 @@ poi_from_bbox = OsmGt.poi_from_bbox(
 )
 
 # 2 methods available:
-poi_study_area_data_wkt = poi_from_bbox.study_area_geom()  # to get the wkt of the data
+poi_study_area_data_wkt = poi_from_bbox.study_area_geom()  # to get the shapely Polygon of the study data
 poi_gdf = poi_from_bbox.get_gdf()  # to get the geodataframe containing all the POIs
 
 
@@ -44,13 +44,13 @@ roads_from_location = OsmGt.roads_from_location(
 )
 
 roads_from_bbox = OsmGt.roads_from_bbox(
-	(-74.018433, 40.718087, -73.982749, 40.733356),
+	(4.0237426757812, 46.019674567761, 4.1220188140869, 46.072575637028),
 	mode="pedestrian",  # 'pedestrian' or 'vehicle' supported
 	additionnal_nodes=None,  # optional, to connect nodes on the roads network (geodataframe or None)
 )
 
 # 3 methods available:
-roads_study_area_data_wkt = roads_from_location.study_area_geom()  # to get the wkt of the data
+roads_study_area_data_wkt = roads_from_location.study_area_geom()  # to get the shapely Polygon of the study data
 roads_gdf = roads_from_location.get_gdf()  # to get the geodataframe containing all the roads
 roads_graph = roads_from_location.get_graph()  # to get the graph (graph-tool graph) of the osm network 
 ```

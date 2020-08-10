@@ -106,7 +106,7 @@ def test_run_from_bbox_func_usa(pois_default_columns_from_output, roads_default_
     for colunm_expected in roads_default_columns_from_output:
         assert colunm_expected in columns_computed
 
-    #check graph
+    # check graph
     assert len(list(graph_computed.edges())) > 0
     assert len(list(graph_computed.vertices())) > 0
     assert type(graph_computed.vertices_content) == dict
@@ -114,7 +114,7 @@ def test_run_from_bbox_func_usa(pois_default_columns_from_output, roads_default_
 
 
 def test_if_path_can_be_computed(points_gdf_from_coords):
-
+    # TODO add the same test with bbox...
     location_name = "roanne"
     poi_from_web_found_gdf = OsmGt.poi_from_location(location_name).get_gdf()
 
