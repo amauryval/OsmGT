@@ -22,11 +22,12 @@ class NetWorkGeomIncompatible(Exception):
 
 class OsmGtRoads(OsmGtCore):
 
-    _output_data = None
     _FEATURE_OSM_TYPE = "way"
 
     def __init__(self):
         super().__init__()
+
+        self._mode = None
 
     def from_location(self, location_name, additionnal_nodes=None, mode="vehicle"):
         self._check_transport_mode(mode)

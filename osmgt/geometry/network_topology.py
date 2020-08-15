@@ -257,7 +257,6 @@ class NetworkTopology:
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self.split_line, nearest_line_and_its_nodes.items())
 
-
         self._network_data = {**self._network_data, **self.__connections_added}
 
         stats_infos = ", ".join(
@@ -272,7 +271,6 @@ class NetworkTopology:
 
     def insert_new_nodes_on_its_line(self, item):
         original_line_key = item["original_line_key"]
-        interpolated_line = item["interpolated_line"]
         end_points_found = item["end_points_found"]
 
         linestring_with_new_nodes = self._network_data[original_line_key][self.__COORDINATES_FIELD]
@@ -284,7 +282,7 @@ class NetworkTopology:
         linestring_linked_updated = list(
             filter(
                 lambda x: x in linestring_with_new_nodes,
-                interpolated_line,
+                item["interpolated_line"],
             )
         )
 
@@ -293,7 +291,6 @@ class NetworkTopology:
     def proceed_nodes_on_network(self, nearest_line_content):
         nearest_line_key, node_keys = nearest_line_content
 
-        # interpolated_line_coords = self.__compute_interpolation_on_line(nearest_line_key, self.__INTERPOLATION_LEVEL)
         interpolated_line_coords = interpolate_curve_based_on_original_points(
             np.array(self._network_data[nearest_line_key][self.__COORDINATES_FIELD]),
             self.__INTERPOLATION_LEVEL
@@ -301,9 +298,12 @@ class NetworkTopology:
         line_tree = spatial.cKDTree(interpolated_line_coords)
         interpolated_line_coords_reformated = list(map(tuple, interpolated_line_coords))
 
-        nodes_coords = [self._additionnal_nodes[node_key]["coordinates"] for node_key in node_keys]
+        nodes_coords = [self._additionnal_nodes[node_key][self.__COORDINATES_FIELD] for node_key in node_keys]
         _, nearest_line_object_idxes = line_tree.query(nodes_coords)
-        end_points_found = [interpolated_line_coords_reformated[nearest_line_key] for nearest_line_key in nearest_line_object_idxes]
+        end_points_found = [
+            interpolated_line_coords_reformated[nearest_line_key]
+            for nearest_line_key in nearest_line_object_idxes
+        ]
 
         connections_coords = list(
             zip(
@@ -385,13 +385,14 @@ class NetworkTopology:
 
         return set(intersections_found)
 
+    def __rtree_generator_func(self):
+        for fid , feature in self._network_data.items():
+            # fid is an integer
+            yield (fid, feature[self.__GEOMETRY_FIELD].bounds, None)
+
     def __find_nearest_line_for_each_key_nodes(self):
         # find the nereast network arc to interpolate
-        self.__tree_index = rtree.index.Index()
-        for fid, feature in self._network_data.items():
-            self.__tree_index.insert(
-                int(fid), feature[self.__GEOMETRY_FIELD].bounds
-            )
+        self.__tree_index = rtree.index.Index(self.__rtree_generator_func())
 
         # find nearest line
         self.__node_by_nearest_lines = {}
@@ -464,10 +465,13 @@ def compute_interpolation_on_line(line_found, interpolation_level):
 
     return interpolated_line_coords
 
-signature_interpolation_func = nb_types.Array(nb_types.float64, 2, 'C')(nb_types.Array(nb_types.float64, 2, 'C'), nb_types.int64)
+signature_interpolation_func = nb_types.Array(nb_types.float64, 2, 'C')(
+    nb_types.Array(nb_types.float64, 2, 'C'), nb_types.int64
+)
 @jit(signature_interpolation_func, nopython=True, nogil=True, cache=True)
 def interpolate_curve_based_on_original_points(x, n):
-    # source https://stackoverflow.com/questions/31243002/higher-order-local-interpolation-of-implicit-curves-in-python/31335255
+    # source :
+    # https://stackoverflow.com/questions/31243002/higher-order-local-interpolation-of-implicit-curves-in-python/31335255
     if n > 1:
         m = 0.5 * (x[:-1] + x[1:])
         if x.ndim == 2:
