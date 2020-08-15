@@ -1,8 +1,5 @@
 from osmgt.compoments.core import OsmGtCore
 
-from osmgt.apis.overpass import OverpassApi
-from geopandas.tools import sjoin
-
 from osmgt.geometry.network_topology import NetworkTopology
 
 from shapely.geometry import LineString

@@ -40,6 +40,12 @@ class NetworkTopology:
     __COORDINATES_FIELD = "coordinates"
     __ONEWAY_FIELD = "oneway"
 
+    __INSERT_OPTIONS = {
+        "after": 1 ,
+        "before": -1 ,
+        None: 0
+    }
+
     # ugly footway processing...
     # __PLACE_NODE_FIELD = "amenity"
     # __PLACE_NODE_DEFAULT_VALUE = "park_node"
@@ -86,7 +92,7 @@ class NetworkTopology:
         # find all the existing intersection from coordinates
         self._intersections_found = set(self.find_intersections_from_ways())
 
-        self.logger.info("Starting: build lines")
+        self.logger.info("Build lines")
         for feature in self._network_data.values():
             self.build_lines(feature)
 
@@ -246,12 +252,10 @@ class NetworkTopology:
 
         self.logger.info("Split line")
         self._bestlines_found = []
-        for nearest_line_content in nearest_line_and_its_nodes.items():
-            default_line_updater = self.proceed_nodes_on_network(nearest_line_content)
-            if default_line_updater is not None:
-                self.insert_new_nodes_on_its_line(default_line_updater)
-        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
-        #     executor.map(self.proceed_nodes_on_network, nearest_line_and_its_nodes.items())
+        # for nearest_line_content in nearest_line_and_its_nodes.items():
+        #     self.split_line(nearest_line_content)
+        with concurrent.futures.ThreadPoolExecutor(4) as executor:
+            executor.map(self.split_line, nearest_line_and_its_nodes.items())
 
 
         self._network_data = {**self._network_data, **self.__connections_added}
@@ -260,6 +264,11 @@ class NetworkTopology:
             [f"{key}: {value}" for key, value in self.__node_con_stats.items()]
         )
         self.logger.info(f"Done: Adding new nodes on the network ; {stats_infos}")
+
+    def split_line(self, nearest_line_content):
+        default_line_updater = self.proceed_nodes_on_network(nearest_line_content)
+        if default_line_updater is not None:
+            self.insert_new_nodes_on_its_line(default_line_updater)
 
     def insert_new_nodes_on_its_line(self, item):
         original_line_key = item["original_line_key"]
@@ -292,16 +301,9 @@ class NetworkTopology:
         line_tree = spatial.cKDTree(interpolated_line_coords)
         interpolated_line_coords_reformated = list(map(tuple, interpolated_line_coords))
 
-        default_line_updater = {
-            "interpolated_line": interpolated_line_coords_reformated,
-            "original_line_key": nearest_line_key,
-            "end_points_found": None
-        }
-
         nodes_coords = [self._additionnal_nodes[node_key]["coordinates"] for node_key in node_keys]
         _, nearest_line_object_idxes = line_tree.query(nodes_coords)
         end_points_found = [interpolated_line_coords_reformated[nearest_line_key] for nearest_line_key in nearest_line_object_idxes]
-        default_line_updater["end_points_found"] = end_points_found
 
         connections_coords = list(
             zip(
@@ -316,16 +318,18 @@ class NetworkTopology:
 
             # to split line at node (and also if node is on the network). it builds intersection used to split lines
             # additionnal are converted to lines
-            self._additionnal_nodes[node_key][self.__COORDINATES_FIELD] = connection
-            self._additionnal_nodes[node_key][self.__CLEANING_FILED_STATUS] = "added"
-            self._additionnal_nodes[node_key][self.__FIELD_ID] = f"added_{self._additionnal_nodes[node_key][self.__FIELD_ID]}"
+            self.__connections_added[f"from_node_id_{node_key}"] = {
+                self.__COORDINATES_FIELD: connection,
+                self.__GEOMETRY_FIELD: connection,
+                self.__CLEANING_FILED_STATUS: "added",
+                self.__FIELD_ID: f"added_{node_key}"
+            }
 
-            self.__connections_added[f"from_node_id_{node_key}"] = self._additionnal_nodes[node_key]
-
-        if default_line_updater["end_points_found"] is not None:
-            return default_line_updater
-
-        return None
+        return {
+            "interpolated_line": interpolated_line_coords_reformated,
+            "original_line_key": nearest_line_key,
+            "end_points_found": end_points_found
+        }
 
     def _topology_builder(self, coordinates, points_intersections):
 
@@ -397,17 +401,18 @@ class NetworkTopology:
         return self.__node_by_nearest_lines
 
     def __get_nearest_line(self, node_info):
-        node_uuid , node = node_info
+        node_uuid, node = node_info
         distances_computed = []
-        node_geom = Point(node[self.__GEOMETRY_FIELD])
-        for index_feature in self.__tree_index.nearest(node[self.__GEOMETRY_FIELD].bounds, self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
+        node_geom = node[self.__GEOMETRY_FIELD]
 
+        for index_feature in self.__tree_index.nearest(node_geom.bounds, self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
             line_geom = LineString(self._network_data[index_feature][self.__COORDINATES_FIELD])
             distance_from_node_to_line = node_geom.distance(line_geom)
-            distances_computed.append((distance_from_node_to_line , index_feature))
             if distance_from_node_to_line == 0:
                 # means that we node is on the network, looping is not necessary anymore
+                distances_computed = [(distance_from_node_to_line, index_feature)]
                 break
+            distances_computed.append((distance_from_node_to_line, index_feature))
 
         _, line_min_index = min(distances_computed)
         if line_min_index not in self.__node_by_nearest_lines:
@@ -424,33 +429,22 @@ class NetworkTopology:
             )
         )
 
-        return geometries[min_index] , min_dist , min_index
+        return geometries[min_index], min_dist, min_index
 
     def _check_inputs(self, inputs):
         # TODO add assert
         assert len(inputs) > 0
         return inputs
 
-    @staticmethod
-    def _insert_value(list_object, search_value, value_to_add, position=None):
-        assert position in {None, "after", "before"}
+    def _insert_value(self, list_object, search_value, value_to_add, position=None):
 
-        index_increment = 0
-        if position == "before":
-            index_increment = -1
-        elif position == "after":
-            index_increment = 1
+        assert position in self.__INSERT_OPTIONS.keys()
 
+        index_increment = self.__INSERT_OPTIONS[position]
         index = list_object.index(search_value) + index_increment
         list_object[index:index] = value_to_add
 
         return list_object
-
-    def _geojson_formating(self, input_data):
-        properties_fields = list(input_data.keys())
-        properties_fields.remove("geometry")
-        geometry, properties = map(lambda keys: {x: input_data[x] for x in keys} , [[self.__COORDINATES_FIELD], properties_fields])
-        return {**geometry, "properties": properties}
 
     @functools.lru_cache(maxsize=2097152)
     def __compute_interpolation_on_line(self, line_key_found, interpolation_level):

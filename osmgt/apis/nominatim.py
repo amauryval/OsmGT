@@ -32,7 +32,7 @@ class NominatimApi(ApiCore):
         self.logger = logger
 
         parameters = self.__check_parameters(params)
-        self.__RESULT_QUERY = self.compute_query(self.nominatim_url, parameters)
+        self.__RESULT_QUERY = self.request_query(self.nominatim_url , parameters)
 
     def __check_parameters(self, input_parameters):
 

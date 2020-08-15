@@ -122,9 +122,8 @@ class OsmGtCore(Logger):
             # more performance comparing .from_features() method
             df = pd.DataFrame(self._output_data)
             geometry = df[self._GEOMETRY_FIELD]
-            properties = df.drop([self._GEOMETRY_FIELD], axis=1)
             output_gdf = gpd.GeoDataFrame(
-                properties,
+                df.drop([self._GEOMETRY_FIELD], axis=1),
                 crs=default_epsg,
                 geometry=geometry.to_list()
             )

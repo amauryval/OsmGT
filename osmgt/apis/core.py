@@ -1,4 +1,4 @@
-import requests
+from requests_futures import sessions
 
 
 class ErrorRequest(ValueError):
@@ -9,10 +9,9 @@ class ApiCore:
 
     def check_request_response(self, response):
         python_class_name = self.__class__.__name__
-        response_code = response.status_code
-        response_reason = f"{response.status_code}:{response.reason}"
-        response_elapsed_time = str(response.elapsed)
-        response_result_message = f"{python_class_name}: Query {response_reason} in {response_elapsed_time} sec."
+        response_code = response.result().status_code
+        response_reason = f"{response_code}:{response.result().reason}"
+        response_result_message = f"{python_class_name}: Query {response_reason} in {response.result().elapsed.total_seconds()} sec."
 
         if response_code == 200:
             self.logger.info(
@@ -20,12 +19,15 @@ class ApiCore:
             )
         else:
             raise ErrorRequest(
-                f"{response_result_message} ; url={response.url}"
+                f"{response_result_message} ; url={response.result().url}"
             )
 
 
-    def compute_query(self, url, parameters):
-        response = requests.get(url, params=parameters)
+    def request_query(self, url, parameters):
+
+        session = sessions.FuturesSession(max_workers=1)
+        response = session.get(url, params=parameters)
 
         self.check_request_response(response)
-        return response.json()
+        return response.result().json()
+
