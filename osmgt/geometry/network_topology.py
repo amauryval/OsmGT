@@ -391,7 +391,7 @@ class NetworkTopology:
             yield (fid, feature[self.__GEOMETRY_FIELD].bounds, None)
 
     def __find_nearest_line_for_each_key_nodes(self):
-        # find the nereast network arc to interpolate
+        # find the nearest network arc to interpolate
         self.__tree_index = rtree.index.Index(self.__rtree_generator_func())
 
         # find nearest line
