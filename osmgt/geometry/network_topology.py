@@ -219,6 +219,8 @@ class NetworkTopology:
 
         if direction is not None:
             feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{direction}"
+        else:
+            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
 
         del feature[self.__COORDINATES_FIELD]
         return feature
