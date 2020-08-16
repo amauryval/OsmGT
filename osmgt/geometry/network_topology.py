@@ -13,16 +13,14 @@ from more_itertools import split_at
 
 import functools
 
-import ujson
-
 from numba import jit
 from numba import types as nb_types
 
 import concurrent.futures
 
 
-def deepcopy(variable):
-    return ujson.loads(ujson.dumps(variable))
+class NetworkTopologyError(Exception):
+    pass
 
 
 class NetworkTopology:
@@ -40,9 +38,13 @@ class NetworkTopology:
     __COORDINATES_FIELD = "coordinates"
     __ONEWAY_FIELD = "oneway"
 
+    __TOPOLOGY_TAG_SPLIT = "split"
+    __TOPOLOGY_TAG_ADDED = "added"
+    __TOPOLOGY_TAG_UNCHANGED = "unchanged"
+
     __INSERT_OPTIONS = {
-        "after": 1 ,
-        "before": -1 ,
+        "after": 1,
+        "before": -1,
         None: 0
     }
 
@@ -157,9 +159,6 @@ class NetworkTopology:
     #     self._additionnal_nodes = {**self._additionnal_nodes , **footway_additional_nodes}
 
     def build_lines(self, feature):
-        # del feature["bounds"]  # useless now
-        del feature[self.__GEOMETRY_FIELD]  # useless now
-
         # compare linecoords and intersections points
         coordinates_list = set(feature[self.__COORDINATES_FIELD])
         points_intersections = coordinates_list.intersection(self._intersections_found)
@@ -173,16 +172,16 @@ class NetworkTopology:
             if len(lines_coordinates_rebuild) > 1:
 
                 for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
-                    feature_updated = deepcopy(feature)
+                    feature_updated = dict(feature)
                     feature_updated[self.__FIELD_ID] = f"{feature_updated[self.__FIELD_ID]}_{new_suffix_id}"
-                    feature_updated[self.__CLEANING_FILED_STATUS] = "split"
+                    feature_updated[self.__CLEANING_FILED_STATUS] = self.__TOPOLOGY_TAG_SPLIT
                     feature_updated[self.__COORDINATES_FIELD] = line_coordinates
 
                     new_features = self.mode_processing(feature_updated)
                     self._output.extend(new_features)
             else:
                 # nothing to change
-                feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
+                feature[self.__FIELD_ID] = feature[self.__FIELD_ID]
                 new_features = self.mode_processing(feature)
                 self._output.extend(new_features)
 
@@ -209,16 +208,18 @@ class NetworkTopology:
         return new_elements
 
     def _direction_processing(self, input_feature, direction=None):
-        feature = deepcopy(input_feature)
+        feature = dict(input_feature)
+
         if direction == "backward":
-            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__COORDINATES_FIELD][::-1])
+            new_linestring = LineString(feature[self.__COORDINATES_FIELD][::-1])
         elif direction in ["forward", None]:
-            feature[self.__GEOMETRY_FIELD] = LineString(feature[self.__COORDINATES_FIELD])
+            new_linestring = LineString(feature[self.__COORDINATES_FIELD])
+        else:
+            raise NetworkTopologyError(f"Direction issue: value '{direction}' found")
+        feature[self.__GEOMETRY_FIELD] = new_linestring
 
         if direction is not None:
             feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{direction}"
-        else:
-            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
 
         del feature[self.__COORDINATES_FIELD]
         return feature
@@ -229,7 +230,7 @@ class NetworkTopology:
             feature[self.__FIELD_ID]: {
                 **{self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[:]},
                 **feature,
-                **{self.__CLEANING_FILED_STATUS: "unchanged"}
+                **{self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_UNCHANGED}
             }
             for feature in self._network_data
         }
@@ -248,14 +249,14 @@ class NetworkTopology:
         self.__connections_added = {}
 
         self.logger.info("Find nearest line for each node")
-        nearest_line_and_its_nodes = self.__find_nearest_line_for_each_key_nodes()
+        node_keys_by_nearest_lines_filled = self.__find_nearest_line_for_each_key_nodes()
 
         self.logger.info("Split line")
         self._bestlines_found = []
-        # for nearest_line_content in nearest_line_and_its_nodes.items():
-        #     self.split_line(nearest_line_content)
+        # for nearest_line_key in node_keys_by_nearest_lines_filled:
+        #     self.split_line(nearest_line_key)
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
-            executor.map(self.split_line, nearest_line_and_its_nodes.items())
+            executor.map(self.split_line, node_keys_by_nearest_lines_filled)
 
         self._network_data = {**self._network_data, **self.__connections_added}
 
@@ -264,8 +265,9 @@ class NetworkTopology:
         )
         self.logger.info(f"Done: Adding new nodes on the network ; {stats_infos}")
 
-    def split_line(self, nearest_line_content):
-        default_line_updater = self.proceed_nodes_on_network(nearest_line_content)
+    def split_line(self, node_key_by_nearest_lines):
+        nearest_line_content = self.__node_by_nearest_lines[node_key_by_nearest_lines]
+        default_line_updater = self.proceed_nodes_on_network((node_key_by_nearest_lines, nearest_line_content))
         if default_line_updater is not None:
             self.insert_new_nodes_on_its_line(default_line_updater)
 
@@ -321,8 +323,8 @@ class NetworkTopology:
             self.__connections_added[f"from_node_id_{node_key}"] = {
                 self.__COORDINATES_FIELD: connection,
                 self.__GEOMETRY_FIELD: connection,
-                self.__CLEANING_FILED_STATUS: "added",
-                self.__FIELD_ID: f"added_{node_key}"
+                self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_ADDED,
+                self.__FIELD_ID: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}"
             }
 
         return {
@@ -395,11 +397,20 @@ class NetworkTopology:
         self.__tree_index = rtree.index.Index(self.__rtree_generator_func())
 
         # find nearest line
-        self.__node_by_nearest_lines = {}
+        self.__node_by_nearest_lines = dict((key, []) for key in self._network_data.keys())
+
+        # not working because rtree cannot be multithreaded
+        # with concurrent.futures.ThreadPoolExecutor(4) as executor:
+        #     executor.map(self.__get_nearest_line, self._additionnal_nodes.items())
         for node_info in self._additionnal_nodes.items():
             self.__get_nearest_line(node_info)
 
-        return self.__node_by_nearest_lines
+        node_keys_by_nearest_lines_filled = filter(
+            lambda x: len(self.__node_by_nearest_lines[x]) > 0,
+            self.__node_by_nearest_lines
+        )
+
+        return node_keys_by_nearest_lines_filled
 
     def __get_nearest_line(self, node_info):
         node_uuid, node = node_info
@@ -407,7 +418,7 @@ class NetworkTopology:
         node_geom = node[self.__GEOMETRY_FIELD]
 
         for index_feature in self.__tree_index.nearest(node_geom.bounds, self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
-            line_geom = LineString(self._network_data[index_feature][self.__COORDINATES_FIELD])
+            line_geom = self._network_data[index_feature][self.__GEOMETRY_FIELD]
             distance_from_node_to_line = node_geom.distance(line_geom)
             if distance_from_node_to_line == 0:
                 # means that we node is on the network, looping is not necessary anymore
@@ -416,10 +427,7 @@ class NetworkTopology:
             distances_computed.append((distance_from_node_to_line, index_feature))
 
         _, line_min_index = min(distances_computed)
-        if line_min_index not in self.__node_by_nearest_lines:
-            self.__node_by_nearest_lines[line_min_index] = [node_uuid]
-        else:
-            self.__node_by_nearest_lines[line_min_index].append(node_uuid)
+        self.__node_by_nearest_lines[line_min_index].append(node_uuid)
 
     @staticmethod
     def find_nearest_geometry(point, geometries):
