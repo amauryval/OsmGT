@@ -83,7 +83,7 @@ class OsmGtCore(Logger):
         return OverpassApi(self.logger).query(request)[self._QUERY_ELEMENTS_FIELD]
 
     @staticmethod
-    def _from_location_name_query_builder(location_osm_id , query):
+    def _from_location_name_query_builder(location_osm_id, query):
         geo_tag_query = "area.searchArea"
         query = query.format(geo_filter=geo_tag_query)
         return f"area({location_osm_id})->.searchArea;({query});{out_geom_query};"
@@ -106,7 +106,7 @@ class OsmGtCore(Logger):
         query = query.format(geo_filter=bbox_value_formated)
         return f"({query});{out_geom_query};"
 
-    def _check_topology_field(self , input_gdf):
+    def _check_topology_field(self, input_gdf):
         if self._TOPO_FIELD not in input_gdf.columns.tolist():
             input_gdf[self._TOPO_FIELD] = input_gdf.index.apply(lambda x: int(x))
 
@@ -147,7 +147,7 @@ class OsmGtCore(Logger):
 
         return input_gdf
 
-    def _location_osm_default_id_computing(self , osm_location_id):
+    def _location_osm_default_id_computing(self, osm_location_id):
         return osm_location_id + self._NOMINATIM_DEFAULT_ID
 
     def _build_feature_from_osm(self, uuid_enum, geometry, properties):
@@ -155,11 +155,12 @@ class OsmGtCore(Logger):
         properties_found[self._ID_OSM_FIELD] = properties[self._ID_OSM_FIELD]
 
         # used for topology
-        properties_found[self._TOPO_FIELD] = uuid_enum  # do not cast to str, because topology processing need integer...
+        properties_found[self._TOPO_FIELD] = uuid_enum  # do not cast to str, because topology processing need an int..
         properties_found[self._GEOMETRY_FIELD] = geometry
         feature_build = properties_found
 
         return feature_build
 
-    def _check_transport_mode(self, mode):
+    @staticmethod
+    def _check_transport_mode(mode):
         assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"

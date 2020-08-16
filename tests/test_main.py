@@ -2,7 +2,6 @@ import pytest
 
 from osmgt import OsmGt
 
-import graph_tool.all as gt
 from graph_tool.topology import shortest_path
 
 
@@ -36,7 +35,7 @@ def test_run_from_location_name_func(pois_default_columns_from_output, roads_def
     for colunm_expected in roads_default_columns_from_output:
         assert colunm_expected in columns_computed
 
-    #check graph
+    # check graph
     assert len(list(graph_computed.edges())) > 0
     assert len(list(graph_computed.vertices())) > 0
     assert type(graph_computed.vertices_content) == dict
@@ -71,7 +70,7 @@ def test_run_from_bbox_func(pois_default_columns_from_output, roads_default_colu
     for colunm_expected in roads_default_columns_from_output:
         assert colunm_expected in columns_computed
 
-    #check graph
+    # check graph
     assert len(list(graph_computed.edges())) > 0
     assert len(list(graph_computed.vertices())) > 0
     assert type(graph_computed.vertices_content) == dict
@@ -153,4 +152,3 @@ def test_if_path_can_be_computed(points_gdf_from_coords):
     assert "added_47_forward" in path_ids
     # assert "469_backward" in path_ids
     assert network_data.shape[0] == 27
-

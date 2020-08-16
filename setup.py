@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-#used by meta.yaml, do not forget space
+# used by meta.yaml, do not forget space
 requirements = [
     "geopandas ==0.8.0",
     "requests ==2.23.0",
@@ -10,7 +10,6 @@ requirements = [
     "graph-tool ==2.33",
     "cairo ==1.16.0",
     "scipy ==1.3.2",
-    "ujson ==3.0.0",
     "more-itertools ==8.4.0",
     "numba ==0.48.0",
     "requests-futures ==1.0.0"

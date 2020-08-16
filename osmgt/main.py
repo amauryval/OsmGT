@@ -1,6 +1,7 @@
 from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
+
 class OsmGt:
 
     @staticmethod
@@ -59,4 +60,3 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
         return OsmGtPoi().from_bbox(bbox_value)
-

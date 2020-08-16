@@ -111,7 +111,8 @@ class OsmGtRoads(OsmGtCore):
 
         return features
 
-    def _get_query_from_mode(self, mode):
+    @staticmethod
+    def _get_query_from_mode(mode):
         return network_queries[mode]["query"]
 
 

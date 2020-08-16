@@ -39,7 +39,6 @@ class Logger:
         create a logger
 
         :param logger_level: str
-        :param logger_file: str
         :return:
         """
 

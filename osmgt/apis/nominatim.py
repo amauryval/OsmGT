@@ -1,4 +1,4 @@
-import requests
+
 from osmgt.apis.core import ApiCore
 
 

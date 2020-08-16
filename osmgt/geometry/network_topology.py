@@ -1,6 +1,5 @@
 from scipy import spatial
 
-from shapely.geometry import Point
 from shapely.geometry import LineString
 
 import rtree
@@ -75,7 +74,7 @@ class NetworkTopology:
             self._additionnal_nodes = {}
 
         # ugly footway processing...
-        self._force_footway_connection = False
+        # self._force_footway_connection = False
 
         self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
 
@@ -84,8 +83,8 @@ class NetworkTopology:
     def run(self):
         self._prepare_data()
 
-        if self._force_footway_connection:
-            self.prepare_footway_nodes()
+        # if self._force_footway_connection:
+        #     self.prepare_footway_nodes()
 
         # connect all the added nodes
         if len(self._additionnal_nodes) > 0:
@@ -388,9 +387,9 @@ class NetworkTopology:
         return set(intersections_found)
 
     def __rtree_generator_func(self):
-        for fid , feature in self._network_data.items():
+        for fid, feature in self._network_data.items():
             # fid is an integer
-            yield (fid, feature[self.__GEOMETRY_FIELD].bounds, None)
+            yield fid, feature[self.__GEOMETRY_FIELD].bounds, None
 
     def __find_nearest_line_for_each_key_nodes(self):
         # find the nearest network arc to interpolate
@@ -431,16 +430,17 @@ class NetworkTopology:
 
     @staticmethod
     def find_nearest_geometry(point, geometries):
-        min_dist , min_index = (
+        min_dist, min_index = (
             min(
                 (point.distance(geom), k)
-                for (k , geom) in enumerate(geometries)
+                for (k, geom) in enumerate(geometries)
             )
         )
 
         return geometries[min_index], min_dist, min_index
 
-    def _check_inputs(self, inputs):
+    @staticmethod
+    def _check_inputs(inputs):
         # TODO add assert
         assert len(inputs) > 0
         return inputs
@@ -464,7 +464,7 @@ class NetworkTopology:
 
         return interpolated_line_coords
 
-# @jit(nopython=True, nogil=True, cache=True)
+
 def compute_interpolation_on_line(line_found, interpolation_level):
 
     interpolated_line_coords = interpolate_curve_based_on_original_points(
@@ -473,9 +473,12 @@ def compute_interpolation_on_line(line_found, interpolation_level):
 
     return interpolated_line_coords
 
+
 signature_interpolation_func = nb_types.Array(nb_types.float64, 2, 'C')(
     nb_types.Array(nb_types.float64, 2, 'C'), nb_types.int64
 )
+
+
 @jit(signature_interpolation_func, nopython=True, nogil=True, cache=True)
 def interpolate_curve_based_on_original_points(x, n):
     # source :

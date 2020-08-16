@@ -6,6 +6,7 @@ class ErrorRequest(ValueError):
 
 
 class ApiCore:
+
     __NB_WORKER = 1
 
     __WORKED_STATUS_CODE = 200
@@ -25,7 +26,6 @@ class ApiCore:
                 f"{response_result_message} ; url={response.result().url}"
             )
 
-
     def request_query(self, url, parameters):
 
         session = sessions.FuturesSession(max_workers=self.__NB_WORKER)
@@ -33,4 +33,3 @@ class ApiCore:
 
         self.check_request_response(response)
         return response.result().json()
-
