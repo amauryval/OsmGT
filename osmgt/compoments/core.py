@@ -57,14 +57,22 @@ class OsmGtCore(Logger):
         self.logger.info(f"From location: {location_name}")
         self.logger.info("Loading data...")
 
-        location_found = list(NominatimApi(self.logger, q=location_name, limit=self._NOMINATIM_NUMBER_RESULT).data())
+        location_found = list(
+            NominatimApi(
+                self.logger, q=location_name, limit=self._NOMINATIM_NUMBER_RESULT
+            ).data()
+        )
 
         if len(location_found) == 0:
             raise ErrorOsmGtCore("Location not found!")
         elif len(location_found) > 1:
-            self.logger.warning(f"Multiple locations found for {location_name} ; the first will be used")
+            self.logger.warning(
+                f"Multiple locations found for {location_name} ; the first will be used"
+            )
         location_id = location_found[0][self._NOMINATIM_OSM_ID_FIELD]
-        self.study_area_geom = Polygon(location_found[0][self._NOMINATIM_GEOJSON_FIELD]["coordinates"][0])
+        self.study_area_geom = Polygon(
+            location_found[0][self._NOMINATIM_GEOJSON_FIELD]["coordinates"][0]
+        )
 
         self._location_id = self._location_osm_default_id_computing(location_id)
 
@@ -94,7 +102,9 @@ class OsmGtCore(Logger):
             raw_data = input_gdf.to_dict("records")
 
         else:
-            raise IncompatibleFormat(f"{type(input_gdf)} type not supported. Use a geodataframe.")
+            raise IncompatibleFormat(
+                f"{type(input_gdf)} type not supported. Use a geodataframe."
+            )
 
         return raw_data
 
@@ -125,7 +135,7 @@ class OsmGtCore(Logger):
             output_gdf = gpd.GeoDataFrame(
                 df.drop([self._GEOMETRY_FIELD], axis=1),
                 crs=default_epsg,
-                geometry=geometry.to_list()
+                geometry=geometry.to_list(),
             )
 
         else:
@@ -155,7 +165,9 @@ class OsmGtCore(Logger):
         properties_found[self._ID_OSM_FIELD] = properties[self._ID_OSM_FIELD]
 
         # used for topology
-        properties_found[self._TOPO_FIELD] = uuid_enum  # do not cast to str, because topology processing need an int..
+        properties_found[
+            self._TOPO_FIELD
+        ] = uuid_enum  # do not cast to str, because topology processing need an int..
         properties_found[self._GEOMETRY_FIELD] = geometry
         feature_build = properties_found
 
@@ -163,4 +175,6 @@ class OsmGtCore(Logger):
 
     @staticmethod
     def _check_transport_mode(mode):
-        assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"
+        assert (
+            mode in network_queries.keys()
+        ), f"'{mode}' not found in {', '.join(network_queries.keys())}"

@@ -1,4 +1,3 @@
-
 from osmgt.apis.core import ApiCore
 
 
@@ -19,11 +18,7 @@ class NominatimApi(ApiCore):
         "country",
         "postalcode",
     }
-    format_parameter = {
-        "format": "json",
-        "polygon": "1",
-        "polygon_geojson": "1"
-    }
+    format_parameter = {"format": "json", "polygon": "1", "polygon_geojson": "1"}
 
     _output = []
 
@@ -45,7 +40,10 @@ class NominatimApi(ApiCore):
                     pass
 
         elif not any(
-            [input_key in self.other_query_parameter for input_key in input_parameters.keys()]
+            [
+                input_key in self.other_query_parameter
+                for input_key in input_parameters.keys()
+            ]
         ):
             raise ErrorNominatimApi(
                 f"{', '.join(self.other_query_parameter)} not found!"

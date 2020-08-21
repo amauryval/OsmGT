@@ -38,7 +38,10 @@ class OsmGtPoi(OsmGtCore):
     def __build_points(self, raw_data):
         self.logger.info("Formating data")
 
-        raw_data = filter(lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE, raw_data)
+        raw_data = filter(
+            lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE,
+            raw_data,
+        )
         features = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
 

@@ -3,7 +3,6 @@ from osmgt.compoments.poi import OsmGtPoi
 
 
 class OsmGt:
-
     @staticmethod
     def roads_from_location(location_name, mode="pedestrian", additionnal_nodes=None):
         """

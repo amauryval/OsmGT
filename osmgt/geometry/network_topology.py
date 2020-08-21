@@ -41,11 +41,7 @@ class NetworkTopology:
     __TOPOLOGY_TAG_ADDED = "added"
     __TOPOLOGY_TAG_UNCHANGED = "unchanged"
 
-    __INSERT_OPTIONS = {
-        "after": 1,
-        "before": -1,
-        None: 0
-    }
+    __INSERT_OPTIONS = {"after": 1, "before": -1, None: 0}
 
     # ugly footway processing...
     # __PLACE_NODE_FIELD = "amenity"
@@ -54,7 +50,9 @@ class NetworkTopology:
     # __TRUNK_VALUE = "trunk"
     # __HIGHWAY_FIELD = "highway"
 
-    def __init__(self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing):
+    def __init__(
+        self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing
+    ):
         """
 
         :param logger:
@@ -170,10 +168,16 @@ class NetworkTopology:
 
             if len(lines_coordinates_rebuild) > 1:
 
-                for new_suffix_id, line_coordinates in enumerate(lines_coordinates_rebuild):
+                for new_suffix_id, line_coordinates in enumerate(
+                    lines_coordinates_rebuild
+                ):
                     feature_updated = dict(feature)
-                    feature_updated[self.__FIELD_ID] = f"{feature_updated[self.__FIELD_ID]}_{new_suffix_id}"
-                    feature_updated[self.__CLEANING_FILED_STATUS] = self.__TOPOLOGY_TAG_SPLIT
+                    feature_updated[
+                        self.__FIELD_ID
+                    ] = f"{feature_updated[self.__FIELD_ID]}_{new_suffix_id}"
+                    feature_updated[
+                        self.__CLEANING_FILED_STATUS
+                    ] = self.__TOPOLOGY_TAG_SPLIT
                     feature_updated[self.__COORDINATES_FIELD] = line_coordinates
 
                     new_features = self.mode_processing(feature_updated)
@@ -195,7 +199,9 @@ class NetworkTopology:
                 return new_elements
 
             if input_feature.get(self.__ONEWAY_FIELD, None) != "yes":
-                new_backward_feature = self._direction_processing(input_feature, "backward")
+                new_backward_feature = self._direction_processing(
+                    input_feature, "backward"
+                )
                 new_elements.append(new_backward_feature)
 
         elif self._mode_post_processing == "pedestrian":
@@ -231,14 +237,18 @@ class NetworkTopology:
             feature[self.__FIELD_ID]: {
                 **{self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[:]},
                 **feature,
-                **{self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_UNCHANGED}
+                **{self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_UNCHANGED},
             }
             for feature in self._network_data
         }
         if self._additionnal_nodes is not None:
             self._additionnal_nodes = {
                 feature[self.__FIELD_ID]: {
-                    **{self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[0]},
+                    **{
+                        self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[
+                            0
+                        ]
+                    },
                     **feature,
                 }
                 for feature in self._additionnal_nodes
@@ -250,7 +260,9 @@ class NetworkTopology:
         self.__connections_added = {}
 
         self.logger.info("Find nearest line for each node")
-        node_keys_by_nearest_lines_filled = self.__find_nearest_line_for_each_key_nodes()
+        node_keys_by_nearest_lines_filled = (
+            self.__find_nearest_line_for_each_key_nodes()
+        )
 
         self.logger.info("Split line")
         self._bestlines_found = []
@@ -268,7 +280,9 @@ class NetworkTopology:
 
     def split_line(self, node_key_by_nearest_lines):
         nearest_line_content = self.__node_by_nearest_lines[node_key_by_nearest_lines]
-        default_line_updater = self.proceed_nodes_on_network((node_key_by_nearest_lines, nearest_line_content))
+        default_line_updater = self.proceed_nodes_on_network(
+            (node_key_by_nearest_lines, nearest_line_content)
+        )
         if default_line_updater is not None:
             self.insert_new_nodes_on_its_line(default_line_updater)
 
@@ -276,32 +290,38 @@ class NetworkTopology:
         original_line_key = item["original_line_key"]
         end_points_found = item["end_points_found"]
 
-        linestring_with_new_nodes = self._network_data[original_line_key][self.__COORDINATES_FIELD]
+        linestring_with_new_nodes = self._network_data[original_line_key][
+            self.__COORDINATES_FIELD
+        ]
         linestring_with_new_nodes.extend(end_points_found)
         linestring_with_new_nodes = set(linestring_with_new_nodes)
-        self.__node_con_stats["line_split"] += len(linestring_with_new_nodes.intersection(end_points_found))
+        self.__node_con_stats["line_split"] += len(
+            linestring_with_new_nodes.intersection(end_points_found)
+        )
 
         # build new linestrings
         linestring_linked_updated = list(
-            filter(
-                lambda x: x in linestring_with_new_nodes,
-                item["interpolated_line"],
-            )
+            filter(lambda x: x in linestring_with_new_nodes, item["interpolated_line"],)
         )
 
-        self._network_data[original_line_key][self.__COORDINATES_FIELD] = linestring_linked_updated
+        self._network_data[original_line_key][
+            self.__COORDINATES_FIELD
+        ] = linestring_linked_updated
 
     def proceed_nodes_on_network(self, nearest_line_content):
         nearest_line_key, node_keys = nearest_line_content
 
         interpolated_line_coords = interpolate_curve_based_on_original_points(
             np.array(self._network_data[nearest_line_key][self.__COORDINATES_FIELD]),
-            self.__INTERPOLATION_LEVEL
+            self.__INTERPOLATION_LEVEL,
         )
         line_tree = spatial.cKDTree(interpolated_line_coords)
         interpolated_line_coords_reformated = list(map(tuple, interpolated_line_coords))
 
-        nodes_coords = [self._additionnal_nodes[node_key][self.__COORDINATES_FIELD] for node_key in node_keys]
+        nodes_coords = [
+            self._additionnal_nodes[node_key][self.__COORDINATES_FIELD]
+            for node_key in node_keys
+        ]
         _, nearest_line_object_idxes = line_tree.query(nodes_coords)
         end_points_found = [
             interpolated_line_coords_reformated[nearest_line_key]
@@ -309,14 +329,13 @@ class NetworkTopology:
         ]
 
         connections_coords = list(
-            zip(
-                node_keys,
-                list(zip(nodes_coords, end_points_found))
-            )
+            zip(node_keys, list(zip(nodes_coords, end_points_found)))
         )
         self.__node_con_stats["connections_added"] += len(connections_coords)
 
-        connections_coords_valid = list(filter(lambda x: len(set(x[-1])) > 0, connections_coords))
+        connections_coords_valid = list(
+            filter(lambda x: len(set(x[-1])) > 0, connections_coords)
+        )
         for node_key, connection in connections_coords_valid:
 
             # to split line at node (and also if node is on the network). it builds intersection used to split lines
@@ -325,13 +344,13 @@ class NetworkTopology:
                 self.__COORDINATES_FIELD: connection,
                 self.__GEOMETRY_FIELD: connection,
                 self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_ADDED,
-                self.__FIELD_ID: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}"
+                self.__FIELD_ID: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
             }
 
         return {
             "interpolated_line": interpolated_line_coords_reformated,
             "original_line_key": nearest_line_key,
-            "end_points_found": end_points_found
+            "end_points_found": end_points_found,
         }
 
     def _topology_builder(self, coordinates, points_intersections):
@@ -348,7 +367,9 @@ class NetworkTopology:
                 # we get the middle values from coordinates to avoid to catch the first and last value when editing
 
                 middle_coordinates_values = self._insert_value(
-                    middle_coordinates_values, point_intersection, tuple([point_intersection])
+                    middle_coordinates_values,
+                    point_intersection,
+                    tuple([point_intersection]),
                 )
 
                 middle_coordinates_values = self._insert_value(
@@ -398,7 +419,9 @@ class NetworkTopology:
         self.__tree_index = rtree.index.Index(self.__rtree_generator_func())
 
         # find nearest line
-        self.__node_by_nearest_lines = dict((key, []) for key in self._network_data.keys())
+        self.__node_by_nearest_lines = dict(
+            (key, []) for key in self._network_data.keys()
+        )
 
         # not working because rtree cannot be multithreaded
         # with concurrent.futures.ThreadPoolExecutor(4) as executor:
@@ -408,7 +431,7 @@ class NetworkTopology:
 
         node_keys_by_nearest_lines_filled = filter(
             lambda x: len(self.__node_by_nearest_lines[x]) > 0,
-            self.__node_by_nearest_lines
+            self.__node_by_nearest_lines,
         )
 
         return node_keys_by_nearest_lines_filled
@@ -418,7 +441,9 @@ class NetworkTopology:
         distances_computed = []
         node_geom = node[self.__GEOMETRY_FIELD]
 
-        for index_feature in self.__tree_index.nearest(node_geom.bounds, self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND):
+        for index_feature in self.__tree_index.nearest(
+            node_geom.bounds, self.__NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND
+        ):
             line_geom = self._network_data[index_feature][self.__GEOMETRY_FIELD]
             distance_from_node_to_line = node_geom.distance(line_geom)
             if distance_from_node_to_line == 0:
@@ -432,11 +457,8 @@ class NetworkTopology:
 
     @staticmethod
     def find_nearest_geometry(point, geometries):
-        min_dist, min_index = (
-            min(
-                (point.distance(geom), k)
-                for (k, geom) in enumerate(geometries)
-            )
+        min_dist, min_index = min(
+            (point.distance(geom), k) for (k, geom) in enumerate(geometries)
         )
 
         return geometries[min_index], min_dist, min_index
@@ -461,7 +483,8 @@ class NetworkTopology:
     def __compute_interpolation_on_line(self, line_key_found, interpolation_level):
 
         interpolated_line_coords = interpolate_curve_based_on_original_points(
-            np.array(self._network_data[line_key_found][self.__COORDINATES_FIELD]), interpolation_level
+            np.array(self._network_data[line_key_found][self.__COORDINATES_FIELD]),
+            interpolation_level,
         )
 
         return interpolated_line_coords
@@ -476,8 +499,8 @@ def compute_interpolation_on_line(line_found, interpolation_level):
     return interpolated_line_coords
 
 
-signature_interpolation_func = nb_types.Array(nb_types.float64, 2, 'C')(
-    nb_types.Array(nb_types.float64, 2, 'C'), nb_types.int64
+signature_interpolation_func = nb_types.Array(nb_types.float64, 2, "C")(
+    nb_types.Array(nb_types.float64, 2, "C"), nb_types.int64
 )
 
 

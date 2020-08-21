@@ -18,9 +18,7 @@ class ApiCore:
         response_result_message = f"{python_class_name}: Query {response_reason} in {response.result().elapsed.total_seconds()} sec."
 
         if response_code == self.__WORKED_STATUS_CODE:
-            self.logger.info(
-                f"{response_result_message}"
-            )
+            self.logger.info(f"{response_result_message}")
         else:
             raise ErrorRequest(
                 f"{response_result_message} ; url={response.result().url}"

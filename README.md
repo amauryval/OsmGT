@@ -3,10 +3,10 @@ OsmGT
 
 ![CI](https://github.com/wiralyki/osmgt/workflows/CI/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/wiralyki/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/wiralyki/osmgt)
-
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 OpenStreetMap based on graph-tools
-
+y
 # Check the jupyter notebook output
 
 [Open the example](https://amauryval.github.io/osmgt/)

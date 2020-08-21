@@ -37,7 +37,9 @@ class OsmGtRoads(OsmGtCore):
         query = self._get_query_from_mode(mode)
         request = self._from_location_name_query_builder(self._location_id, query)
         raw_data = self._query_on_overpass_api(request)
-        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
+        self._output_data = self.__build_network_topology(
+            raw_data, additionnal_nodes, mode
+        )
 
         return self
 
@@ -49,7 +51,9 @@ class OsmGtRoads(OsmGtCore):
         query = self._get_query_from_mode(mode)
         request = self._from_bbox_query_builder(self._bbox_value, query)
         raw_data = self._query_on_overpass_api(request)
-        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
+        self._output_data = self.__build_network_topology(
+            raw_data, additionnal_nodes, mode
+        )
 
         return self
 
@@ -58,10 +62,14 @@ class OsmGtRoads(OsmGtCore):
         self._check_transport_mode(mode)
         geometry_found = set(network_gdf[self._GEOMETRY_FIELD].to_list())
         if geometry_found != {"LineString"}:
-            raise NetWorkGeomIncompatible(f"Input geodataframe does not contains only LineString: {geometry_found}")
+            raise NetWorkGeomIncompatible(
+                f"Input geodataframe does not contains only LineString: {geometry_found}"
+            )
 
         raw_data = super()._build_network_from_gdf(network_gdf)
-        self._output_data = self.__build_network_topology(raw_data, additionnal_nodes, mode)
+        self._output_data = self.__build_network_topology(
+            raw_data, additionnal_nodes, mode
+        )
 
         return self
 
@@ -90,7 +98,11 @@ class OsmGtRoads(OsmGtCore):
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
-            self.logger, raw_data_restructured, additionnal_nodes, self._TOPO_FIELD, mode
+            self.logger,
+            raw_data_restructured,
+            additionnal_nodes,
+            self._TOPO_FIELD,
+            mode,
         ).run()
 
         return raw_data_topology_rebuild
@@ -98,11 +110,17 @@ class OsmGtRoads(OsmGtCore):
     def __rebuild_network_data(self, raw_data):
         self.logger.info("Formating data")
 
-        raw_data = filter(lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE, raw_data)
+        raw_data = filter(
+            lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE,
+            raw_data,
+        )
         features = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
             geometry = LineString(
-                [(coords[self._LNG_FIELD], coords[self._LAT_FIELD]) for coords in feature[self._GEOMETRY_FIELD]]
+                [
+                    (coords[self._LNG_FIELD], coords[self._LAT_FIELD])
+                    for coords in feature[self._GEOMETRY_FIELD]
+                ]
             )
             del feature[self._GEOMETRY_FIELD]
 
@@ -114,5 +132,3 @@ class OsmGtRoads(OsmGtCore):
     @staticmethod
     def _get_query_from_mode(mode):
         return network_queries[mode]["query"]
-
-
