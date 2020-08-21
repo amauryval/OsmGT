@@ -57,14 +57,22 @@ class OsmGtCore(Logger):
         self.logger.info(f"From location: {location_name}")
         self.logger.info("Loading data...")
 
-        location_found = list(NominatimApi(self.logger, q=location_name, limit=self._NOMINATIM_NUMBER_RESULT).data())
+        location_found = list(
+            NominatimApi(
+                self.logger, q=location_name, limit=self._NOMINATIM_NUMBER_RESULT
+            ).data()
+        )
 
         if len(location_found) == 0:
             raise ErrorOsmGtCore("Location not found!")
         elif len(location_found) > 1:
-            self.logger.warning(f"Multiple locations found for {location_name} ; the first will be used")
+            self.logger.warning(
+                f"Multiple locations found for {location_name} ; the first will be used"
+            )
         location_id = location_found[0][self._NOMINATIM_OSM_ID_FIELD]
-        self.study_area_geom = Polygon(location_found[0][self._NOMINATIM_GEOJSON_FIELD]["coordinates"][0])
+        self.study_area_geom = Polygon(
+            location_found[0][self._NOMINATIM_GEOJSON_FIELD]["coordinates"][0]
+        )
 
         self._location_id = self._location_osm_default_id_computing(location_id)
 
@@ -83,7 +91,7 @@ class OsmGtCore(Logger):
         return OverpassApi(self.logger).query(request)[self._QUERY_ELEMENTS_FIELD]
 
     @staticmethod
-    def _from_location_name_query_builder(location_osm_id , query):
+    def _from_location_name_query_builder(location_osm_id, query):
         geo_tag_query = "area.searchArea"
         query = query.format(geo_filter=geo_tag_query)
         return f"area({location_osm_id})->.searchArea;({query});{out_geom_query};"
@@ -94,7 +102,9 @@ class OsmGtCore(Logger):
             raw_data = input_gdf.to_dict("records")
 
         else:
-            raise IncompatibleFormat(f"{type(input_gdf)} type not supported. Use a geodataframe.")
+            raise IncompatibleFormat(
+                f"{type(input_gdf)} type not supported. Use a geodataframe."
+            )
 
         return raw_data
 
@@ -106,7 +116,7 @@ class OsmGtCore(Logger):
         query = query.format(geo_filter=bbox_value_formated)
         return f"({query});{out_geom_query};"
 
-    def _check_topology_field(self , input_gdf):
+    def _check_topology_field(self, input_gdf):
         if self._TOPO_FIELD not in input_gdf.columns.tolist():
             input_gdf[self._TOPO_FIELD] = input_gdf.index.apply(lambda x: int(x))
 
@@ -122,11 +132,10 @@ class OsmGtCore(Logger):
             # more performance comparing .from_features() method
             df = pd.DataFrame(self._output_data)
             geometry = df[self._GEOMETRY_FIELD]
-            properties = df.drop([self._GEOMETRY_FIELD], axis=1)
             output_gdf = gpd.GeoDataFrame(
-                properties,
+                df.drop([self._GEOMETRY_FIELD], axis=1),
                 crs=default_epsg,
-                geometry=geometry.to_list()
+                geometry=geometry.to_list(),
             )
 
         else:
@@ -148,7 +157,7 @@ class OsmGtCore(Logger):
 
         return input_gdf
 
-    def _location_osm_default_id_computing(self , osm_location_id):
+    def _location_osm_default_id_computing(self, osm_location_id):
         return osm_location_id + self._NOMINATIM_DEFAULT_ID
 
     def _build_feature_from_osm(self, uuid_enum, geometry, properties):
@@ -156,11 +165,16 @@ class OsmGtCore(Logger):
         properties_found[self._ID_OSM_FIELD] = properties[self._ID_OSM_FIELD]
 
         # used for topology
-        properties_found[self._TOPO_FIELD] = uuid_enum  # do not cast to str, because topology processing need integer...
+        properties_found[
+            self._TOPO_FIELD
+        ] = uuid_enum  # do not cast to str, because topology processing need an int..
         properties_found[self._GEOMETRY_FIELD] = geometry
         feature_build = properties_found
 
         return feature_build
 
-    def _check_transport_mode(self, mode):
-        assert mode in network_queries.keys(), f"'{mode}' not found in {', '.join(network_queries.keys())}"
+    @staticmethod
+    def _check_transport_mode(mode):
+        assert (
+            mode in network_queries.keys()
+        ), f"'{mode}' not found in {', '.join(network_queries.keys())}"

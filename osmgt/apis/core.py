@@ -1,4 +1,4 @@
-import requests
+from requests_futures import sessions
 
 
 class ErrorRequest(ValueError):
@@ -7,25 +7,27 @@ class ErrorRequest(ValueError):
 
 class ApiCore:
 
+    __NB_WORKER = 1
+
+    __WORKED_STATUS_CODE = 200
+
     def check_request_response(self, response):
         python_class_name = self.__class__.__name__
-        response_code = response.status_code
-        response_reason = f"{response.status_code}:{response.reason}"
-        response_elapsed_time = str(response.elapsed)
-        response_result_message = f"{python_class_name}: Query {response_reason} in {response_elapsed_time} sec."
+        response_code = response.result().status_code
+        response_reason = f"{response_code}:{response.result().reason}"
+        response_result_message = f"{python_class_name}: Query {response_reason} in {response.result().elapsed.total_seconds()} sec."
 
-        if response_code == 200:
-            self.logger.info(
-                f"{response_result_message}"
-            )
+        if response_code == self.__WORKED_STATUS_CODE:
+            self.logger.info(f"{response_result_message}")
         else:
             raise ErrorRequest(
-                f"{response_result_message} ; url={response.url}"
+                f"{response_result_message} ; url={response.result().url}"
             )
 
+    def request_query(self, url, parameters):
 
-    def compute_query(self, url, parameters):
-        response = requests.get(url, params=parameters)
+        session = sessions.FuturesSession(max_workers=self.__NB_WORKER)
+        response = session.get(url, params=parameters)
 
         self.check_request_response(response)
-        return response.json()
+        return response.result().json()

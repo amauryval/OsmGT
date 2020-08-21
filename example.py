@@ -5,7 +5,7 @@ from osmgt import OsmGt
 def test_from_web():
     location = "lyon"
     poi_output_name = f"{location}_poi"
-    network_output_name = f"{location}_network2"
+    network_output_name = f"{location}_network"
     bbox = (-74.018433, 40.718087, -73.982749, 40.733356)
 
     # get POI

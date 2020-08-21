@@ -23,4 +23,4 @@ class OverpassApi(ApiCore):
 
     def query(self, query):
         parameters = self._build_parameters(query)
-        return self.compute_query(self.__OVERPASS_URL, parameters)
+        return self.request_query(self.__OVERPASS_URL, parameters)

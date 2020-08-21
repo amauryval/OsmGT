@@ -1,8 +1,8 @@
 from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
-class OsmGt:
 
+class OsmGt:
     @staticmethod
     def roads_from_location(location_name, mode="pedestrian", additionnal_nodes=None):
         """
@@ -59,4 +59,3 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
         return OsmGtPoi().from_bbox(bbox_value)
-
