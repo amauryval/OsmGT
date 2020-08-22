@@ -29,12 +29,16 @@ class OsmGtIsochrone(OsmGtRoads):
         self.source_node = None
 
         self._trip_speed = trip_speed  # km/h
+
+        isochrones_to_build.sort()
+        self._raw_isochrones = isochrones_to_build
         self._isochrones_to_build = self._prepare_isochrone_values(isochrones_to_build)
 
     def _prepare_isochrone_values(self, isochrones_to_build):
         speed_to_m_s = self._trip_speed / self.__KM_SEC_2_M_SEC
+
         times_reach_time_dist = {
-            t: math.ceil((t * self.__SECS_IN_MIN) * speed_to_m_s)
+            t: math.ceil((t * self.__SECS_IN_MIN) * speed_to_m_s)  # distance
             for t in isochrones_to_build
         }
         times_reach_time_dist_reversed = sorted(times_reach_time_dist.items(), key=lambda x: x[1], reverse=True)
@@ -88,3 +92,18 @@ class OsmGtIsochrone(OsmGtRoads):
                 "geometry": concave_hull.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
                 #         "geometry": MultiPoint(points)
             })
+
+    def get_gdf(self, verbose=True):
+        output = super().get_gdf()
+        # find iso index pair in order to create hole geom. isochrones are like russian doll
+        iso_values = self._raw_isochrones[::-1]
+        iso_values_map = {x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))}
+        output["geometry"] = output.apply(
+            lambda x: x["geometry"].difference(
+                output.loc[
+                    output["iso_name"] == iso_values_map[x["iso_name"]]].iloc[0]["geometry"]
+            ) if x["iso_name"] in iso_values_map else x["geometry"],
+            axis=1
+        )
+
+        return output
