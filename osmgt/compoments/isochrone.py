@@ -21,6 +21,7 @@ class OsmGtIsochrone(OsmGtRoads):
     __KM_SEC_2_M_SEC = 3.6
     __SECS_IN_MIN = 60
     __DISTANCE_TOLERANCE = 1.2
+    __BUFFER_VALUE_FOR_SMOOTHING = 0.001
 
     def __init__(self, isochrones_to_build, trip_speed=3):
         super().__init__()
@@ -83,7 +84,7 @@ class OsmGtIsochrone(OsmGtRoads):
             #     concave_hull, edge_points = alpha_shape(points, alpha=1.87)
             concave_hull = Concave_hull(points).run()
             self._output_data.append({
-                "iso_name": f"iso_{t}",
-                "geometry": concave_hull,
+                "iso_name": t,
+                "geometry": concave_hull.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
                 #         "geometry": MultiPoint(points)
             })
