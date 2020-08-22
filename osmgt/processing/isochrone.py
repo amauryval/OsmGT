@@ -1,4 +1,5 @@
 from osmgt.compoments.roads import OsmGtRoads
+from osmgt.processing.shortest_path import OsmGtShortestPath
 
 import math
 
@@ -85,12 +86,12 @@ class OsmGtIsochrone(OsmGtRoads):
                 loads(graph.vertex_names[vertex])
                 for vertex in pred
             ]
-            #     concave_hull, edge_points = alpha_shape(points, alpha=1.87)
-            concave_hull = Concave_hull(points).run()
+            concave_hull_proc = Concave_hull(points)
+
+            polygon = concave_hull_proc.polygon()
             self._output_data.append({
                 "iso_name": t,
-                "geometry": concave_hull.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
-                #         "geometry": MultiPoint(points)
+                "geometry": polygon.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
             })
 
     def get_gdf(self, verbose=True):

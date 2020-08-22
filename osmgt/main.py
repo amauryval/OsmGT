@@ -1,6 +1,7 @@
 from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
-from osmgt.compoments.isochrone import OsmGtIsochrone
+
+from osmgt.processing.isochrone import OsmGtIsochrone
 
 
 class OsmGt:

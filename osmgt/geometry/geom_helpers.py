@@ -63,9 +63,10 @@ class Concave_hull:
         self._points = points
 
         self.__edges = set()
-        self.edge_points = []
+        self._edge_points = []
+        self._compute()
 
-    def run(self):
+    def _compute(self):
         result = self._check_points_number()
 
         if result is None:
@@ -97,9 +98,15 @@ class Concave_hull:
                     self.add_edge(coords, ib, ic)
                     self.add_edge(coords, ic, ia)
 
-            multilinestring_built = MultiLineString(self.edge_points)
-            triangles = list(polygonize(multilinestring_built))
-            return cascaded_union(triangles)
+            multilinestring_built = MultiLineString(self._edge_points)
+            self._triangles = list(polygonize(multilinestring_built))
+            return self
+
+    def polygon(self):
+        return cascaded_union(self._triangles)
+
+    def points(self):
+        return self._edge_points
 
     def _check_points_number(self):
         if len(self._points) < self.__MIN_NUMBER_OF_POINTS:
@@ -114,7 +121,7 @@ class Concave_hull:
             # already added
             return
         self.__edges.add((i , j))
-        self.edge_points.append(coords[[i, j]])
+        self._edge_points.append(coords[[i, j]])
 
 
 def reproject(geometry, from_epsg, to_epsg):
@@ -132,3 +139,19 @@ def reproject(geometry, from_epsg, to_epsg):
         geometry = transform(proj_transformer.transform, geometry)
 
     return geometry
+
+
+def multilinestring_continuity(linestrings):
+
+    """
+    :param linestrings: linestring with different orientations, directed with the last coords of the first element
+    :type linestrings: list of shapely.geometry.MultiLineString
+    :return: re-oriented MultiLineSting
+    :rtype: shapely.geometry.MultiLineString
+    """
+
+    dict_line = {key: value for key, value in enumerate(linestrings)}
+    for key, line in dict_line.items():
+        if key != 0 and dict_line[key - 1].coords[-1] == line.coords[-1]:
+            dict_line[key] = LineString(line.coords[::-1])
+    return [v for _, v in dict_line.items()]
