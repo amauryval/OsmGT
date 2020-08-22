@@ -1,11 +1,16 @@
 from pyproj import Geod
+from pyproj import Transformer
 
+from shapely.ops import transform
 from shapely.ops import cascaded_union
 from shapely.ops import polygonize
 from shapely.geometry import MultiLineString
 from shapely.geometry import MultiPoint
+
 from scipy.spatial import Delaunay
+
 import numpy as np
+
 import math
 
 def compute_wg84_line_length(input_geom):
@@ -110,3 +115,20 @@ class Concave_hull:
             return
         self.__edges.add((i , j))
         self.edge_points.append(coords[[i, j]])
+
+
+def reproject(geometry, from_epsg, to_epsg):
+    """
+    pyproj_reprojection
+
+    :type geometry: shapely.geometry.*
+    :type from_epsg: int
+    :type to_epsg: int
+    :rtype: shapely.geometry.*
+    """
+
+    if from_epsg != to_epsg:
+        proj_transformer = Transformer.from_crs(f'EPSG:{from_epsg}', f'EPSG:{to_epsg}', always_xy=True)
+        geometry = transform(proj_transformer.transform, geometry)
+
+    return geometry

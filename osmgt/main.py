@@ -62,12 +62,12 @@ class OsmGt:
         return OsmGtPoi().from_bbox(bbox_value)
 
     @staticmethod
-    def isochrone_from_coordinates(location_points, isochrones_to_build, trip_speed, mode="pedestrian"):
+    def isochrone_from_coordinates(location_point, isochrones_to_build, trip_speed, mode="pedestrian"):
         """
         Get OpenStreetMap roads from a location name
 
-        :param location_points: location points
-        :type location_points: shapely.geometry.Point
+        :param location_point: location points
+        :type location_point: shapely.geometry.Point
         :param isochrones_to_build: isochrones to build (in minutes)
         :type isochrones_to_build: list of int
         :param trip_speed: trip speed in km/sec
@@ -78,4 +78,4 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
 
-        return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(location_points, mode)
+        return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(location_point, mode)
