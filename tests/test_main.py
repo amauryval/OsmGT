@@ -152,3 +152,14 @@ def test_if_path_can_be_computed(points_gdf_from_coords):
     assert "added_47_forward" in path_ids
     # assert "469_backward" in path_ids
     assert network_data.shape[0] == 27
+
+
+def test_if_isochrones_can_be_computed(location_point, isochrone_values):
+    isochrones_from_location = OsmGt.isochrone_from_coordinates(
+        location_point,
+        isochrone_values,
+        3,
+        mode="pedestrian"
+    )
+    assert isochrones_from_location.shape[0] == 3
+    assert set(isochrones_from_location["iso_name"].to_list()) == set(isochrone_values)

@@ -80,7 +80,7 @@ class OsmGtIsochrone(OsmGtRoads):
                 max_dist=dist,
                 return_reached=True,
             )[1]
-            print(len(pred))
+
             points = [
                 loads(graph.vertex_names[vertex])
                 for vertex in pred
