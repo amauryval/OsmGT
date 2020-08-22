@@ -1,6 +1,7 @@
 from osmgt.compoments.core import OsmGtCore
 
 from osmgt.geometry.network_topology import NetworkTopology
+from osmgt.geometry.geom_helpers import compute_wg84_line_length
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
@@ -84,7 +85,7 @@ class OsmGtRoads(OsmGtCore):
                 Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
                 Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
                 feature[self._TOPO_FIELD],
-                shape(feature[self._GEOMETRY_FIELD]).length,
+                compute_wg84_line_length(shape(feature[self._GEOMETRY_FIELD])),
             )
         return graph
 

@@ -84,6 +84,9 @@ class OsmGtCore(Logger):
         # reordered because of nominatim
         self._bbox_value = (bbox_value[1], bbox_value[0], bbox_value[3], bbox_value[2])
 
+    def from_location_point(self, location_point, isochrones_to_build, mode):
+        pass
+
     def _get_study_area_from_bbox(self, bbox):
         return
 
