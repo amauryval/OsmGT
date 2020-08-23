@@ -26,7 +26,6 @@ class EmptyData(Exception):
     pass
 
 
-
 class OsmGtCore(Logger):
 
     _QUERY_ELEMENTS_FIELD = "elements"
@@ -133,10 +132,12 @@ class OsmGtCore(Logger):
 
     def get_gdf(self, verbose=True):
         if verbose:
-            self.logger.info(f"Prepare Geodataframe")
+            self.logger.info("Prepare Geodataframe")
 
         if len(self._output_data) == 0:
-            raise EmptyData("Geodataframe creation is impossible, because no data has been found")
+            raise EmptyData(
+                "Geodataframe creation is impossible, because no data has been found"
+            )
 
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             self._check_build_input_data()
@@ -153,7 +154,7 @@ class OsmGtCore(Logger):
             output_gdf = self._output_data
 
         output_gdf = self._clean_attributes(output_gdf)
-        self.logger.info(f"Geodataframe Ready")
+        self.logger.info("Geodataframe Ready")
 
         return output_gdf
 

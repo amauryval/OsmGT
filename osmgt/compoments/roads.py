@@ -9,7 +9,7 @@ from shapely.geometry import Point
 # to facilitate debugging
 try:
     from osmgt.network.gt_helper import GraphHelpers
-except:
+except ModuleNotFoundError:
     pass
 
 from shapely.geometry import shape
@@ -105,10 +105,15 @@ class OsmGtRoads(OsmGtCore):
                     map(lambda x: x.wkt, additionnal_nodes["geometry"].to_list())
                 ).difference(
                     set(
-                        map(lambda x: x.wkt, additionnal_nodes_filtered["geometry"].to_list())
+                        map(
+                            lambda x: x.wkt,
+                            additionnal_nodes_filtered["geometry"].to_list(),
+                        )
                     )
                 )
-                raise AdditionnalNodesOutsideWorkingArea(f"These following points are outside the working area: {', '.join(additionnal_nodes_outside)}")
+                raise AdditionnalNodesOutsideWorkingArea(
+                    f"These following points are outside the working area: {', '.join(additionnal_nodes_outside)}"
+                )
 
             additionnal_nodes = additionnal_nodes_filtered.to_dict("records")
 

@@ -64,7 +64,9 @@ class OsmGt:
         return OsmGtPoi().from_bbox(bbox_value)
 
     @staticmethod
-    def isochrone_from_coordinates(coordinates, isochrones_to_build, trip_speed, mode="pedestrian"):
+    def isochrone_from_coordinates(
+        coordinates, isochrones_to_build, trip_speed, mode="pedestrian"
+    ):
         """
 
         :param coordinates: location points
@@ -79,10 +81,14 @@ class OsmGt:
         :rtype: geodataframe
         """
 
-        return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(coordinates, mode)
+        return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(
+            coordinates, mode
+        )
 
     @staticmethod
-    def shortest_path_from_location(location_name, source_target_points, mode="pedestrian"):
+    def shortest_path_from_location(
+        location_name, source_target_points, mode="pedestrian"
+    ):
         """
 
         :param location_name: the name of the location
@@ -95,4 +101,6 @@ class OsmGt:
         :rtype: geodataframe
         """
 
-        return OsmGtShortestPath(source_target_points).from_location(location_name, mode)
+        return OsmGtShortestPath(source_target_points).from_location(
+            location_name, mode
+        )

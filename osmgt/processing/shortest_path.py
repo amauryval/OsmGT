@@ -7,7 +7,7 @@ import pandas as pd
 
 try:
     from graph_tool.topology import shortest_path
-except:
+except ModuleNotFoundError:
     pass
 
 from shapely.geometry import Point
@@ -17,24 +17,7 @@ from shapely.ops import linemerge
 from shapely.wkt import loads
 
 
-def multilinestring_continuity(linestrings):
-
-    """
-    :param linestrings: linestring with different orientations, directed with the last coords of the first element
-    :type linestrings: list of shapely.geometry.MultiLineString
-    :return: re-oriented MultiLineSting
-    :rtype: shapely.geometry.MultiLineString
-    """
-
-    dict_line = {key: value for key, value in enumerate(linestrings)}
-    for key, line in dict_line.items():
-        if key != 0 and dict_line[key - 1].coords[-1] == line.coords[-1]:
-            dict_line[key] = LineString(line.coords[::-1])
-    return [v for _, v in dict_line.items()]
-
-
 class OsmGtShortestPath(OsmGtRoads):
-
     def __init__(self, source_target_points):
         super().__init__()
 
@@ -47,10 +30,9 @@ class OsmGtShortestPath(OsmGtRoads):
 
     def _check_nodes(self, source_target_points):
 
-        source_target_points_cleaned = set([
-            (source.wkt, target.wkt)
-            for source, target in source_target_points
-        ])
+        source_target_points_cleaned = set(
+            [(source.wkt, target.wkt) for source, target in source_target_points]
+        )
 
         source_target_points_cleaned = [
             (loads(source), loads(target))
@@ -68,15 +50,15 @@ class OsmGtShortestPath(OsmGtRoads):
         df = pd.DataFrame(additionnal_nodes)
         geometry = df["geometry"]
         additionnal_nodes_gdf = gpd.GeoDataFrame(
-            df.drop(["geometry"], axis=1),
-            crs=4326,
-            geometry=geometry.to_list(),
+            df.drop(["geometry"], axis=1), crs=4326, geometry=geometry.to_list(),
         )
 
         return additionnal_nodes_gdf
 
     def from_location(self, location_name, additionnal_nodes=None, mode="pedestrian"):
-        super().from_location(location_name, additionnal_nodes=self._additionnal_nodes_gdf, mode=mode)
+        super().from_location(
+            location_name, additionnal_nodes=self._additionnal_nodes_gdf, mode=mode
+        )
         self._compute_data_and_graph()
 
         return self.get_gdf()
@@ -96,6 +78,7 @@ class OsmGtShortestPath(OsmGtRoads):
         # for nodes in self._source_target_points:
         #     self._compute_shortest_path(nodes)
         import concurrent.futures
+
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self._compute_shortest_path, self._source_target_points)
 
@@ -117,13 +100,15 @@ class OsmGtShortestPath(OsmGtRoads):
                 self._graph,
                 source=source_vertex,
                 target=target_vertex,
-                weights=self._graph.edge_weights  # weights is based on line length
+                weights=self._graph.edge_weights,  # weights is based on line length
             )
 
             gdf_copy = self._gdf.copy(deep=True)
             # # get path by using edge names
             path_geoms = gdf_copy[
-                gdf_copy[self._TOPO_FIELD].isin([self._graph.edge_names[edge] for edge in path_edges])
+                gdf_copy[self._TOPO_FIELD].isin(
+                    [self._graph.edge_names[edge] for edge in path_edges]
+                )
             ]["geometry"].to_list()
 
             # reorder linestring
@@ -136,9 +121,11 @@ class OsmGtShortestPath(OsmGtRoads):
                 {
                     "source_node": source_node,
                     "target_node": target_node,
-                    "geometry":  path_found
+                    "geometry": path_found,
                 }
             )
 
         else:
-            self.logger.info(f"Path from {source_node_wkt} to {target_node_wkt} are equals: not proceed!")
+            self.logger.info(
+                f"Path from {source_node_wkt} to {target_node_wkt} are equals: not proceed!"
+            )

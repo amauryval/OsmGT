@@ -11,7 +11,7 @@ import pandas as pd
 
 try:
     from graph_tool.topology import shortest_distance
-except:
+except ModuleNotFoundError:
     pass
 
 from shapely.wkt import loads
@@ -46,26 +46,34 @@ class OsmGtIsochrone(OsmGtRoads):
             t: math.ceil((t * self.__SECS_IN_MIN) * speed_to_m_s)  # distance
             for t in isochrones_to_build
         }
-        times_reach_time_dist_reversed = sorted(times_reach_time_dist.items(), key=lambda x: x[1], reverse=True)
+        times_reach_time_dist_reversed = sorted(
+            times_reach_time_dist.items(), key=lambda x: x[1], reverse=True
+        )
         return times_reach_time_dist_reversed
 
     def from_location_point(self, location_point, mode):
         self.source_node = location_point.wkt
         # compute bbox
         max_distance = max(self._isochrones_to_build, key=itemgetter(1))[-1]
-        location_point_reproj = reproject(location_point , epsg_4326 , epsg_3857)
-        location_point_reproj_buffered = location_point_reproj.buffer(max_distance * self.__DISTANCE_TOLERANCE)
-        location_point_reproj_buffered_bounds = reproject(location_point_reproj_buffered , epsg_3857 , epsg_4326).bounds
+        location_point_reproj = reproject(location_point, epsg_4326, epsg_3857)
+        location_point_reproj_buffered = location_point_reproj.buffer(
+            max_distance * self.__DISTANCE_TOLERANCE
+        )
+        location_point_reproj_buffered_bounds = reproject(
+            location_point_reproj_buffered, epsg_3857, epsg_4326
+        ).bounds
 
         additionnal_nodes = [{self._TOPO_FIELD: 0, "geometry": location_point}]
         df = pd.DataFrame(additionnal_nodes)
         geometry = df["geometry"]
         additionnal_nodes_gdf = gpd.GeoDataFrame(
-            df.drop(["geometry"], axis=1),
-            crs=4326,
-            geometry=geometry.to_list(),
+            df.drop(["geometry"], axis=1), crs=4326, geometry=geometry.to_list(),
         )
-        self.from_bbox(location_point_reproj_buffered_bounds, additionnal_nodes=additionnal_nodes_gdf, mode=mode)
+        self.from_bbox(
+            location_point_reproj_buffered_bounds,
+            additionnal_nodes=additionnal_nodes_gdf,
+            mode=mode,
+        )
         self._compute_isochrone()
 
         return self.get_gdf()
@@ -86,17 +94,16 @@ class OsmGtIsochrone(OsmGtRoads):
                 return_reached=True,
             )[1]
 
-            points = [
-                loads(graph.vertex_names[vertex])
-                for vertex in pred
-            ]
+            points = [loads(graph.vertex_names[vertex]) for vertex in pred]
 
             concave_hull_proc = Concave_hull(points)
             polygon = concave_hull_proc.polygon()
-            self._output_data.append({
-                self.__ISOCHRONE_NAME_FIELD: t,
-                "geometry": polygon.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
-            })
+            self._output_data.append(
+                {
+                    self.__ISOCHRONE_NAME_FIELD: t,
+                    "geometry": polygon.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
+                }
+            )
 
     def get_gdf(self, verbose=True):
         output = super().get_gdf()
@@ -106,9 +113,13 @@ class OsmGtIsochrone(OsmGtRoads):
         output["geometry"] = output.apply(
             lambda x: x["geometry"].difference(
                 output.loc[
-                    output[self.__ISOCHRONE_NAME_FIELD] == iso_values_map[x[self.__ISOCHRONE_NAME_FIELD]]].iloc[0]["geometry"]
-            ) if x[self.__ISOCHRONE_NAME_FIELD] in iso_values_map else x["geometry"],
-            axis=1
+                    output[self.__ISOCHRONE_NAME_FIELD]
+                    == iso_values_map[x[self.__ISOCHRONE_NAME_FIELD]]
+                ].iloc[0]["geometry"]
+            )
+            if x[self.__ISOCHRONE_NAME_FIELD] in iso_values_map
+            else x["geometry"],
+            axis=1,
         )
 
         return output
