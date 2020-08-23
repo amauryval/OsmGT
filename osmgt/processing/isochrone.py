@@ -86,8 +86,8 @@ class OsmGtIsochrone(OsmGtRoads):
                 loads(graph.vertex_names[vertex])
                 for vertex in pred
             ]
-            concave_hull_proc = Concave_hull(points)
 
+            concave_hull_proc = Concave_hull(points)
             polygon = concave_hull_proc.polygon()
             self._output_data.append({
                 "iso_name": t,
