@@ -20,6 +20,9 @@ from osmgt.core.global_values import network_queries
 class NetWorkGeomIncompatible(Exception):
     pass
 
+class AdditionnalNodesOutsideWorkingArea(Exception):
+    pass
+
 
 class OsmGtRoads(OsmGtCore):
 
@@ -94,8 +97,19 @@ class OsmGtRoads(OsmGtCore):
             additionnal_nodes = self._check_topology_field(additionnal_nodes)
             # filter nodes from study_area_geom
             additionnal_nodes_mask = additionnal_nodes.intersects(self.study_area_geom)
-            additionnal_nodes = additionnal_nodes.loc[additionnal_nodes_mask]
-            additionnal_nodes = additionnal_nodes.to_dict("records")
+            additionnal_nodes_filtered = additionnal_nodes.loc[additionnal_nodes_mask]
+
+            if additionnal_nodes_filtered.shape[0] != additionnal_nodes.shape[0]:
+                additionnal_nodes_outside = set(
+                    map(lambda x: x.wkt, additionnal_nodes["geometry"].to_list())
+                ).difference(
+                    set(
+                        map(lambda x: x.wkt, additionnal_nodes_filtered["geometry"].to_list())
+                    )
+                )
+                raise AdditionnalNodesOutsideWorkingArea(f"These following points are outside the working area: {', '.join(additionnal_nodes_outside)}")
+
+            additionnal_nodes = additionnal_nodes_filtered.to_dict("records")
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
