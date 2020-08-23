@@ -20,6 +20,7 @@ from osmgt.core.global_values import network_queries
 class NetWorkGeomIncompatible(Exception):
     pass
 
+
 class AdditionnalNodesOutsideWorkingArea(Exception):
     pass
 

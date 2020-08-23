@@ -2,6 +2,7 @@ from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
 from osmgt.processing.isochrone import OsmGtIsochrone
+from osmgt.processing.isochrone import OsmGtShortestPath
 
 
 class OsmGt:
@@ -63,20 +64,35 @@ class OsmGt:
         return OsmGtPoi().from_bbox(bbox_value)
 
     @staticmethod
-    def isochrone_from_coordinates(location_point, isochrones_to_build, trip_speed, mode="pedestrian"):
+    def isochrone_from_coordinates(coordinates, isochrones_to_build, trip_speed, mode="pedestrian"):
         """
-        Get OpenStreetMap roads from a location name
 
-        :param location_point: location points
-        :type location_point: shapely.geometry.Point
+        :param coordinates: location points
+        :type coordinates: shapely.geometry.Point
         :param isochrones_to_build: isochrones to build (in minutes)
         :type isochrones_to_build: list of int
         :param trip_speed: trip speed in km/sec
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of :
-        :return: OsmGtRoads class
-        :rtype: OsmGtRoads
+        :return:
+        :rtype: geodataframe
         """
 
-        return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(location_point, mode)
+        return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(coordinates, mode)
+
+    @staticmethod
+    def shortest_path_from_location(location_name, source_target_points, mode="pedestrian"):
+        """
+
+        :param location_name: the name of the location
+        :type location_name: the name of the location
+        :param source_target_points: list of tuple source and target points
+        :type source_target_points: list of tuple (shapely.geometry.Point)
+        :param mode: the transport mode
+        :type mode: str, default 'pedestrian', one of :
+        :return: OsmGtRoads class
+        :rtype: geodataframe
+        """
+
+        return OsmGtShortestPath(source_target_points).from_location(location_name, mode)
