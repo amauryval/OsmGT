@@ -178,7 +178,10 @@ def test_if_isochrones_can_be_computed(location_point, isochrone_values):
     )
     assert isochrones_polygon_from_location.shape[0] == 3
     assert set(isochrones_polygon_from_location["iso_name"].to_list()) == set(
-        isochrones_polygon_from_location
+        isochrone_values
     )
 
     assert isochrones_lines_from_location.shape[0] > 0
+    assert set(isochrones_lines_from_location["iso_name"].to_list()) == set(
+        isochrone_values
+    )
