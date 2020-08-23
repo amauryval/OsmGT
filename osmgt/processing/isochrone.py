@@ -1,5 +1,7 @@
 from osmgt.compoments.roads import OsmGtRoads
-from osmgt.processing.shortest_path import OsmGtShortestPath
+
+from osmgt.core.global_values import epsg_4326
+from osmgt.core.global_values import epsg_3857
 
 import math
 
@@ -23,6 +25,8 @@ class OsmGtIsochrone(OsmGtRoads):
     __SECS_IN_MIN = 60
     __DISTANCE_TOLERANCE = 1.2
     __BUFFER_VALUE_FOR_SMOOTHING = 0.001
+
+    __ISOCHRONE_NAME_FIELD = "iso_name"
 
     def __init__(self, isochrones_to_build, trip_speed=3):
         super().__init__()
@@ -49,9 +53,9 @@ class OsmGtIsochrone(OsmGtRoads):
         self.source_node = location_point.wkt
         # compute bbox
         max_distance = max(self._isochrones_to_build, key=itemgetter(1))[-1]
-        location_point_reproj = reproject(location_point, 4326, 3857)
+        location_point_reproj = reproject(location_point , epsg_4326 , epsg_3857)
         location_point_reproj_buffered = location_point_reproj.buffer(max_distance * self.__DISTANCE_TOLERANCE)
-        location_point_reproj_buffered_bounds = reproject(location_point_reproj_buffered, 3857, 4326).bounds
+        location_point_reproj_buffered_bounds = reproject(location_point_reproj_buffered , epsg_3857 , epsg_4326).bounds
 
         additionnal_nodes = [{self._TOPO_FIELD: 0, "geometry": location_point}]
         df = pd.DataFrame(additionnal_nodes)
@@ -90,7 +94,7 @@ class OsmGtIsochrone(OsmGtRoads):
             concave_hull_proc = Concave_hull(points)
             polygon = concave_hull_proc.polygon()
             self._output_data.append({
-                "iso_name": t,
+                self.__ISOCHRONE_NAME_FIELD: t,
                 "geometry": polygon.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
             })
 
@@ -102,8 +106,8 @@ class OsmGtIsochrone(OsmGtRoads):
         output["geometry"] = output.apply(
             lambda x: x["geometry"].difference(
                 output.loc[
-                    output["iso_name"] == iso_values_map[x["iso_name"]]].iloc[0]["geometry"]
-            ) if x["iso_name"] in iso_values_map else x["geometry"],
+                    output[self.__ISOCHRONE_NAME_FIELD] == iso_values_map[x[self.__ISOCHRONE_NAME_FIELD]]].iloc[0]["geometry"]
+            ) if x[self.__ISOCHRONE_NAME_FIELD] in iso_values_map else x["geometry"],
             axis=1
         )
 
