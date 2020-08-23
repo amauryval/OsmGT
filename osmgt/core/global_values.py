@@ -1,4 +1,5 @@
-default_epsg = "EPSG:4326"
+epsg_4326 = "4326"
+epsg_3857 = "3857"
 
 # transport modes
 transport_modes = ["vehicle", "pedestrian"]
