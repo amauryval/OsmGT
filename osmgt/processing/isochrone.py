@@ -74,9 +74,16 @@ class OsmGtIsochrone(OsmGtRoads):
             additionnal_nodes=additionnal_nodes_gdf,
             mode=mode,
         )
-        self._compute_isochrone()
 
-        return self.get_gdf()
+        self._network_gdf = super().get_gdf()
+
+        self._compute_isochrone()
+        isochrones = self.get_gdf()
+
+        return (
+            isochrones,
+            self._network_gdf[self._network_gdf[self.__ISOCHRONE_NAME_FIELD].notnull()],
+        )
 
     def _compute_isochrone(self):
         graph = self.get_graph()
@@ -98,11 +105,15 @@ class OsmGtIsochrone(OsmGtRoads):
 
             concave_hull_proc = Concave_hull(points)
             polygon = concave_hull_proc.polygon()
+
+            # network_gdf_copy = self._network_gdf.copy(deep=True)
+            network_gdf_copy_mask = self._network_gdf.within(polygon)
+            self._network_gdf.loc[
+                network_gdf_copy_mask, self.__ISOCHRONE_NAME_FIELD
+            ] = t
+
             self._output_data.append(
-                {
-                    self.__ISOCHRONE_NAME_FIELD: t,
-                    "geometry": polygon.buffer(self.__BUFFER_VALUE_FOR_SMOOTHING),
-                }
+                {self.__ISOCHRONE_NAME_FIELD: t, "geometry": polygon,}
             )
 
     def get_gdf(self, verbose=True):

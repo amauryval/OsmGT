@@ -78,7 +78,7 @@ class OsmGt:
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of :
         :return:
-        :rtype: geodataframe
+        :rtype: 2 geodataframe
         """
 
         return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(

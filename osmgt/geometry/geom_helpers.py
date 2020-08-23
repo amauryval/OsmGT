@@ -2,7 +2,7 @@ from pyproj import Geod
 from pyproj import Transformer
 
 from shapely.ops import transform
-from shapely.ops import cascaded_union
+from shapely.ops import unary_union
 from shapely.ops import polygonize
 
 from shapely.geometry import MultiLineString
@@ -111,13 +111,12 @@ class Concave_hull:
                     self.add_edge(coords, ia, ib)
                     self.add_edge(coords, ib, ic)
                     self.add_edge(coords, ic, ia)
-
             multilinestring_built = MultiLineString(self._edge_points)
             self._triangles = list(polygonize(multilinestring_built))
             return self
 
     def polygon(self):
-        return cascaded_union(self._triangles)
+        return unary_union(self._triangles)
 
     def points(self):
         return self._edge_points
