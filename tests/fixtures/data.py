@@ -33,9 +33,11 @@ def build_geojson_features(input_data):
 def location_point():
     return Point(4.0697088, 46.0410178)
 
+
 @pytest.fixture
 def isochrone_values():
     return [2, 5, 10]
+
 
 @pytest.fixture
 def point_a():
