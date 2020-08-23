@@ -7,7 +7,7 @@ from osmgt.apis.nominatim import NominatimApi
 from osmgt.apis.overpass import OverpassApi
 
 from osmgt.core.global_values import network_queries
-from osmgt.core.global_values import default_epsg
+from osmgt.core.global_values import epsg_4326
 from osmgt.core.global_values import out_geom_query
 
 from shapely.geometry import Polygon
@@ -20,6 +20,11 @@ class ErrorOsmGtCore(Exception):
 
 class IncompatibleFormat(Exception):
     pass
+
+
+class EmptyData(Exception):
+    pass
+
 
 
 class OsmGtCore(Logger):
@@ -130,6 +135,9 @@ class OsmGtCore(Logger):
         if verbose:
             self.logger.info(f"Prepare Geodataframe")
 
+        if len(self._output_data) == 0:
+            raise EmptyData("Geodataframe creation is impossible, because no data has been found")
+
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             self._check_build_input_data()
             # more performance comparing .from_features() method
@@ -137,7 +145,7 @@ class OsmGtCore(Logger):
             geometry = df[self._GEOMETRY_FIELD]
             output_gdf = gpd.GeoDataFrame(
                 df.drop([self._GEOMETRY_FIELD], axis=1),
-                crs=default_epsg,
+                crs=f"EPSG:{epsg_4326}",
                 geometry=geometry.to_list(),
             )
 

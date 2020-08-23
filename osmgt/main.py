@@ -2,7 +2,7 @@ from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
 from osmgt.processing.isochrone import OsmGtIsochrone
-from osmgt.processing.isochrone import OsmGtShortestPath
+from osmgt.processing.shortest_path import OsmGtShortestPath
 
 
 class OsmGt:
