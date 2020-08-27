@@ -5,8 +5,12 @@ OsmGT
 [![codecov](https://codecov.io/gh/amauryval/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/wiralyki/osmgt)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-OpenStreetMap based on graph-tools
-y
+OpenStreetMap network analysis based on graph-tools: 
+* Find data (roads and pois)
+* graph creation (and topology processing)
+* isochrone builder
+* shortest path 
+
 # Check the jupyter notebook output
 
 [Open the example](https://amauryval.github.io/osmgt/)
