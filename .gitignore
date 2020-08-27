@@ -35,6 +35,7 @@ makefile
 notebook2html.run
 .idea/
 conda_build_runner.sh
+pyproject.toml
 
 # PyInstaller
 #  Usually these files are written by a {{cookiecutter.lib_name}}_app script from a template
