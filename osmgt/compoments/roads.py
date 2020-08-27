@@ -1,6 +1,7 @@
 from osmgt.compoments.core import OsmGtCore
 
 from osmgt.geometry.network_topology import NetworkTopology
+from osmgt.geometry.geom_helpers import compute_wg84_line_length
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
@@ -8,7 +9,7 @@ from shapely.geometry import Point
 # to facilitate debugging
 try:
     from osmgt.network.gt_helper import GraphHelpers
-except:
+except ModuleNotFoundError:
     pass
 
 from shapely.geometry import shape
@@ -17,6 +18,10 @@ from osmgt.core.global_values import network_queries
 
 
 class NetWorkGeomIncompatible(Exception):
+    pass
+
+
+class AdditionnalNodesOutsideWorkingArea(Exception):
     pass
 
 
@@ -84,7 +89,7 @@ class OsmGtRoads(OsmGtCore):
                 Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
                 Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
                 feature[self._TOPO_FIELD],
-                shape(feature[self._GEOMETRY_FIELD]).length,
+                compute_wg84_line_length(shape(feature[self._GEOMETRY_FIELD])),
             )
         return graph
 
@@ -93,8 +98,24 @@ class OsmGtRoads(OsmGtCore):
             additionnal_nodes = self._check_topology_field(additionnal_nodes)
             # filter nodes from study_area_geom
             additionnal_nodes_mask = additionnal_nodes.intersects(self.study_area_geom)
-            additionnal_nodes = additionnal_nodes.loc[additionnal_nodes_mask]
-            additionnal_nodes = additionnal_nodes.to_dict("records")
+            additionnal_nodes_filtered = additionnal_nodes.loc[additionnal_nodes_mask]
+
+            if additionnal_nodes_filtered.shape[0] != additionnal_nodes.shape[0]:
+                additionnal_nodes_outside = set(
+                    map(lambda x: x.wkt, additionnal_nodes["geometry"].to_list())
+                ).difference(
+                    set(
+                        map(
+                            lambda x: x.wkt,
+                            additionnal_nodes_filtered["geometry"].to_list(),
+                        )
+                    )
+                )
+                raise AdditionnalNodesOutsideWorkingArea(
+                    f"These following points are outside the working area: {', '.join(additionnal_nodes_outside)}"
+                )
+
+            additionnal_nodes = additionnal_nodes_filtered.to_dict("records")
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
