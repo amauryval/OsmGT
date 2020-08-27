@@ -32,8 +32,6 @@ Check example.html example (doc is coming)
 ```Python
 from osmgt import OsmGt
 
-# 3 ways to get data
-
 # GET POIs
 poi_from_location = OsmGt.poi_from_location(
 	"Lyon"
