@@ -36,7 +36,6 @@ notebook2html.run
 .idea/
 conda_build_runner.sh
 
-
 # PyInstaller
 #  Usually these files are written by a {{cookiecutter.lib_name}}_app script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
