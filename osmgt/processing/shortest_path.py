@@ -16,6 +16,8 @@ from shapely.geometry import LineString
 from shapely.ops import linemerge
 from shapely.wkt import loads
 
+import concurrent.futures
+
 
 class OsmGtShortestPath(OsmGtRoads):
     def __init__(self, source_target_points):
@@ -74,10 +76,6 @@ class OsmGtShortestPath(OsmGtRoads):
         self._gdf = self.get_gdf()
 
         self._output_data = []
-        # todo multithread it!
-        # for nodes in self._source_target_points:
-        #     self._compute_shortest_path(nodes)
-        import concurrent.futures
 
         with concurrent.futures.ThreadPoolExecutor(4) as executor:
             executor.map(self._compute_shortest_path, self._source_target_points)
