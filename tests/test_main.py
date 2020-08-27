@@ -185,3 +185,19 @@ def test_if_isochrones_can_be_computed(location_point, isochrone_values):
     assert set(isochrones_lines_from_location["iso_name"].to_list()) == set(
         isochrone_values
     )
+
+
+def test_if_shortest_path_can_be_computed(start_node, end_node):
+    shortest_paths = OsmGt.shortest_path_from_location(
+        "Roanne",
+        [
+            (start_node, end_node),
+            (start_node, end_node),
+            (start_node, end_node),
+            (start_node, end_node),
+            (start_node, end_node),
+            (start_node, end_node)
+        ],
+        mode="pedestrian"
+    )
+    assert shortest_paths.shape[0] == 1

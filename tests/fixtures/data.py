@@ -168,3 +168,13 @@ def points_gdf_from_coords():
     point_a = Point(451754.566, 5786544.841)
     point_b = Point(454531.361, 5789346.920)
     return gpd.GeoDataFrame(index=[0, 1], crs="EPSG:3857", geometry=[point_a, point_b])
+
+
+@pytest.fixture
+def start_node():
+    return Point(4.0697088, 46.0410178)
+
+
+@pytest.fixture
+def end_node():
+    return Point(4.0757785, 46.0315038)
