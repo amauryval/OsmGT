@@ -1,6 +1,10 @@
 epsg_4326 = "4326"
 epsg_3857 = "3857"
 
+km_hour_2_m_sec = 3.6
+min_2_sec = 60
+time_unit = "minutes"
+
 # transport modes
 transport_modes = ["vehicle", "pedestrian"]
 

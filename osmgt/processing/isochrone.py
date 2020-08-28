@@ -2,6 +2,9 @@ from osmgt.compoments.roads import OsmGtRoads
 
 from osmgt.core.global_values import epsg_4326
 from osmgt.core.global_values import epsg_3857
+from osmgt.core.global_values import km_hour_2_m_sec
+from osmgt.core.global_values import min_2_sec
+from osmgt.core.global_values import time_unit
 
 import math
 
@@ -21,30 +24,26 @@ from osmgt.geometry.geom_helpers import reproject
 
 class OsmGtIsochrone(OsmGtRoads):
 
-    __KM_SEC_2_M_SEC = 3.6
-    __SECS_IN_MIN = 60
     __DISTANCE_TOLERANCE = 1.2
-    __BUFFER_VALUE_FOR_SMOOTHING = 0.001
-
     __ISOCHRONE_NAME_FIELD = "iso_name"
 
-    def __init__(self, isochrones_to_build, trip_speed=3):
+    def __init__(self, isochrones_times, trip_speed=3):
         super().__init__()
 
         self.source_node = None
 
         self._trip_speed = trip_speed  # km/h
 
-        isochrones_to_build.sort()
-        self._raw_isochrones = isochrones_to_build
-        self._isochrones_to_build = self._prepare_isochrone_values(isochrones_to_build)
+        isochrones_times.sort()
+        self._raw_isochrones = isochrones_times
+        self._isochrones_times = self._prepare_isochrone_values(isochrones_times)
 
-    def _prepare_isochrone_values(self, isochrones_to_build):
-        speed_to_m_s = self._trip_speed / self.__KM_SEC_2_M_SEC
+    def _prepare_isochrone_values(self, isochrones_times):
+        speed_to_m_s = self._trip_speed / km_hour_2_m_sec
 
         times_reach_time_dist = {
-            t: math.ceil((t * self.__SECS_IN_MIN) * speed_to_m_s)  # distance
-            for t in isochrones_to_build
+            iso_time: math.ceil((iso_time * min_2_sec) * speed_to_m_s)  # distance
+            for iso_time in isochrones_times
         }
         times_reach_time_dist_reversed = sorted(
             times_reach_time_dist.items(), key=lambda x: x[1], reverse=True
@@ -54,7 +53,7 @@ class OsmGtIsochrone(OsmGtRoads):
     def from_location_point(self, location_point, mode):
         self.source_node = location_point.wkt
         # compute bbox
-        max_distance = max(self._isochrones_to_build, key=itemgetter(1))[-1]
+        max_distance = max(self._isochrones_times , key=itemgetter(1))[-1]
         location_point_reproj = reproject(location_point, epsg_4326, epsg_3857)
         location_point_reproj_buffered = location_point_reproj.buffer(
             max_distance * self.__DISTANCE_TOLERANCE
@@ -92,7 +91,7 @@ class OsmGtIsochrone(OsmGtRoads):
         # reset output else isochrone will be append
         self._output_data = []
 
-        for t, dist in self._isochrones_to_build:
+        for iso_time, dist in self._isochrones_times:
             pred = shortest_distance(
                 graph,
                 source=source_vertex,
@@ -106,19 +105,21 @@ class OsmGtIsochrone(OsmGtRoads):
             concave_hull_proc = Concave_hull(points)
             polygon = concave_hull_proc.polygon()
 
-            # network_gdf_copy = self._network_gdf.copy(deep=True)
             network_gdf_copy_mask = self._network_gdf.within(polygon)
+
+            isochrone_label = f"{iso_time} {time_unit}"
+
             self._network_gdf.loc[
                 network_gdf_copy_mask, self.__ISOCHRONE_NAME_FIELD
-            ] = t
+            ] = isochrone_label
 
             self._output_data.append(
-                {self.__ISOCHRONE_NAME_FIELD: t, "geometry": polygon,}
+                {self.__ISOCHRONE_NAME_FIELD: isochrone_label, "geometry": polygon}
             )
 
     def get_gdf(self, verbose=True):
         output = super().get_gdf()
-        # find iso index pair in order to create hole geom. isochrones are like russian doll
+        # find iso index pair in order to create hole geom. isochrones are like russian dolls
         iso_values = self._raw_isochrones[::-1]
         iso_values_map = {x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))}
         output["geometry"] = output.apply(

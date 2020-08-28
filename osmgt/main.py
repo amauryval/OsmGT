@@ -4,6 +4,7 @@ from osmgt.compoments.poi import OsmGtPoi
 from osmgt.processing.isochrone import OsmGtIsochrone
 from osmgt.processing.shortest_path import OsmGtShortestPath
 
+from typing import *
 
 class OsmGt:
     @staticmethod
@@ -14,7 +15,7 @@ class OsmGt:
         :param location_name: the name of the location
         :type location_name: the name of the location
         :param mode: the transport mode
-        :type mode: str, default 'pedestrian', one of :
+        :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
         :param additionnal_nodes: Addtionnals nodes to connect on the network
         :type additionnal_nodes: geopandas.GeoDataFrame
         :return: OsmGtRoads class
@@ -31,7 +32,7 @@ class OsmGt:
         :param bbox_value: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
         :type bbox_value: tuple of float
         :param mode: the transport mode
-        :type mode: str, default 'pedestrian', one of :
+        :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
         :param additionnal_nodes: Addtionnals nodes to connect on the network
         :type additionnal_nodes: geopandas.GeoDataFrame
         :return: OsmGtRoads class
@@ -65,25 +66,26 @@ class OsmGt:
 
     @staticmethod
     def isochrone_from_coordinates(
-        coordinates, isochrones_to_build, trip_speed, mode="pedestrian"
+        coordinates, isochrones_times, trip_speed, mode="pedestrian"
     ):
         """
-
         :param coordinates: location points
         :type coordinates: shapely.geometry.Point
-        :param isochrones_to_build: isochrones to build (in minutes)
-        :type isochrones_to_build: list of int
-        :param trip_speed: trip speed in km/sec
+        :param isochrones_times: isochrones to build (in minutes)
+        :type isochrones_times: list of int
+        :param trip_speed: trip speed in km/h
         :type trip_speed: int
         :param mode: the transport mode
-        :type mode: str, default 'pedestrian', one of :
-        :return:
-        :rtype: 2 geodataframe
+        :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
+        :return: 2 geodataframe : isochrones polygons and isochrones lines (roads)
+        :rtype: tuple(geopandas.GeoDataFrame)
         """
 
-        return OsmGtIsochrone(isochrones_to_build, trip_speed).from_location_point(
+        isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(isochrones_times, trip_speed).from_location_point(
             coordinates, mode
         )
+
+        return isochrone_polygons_gdf, isochrone_lines_gdf
 
     @staticmethod
     def shortest_path_from_location(
@@ -97,8 +99,8 @@ class OsmGt:
         :type source_target_points: list of tuple (shapely.geometry.Point)
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of :
-        :return: OsmGtRoads class
-        :rtype: geodataframe
+        :return: geodataframe containing the shortest path
+        :rtype: geopandas.GeoDataFrame
         """
 
         return OsmGtShortestPath(source_target_points).from_location(
