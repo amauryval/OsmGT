@@ -1,14 +1,19 @@
+import geopandas as gpd
+from shapely.geometry import Point
+
 from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
 from osmgt.processing.isochrone import OsmGtIsochrone
 from osmgt.processing.shortest_path import OsmGtShortestPath
 
-from typing import *
+from typing import Tuple
+from typing import List
+from typing import Optional
 
 class OsmGt:
     @staticmethod
-    def roads_from_location(location_name, mode="pedestrian", additionnal_nodes=None):
+    def roads_from_location(location_name: str, mode: str = "pedestrian", additionnal_nodes: Optional[gpd.GeoDataFrame] = None) -> OsmGtRoads:
         """
         Get OpenStreetMap roads from a location name
 
@@ -25,7 +30,7 @@ class OsmGt:
         return OsmGtRoads().from_location(location_name, additionnal_nodes, mode)
 
     @staticmethod
-    def roads_from_bbox(bbox_value, mode="pedestrian", additionnal_nodes=None):
+    def roads_from_bbox(bbox_value: Tuple[float, float, float, float], mode: str = "pedestrian", additionnal_nodes: Optional[gpd.GeoDataFrame] = None) -> OsmGtRoads:
         """
         Get OpenStreetMap roads from a bbox
 
@@ -41,7 +46,7 @@ class OsmGt:
         return OsmGtRoads().from_bbox(bbox_value, additionnal_nodes, mode)
 
     @staticmethod
-    def poi_from_location(location_name):
+    def poi_from_location(location_name: str) -> OsmGtPoi:
         """
         Find OSM POIs from a location name
 
@@ -53,7 +58,7 @@ class OsmGt:
         return OsmGtPoi().from_location(location_name)
 
     @staticmethod
-    def poi_from_bbox(bbox_value):
+    def poi_from_bbox(bbox_value: Tuple[float, float, float, float]) -> OsmGtPoi:
         """
         Find OSM POIs from a bbox value
 
@@ -66,8 +71,8 @@ class OsmGt:
 
     @staticmethod
     def isochrone_from_coordinates(
-        coordinates, isochrones_times, trip_speed, mode="pedestrian"
-    ):
+        coordinates: Point, isochrones_times: List[float], trip_speed: float, mode: str = "pedestrian"
+    ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
         :param coordinates: location points
         :type coordinates: shapely.geometry.Point
@@ -89,8 +94,8 @@ class OsmGt:
 
     @staticmethod
     def shortest_path_from_location(
-        location_name, source_target_points, mode="pedestrian"
-    ):
+        location_name: str, source_target_points: List[Tuple[Point, Point]], mode: str = "pedestrian"
+    ) -> OsmGtShortestPath:
         """
 
         :param location_name: the name of the location
