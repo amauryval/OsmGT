@@ -116,5 +116,5 @@ class OsmGt:
         """
 
         return OsmGtShortestPath(source_target_points).from_location(
-            location_name, mode
+            location_name, None, mode
         )
