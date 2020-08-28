@@ -1,3 +1,10 @@
+import geopandas as gpd
+from typing import Tuple
+from typing import List
+from typing import Optional
+from typing import Dict
+
+
 from osmgt.compoments.core import OsmGtCore
 
 from osmgt.geometry.network_topology import NetworkTopology
@@ -27,14 +34,14 @@ class AdditionnalNodesOutsideWorkingArea(Exception):
 
 class OsmGtRoads(OsmGtCore):
 
-    _FEATURE_OSM_TYPE = "way"
+    _FEATURE_OSM_TYPE: str = "way"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self._mode = None
 
-    def from_location(self, location_name, additionnal_nodes=None, mode="vehicle"):
+    def from_location(self, location_name: str, additionnal_nodes: Optional[gpd.GeoDataFrame], mode: str) -> None:
         self._check_transport_mode(mode)
         super().from_location(location_name)
         self._mode = mode
@@ -46,9 +53,7 @@ class OsmGtRoads(OsmGtCore):
             raw_data, additionnal_nodes, mode
         )
 
-        return self
-
-    def from_bbox(self, bbox_value, additionnal_nodes=None, mode="vehicle"):
+    def from_bbox(self, bbox_value: Tuple[float, float, float, float], additionnal_nodes: Optional[gpd.GeoDataFrame], mode: str) -> None:
         self._check_transport_mode(mode)
         super().from_bbox(bbox_value)
         self._mode = mode
@@ -60,25 +65,7 @@ class OsmGtRoads(OsmGtCore):
             raw_data, additionnal_nodes, mode
         )
 
-        return self
-
-    def from_gdf(self, network_gdf, additionnal_nodes=None, mode="vehicle"):
-        # TODO ? to roads data from others sources
-        self._check_transport_mode(mode)
-        geometry_found = set(network_gdf[self._GEOMETRY_FIELD].to_list())
-        if geometry_found != {"LineString"}:
-            raise NetWorkGeomIncompatible(
-                f"Input geodataframe does not contains only LineString: {geometry_found}"
-            )
-
-        raw_data = super()._build_network_from_gdf(network_gdf)
-        self._output_data = self.__build_network_topology(
-            raw_data, additionnal_nodes, mode
-        )
-
-        return self
-
-    def get_graph(self):
+    def get_graph(self) -> GraphHelpers:
         self.logger.info("Prepare graph")
         self._check_build_input_data()
 
@@ -93,7 +80,7 @@ class OsmGtRoads(OsmGtCore):
             )
         return graph
 
-    def __build_network_topology(self, raw_data, additionnal_nodes, mode):
+    def __build_network_topology(self, raw_data: List[Dict], additionnal_nodes: Optional[gpd.GeoDataFrame], mode: str):
         if additionnal_nodes is not None:
             additionnal_nodes = self._check_topology_field(additionnal_nodes)
             # filter nodes from study_area_geom
@@ -128,14 +115,14 @@ class OsmGtRoads(OsmGtCore):
 
         return raw_data_topology_rebuild
 
-    def __rebuild_network_data(self, raw_data):
+    def __rebuild_network_data(self, raw_data: List[Dict]) -> List[Dict]:
         self.logger.info("Formating data")
 
         raw_data = filter(
             lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE,
             raw_data,
         )
-        features = []
+        features: list = []
         for uuid_enum, feature in enumerate(raw_data, start=1):
             geometry = LineString(
                 [
@@ -151,5 +138,5 @@ class OsmGtRoads(OsmGtCore):
         return features
 
     @staticmethod
-    def _get_query_from_mode(mode):
+    def _get_query_from_mode(mode: str) -> str:
         return network_queries[mode]["query"]

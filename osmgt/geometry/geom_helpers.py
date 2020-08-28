@@ -1,3 +1,8 @@
+from typing import List
+from typing import Tuple
+from typing import Set
+from typing import Optional
+
 from pyproj import Geod
 from pyproj import Transformer
 
@@ -5,7 +10,10 @@ from shapely.ops import transform
 from shapely.ops import unary_union
 from shapely.ops import polygonize
 
+from shapely.geometry import base
+from shapely.geometry import LineString
 from shapely.geometry import MultiLineString
+from shapely.geometry import Point
 from shapely.geometry import MultiPoint
 from shapely.geometry import LineString
 
@@ -16,7 +24,7 @@ import numpy as np
 import math
 
 
-def compute_wg84_line_length(input_geom):
+def compute_wg84_line_length(input_geom: LineString) -> float:
     """
     Compute the length of a wg84 line (LineString and MultiLineString)
 
@@ -52,27 +60,27 @@ def compute_wg84_line_length(input_geom):
 
 class Concave_hull:
     # source: http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/
-    __TOLERANCE_VALUE = 1.87
+    __TOLERANCE_VALUE: float = 1.87
 
     # Do not change values
-    __SQUARED_VALUE = 2
-    __SEMIPERIMETER_DIVISOR = 2
-    __HERON_FORMULA_DIVISOR = 4
-    __MIN_NUMBER_OF_POINTS = 4
+    __SQUARED_VALUE: int = 2
+    __SEMIPERIMETER_DIVISOR: int = 2
+    __HERON_FORMULA_DIVISOR: int = 4
+    __MIN_NUMBER_OF_POINTS: int = 4
 
-    def __init__(self, points):
+    def __init__(self, points: List[Point]):
         """
         :param points: list of shapely points
         :type: list of shapely point
         """
         self._points = points
 
-        self.__edges = set()
-        self._edge_points = []
+        self.__edges: Set[Tuple[float, float]] = set()
+        self._edge_points: List[Tuple[Tuple[float, float]]] = []  # TODO check type
         self._compute()
 
-    def _compute(self):
-        result = self._check_points_number()
+    def _compute(self) -> None:
+        result: Optional[MultiPoint] = self._check_points_number()
 
         if result is None:
             coords = np.array([point.coords[0] for point in self._points])
@@ -112,20 +120,19 @@ class Concave_hull:
                     self.add_edge(coords, ib, ic)
                     self.add_edge(coords, ic, ia)
             multilinestring_built = MultiLineString(self._edge_points)
-            self._triangles = list(polygonize(multilinestring_built))
-            return self
+            self._triangles: List = list(polygonize(multilinestring_built))
 
     def polygon(self):
         return unary_union(self._triangles)
 
-    def points(self):
+    def points(self) -> List:
         return self._edge_points
 
-    def _check_points_number(self):
+    def _check_points_number(self) -> Optional[MultiPoint]:
         if len(self._points) < self.__MIN_NUMBER_OF_POINTS:
             return MultiPoint(self._points).convex_hull
 
-    def add_edge(self, coords, i, j):
+    def add_edge(self, coords, i: float, j: float) -> None:
         """
         Add a line between the i-th and j-th points,
         if not in the list already
@@ -137,7 +144,7 @@ class Concave_hull:
         self._edge_points.append(coords[[i, j]])
 
 
-def reproject(geometry, from_epsg, to_epsg):
+def reproject(geometry: base, from_epsg: int, to_epsg: int) -> base:
     """
     pyproj_reprojection
 
@@ -156,7 +163,7 @@ def reproject(geometry, from_epsg, to_epsg):
     return geometry
 
 
-def multilinestring_continuity(linestrings):
+def multilinestring_continuity(linestrings: List[LineString]) -> List[LineString]:
 
     """
     :param linestrings: linestring with different orientations, directed with the last coords of the first element

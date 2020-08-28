@@ -26,8 +26,9 @@ class OsmGt:
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
         """
-
-        return OsmGtRoads().from_location(location_name, additionnal_nodes, mode)
+        osm_road = OsmGtRoads()
+        osm_road.from_location(location_name, additionnal_nodes, mode)
+        return osm_road
 
     @staticmethod
     def roads_from_bbox(bbox_value: Tuple[float, float, float, float], mode: str = "pedestrian", additionnal_nodes: Optional[gpd.GeoDataFrame] = None) -> OsmGtRoads:
@@ -43,7 +44,9 @@ class OsmGt:
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
         """
-        return OsmGtRoads().from_bbox(bbox_value, additionnal_nodes, mode)
+        osm_road = OsmGtRoads()
+        osm_road.from_bbox(bbox_value, additionnal_nodes, mode)
+        return osm_road
 
     @staticmethod
     def poi_from_location(location_name: str) -> OsmGtPoi:
@@ -55,7 +58,9 @@ class OsmGt:
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
         """
-        return OsmGtPoi().from_location(location_name)
+        osm_poi = OsmGtPoi()
+        osm_poi.from_location(location_name)
+        return osm_poi
 
     @staticmethod
     def poi_from_bbox(bbox_value: Tuple[float, float, float, float]) -> OsmGtPoi:
@@ -67,7 +72,9 @@ class OsmGt:
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
         """
-        return OsmGtPoi().from_bbox(bbox_value)
+        osm_poi = OsmGtPoi()
+        osm_poi.from_bbox(bbox_value)
+        return osm_poi
 
     @staticmethod
     def isochrone_from_coordinates(
