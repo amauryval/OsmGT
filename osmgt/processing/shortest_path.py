@@ -35,7 +35,9 @@ class OsmGtShortestPath(OsmGtRoads):
         self._gdf = None
         self._additionnal_nodes_gdf = self._prepare_addtionnal_nodes()
 
-    def _check_nodes(self, source_target_points: List[Tuple[Point, Point]]) -> List[Tuple[Point, Point]]:
+    def _check_nodes(
+        self, source_target_points: List[Tuple[Point, Point]]
+    ) -> List[Tuple[Point, Point]]:
 
         source_target_points_cleaned = set(
             [(source.wkt, target.wkt) for source, target in source_target_points]
@@ -62,7 +64,9 @@ class OsmGtShortestPath(OsmGtRoads):
 
         return additionnal_nodes_gdf
 
-    def from_location(self, location_name: str, additionnal_nodes: None, mode: str) -> gpd.GeoDataFrame:
+    def from_location(
+        self, location_name: str, additionnal_nodes: None, mode: str
+    ) -> gpd.GeoDataFrame:
         super().from_location(
             location_name, additionnal_nodes=self._additionnal_nodes_gdf, mode=mode
         )
@@ -70,7 +74,12 @@ class OsmGtShortestPath(OsmGtRoads):
 
         return self.get_gdf()
 
-    def from_bbox(self, bbox_value: Tuple[float, float, float, float], additionnal_nodes: Optional[gpd.GeoDataFrame], mode: str) -> gpd.GeoDataFrame:
+    def from_bbox(
+        self,
+        bbox_value: Tuple[float, float, float, float],
+        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        mode: str,
+    ) -> gpd.GeoDataFrame:
         super().from_bbox(bbox_value, additionnal_nodes, mode)
         self._compute_data_and_graph()
 

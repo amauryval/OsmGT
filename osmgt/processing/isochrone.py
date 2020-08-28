@@ -57,10 +57,12 @@ class OsmGtIsochrone(OsmGtRoads):
         )
         return times_reach_time_dist_reversed
 
-    def from_location_point(self, location_point: Point, mode: str) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    def from_location_point(
+        self, location_point: Point, mode: str
+    ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         self.source_node = location_point.wkt
         # compute bbox
-        max_distance = max(self._isochrones_times , key=itemgetter(1))[-1]
+        max_distance = max(self._isochrones_times, key=itemgetter(1))[-1]
         location_point_reproj = reproject(location_point, epsg_4326, epsg_3857)
         location_point_reproj_buffered = location_point_reproj.buffer(
             max_distance * self.__DISTANCE_TOLERANCE

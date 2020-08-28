@@ -1,3 +1,12 @@
+from typing import Tuple
+from typing import List
+from typing import Dict
+from typing import Optional
+from typing import Set
+from typing import Union
+from typing import Generator
+from typing import Iterator
+
 from scipy import spatial
 
 from shapely.geometry import LineString
@@ -26,33 +35,38 @@ class NetworkTopology:
     # TODO return topology stats
     # TODO oneway field to arg
 
-    __INTERPOLATION_LEVEL = 7
-    __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND = 10
+    __INTERPOLATION_LEVEL: int = 7
+    __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND: int = 10
 
-    __NUMBER_OF_NODES_INTERSECTIONS = 2
-    __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE = "_"
+    __NUMBER_OF_NODES_INTERSECTIONS: int = 2
+    __ITEM_LIST_SEPARATOR_TO_SPLIT_LINE: str = "_"
 
-    __CLEANING_FILED_STATUS = "topology"
-    __GEOMETRY_FIELD = "geometry"
-    __COORDINATES_FIELD = "coordinates"
-    __ONEWAY_FIELD = "oneway"
+    __CLEANING_FILED_STATUS: str = "topology"
+    __GEOMETRY_FIELD: str = "geometry"
+    __COORDINATES_FIELD: str = "coordinates"
+    __ONEWAY_FIELD: str = "oneway"
 
-    __TOPOLOGY_TAG_SPLIT = "split"
-    __TOPOLOGY_TAG_ADDED = "added"
-    __TOPOLOGY_TAG_UNCHANGED = "unchanged"
+    __TOPOLOGY_TAG_SPLIT: str = "split"
+    __TOPOLOGY_TAG_ADDED: str = "added"
+    __TOPOLOGY_TAG_UNCHANGED: str = "unchanged"
 
-    __INSERT_OPTIONS = {"after": 1, "before": -1, None: 0}
+    __INSERT_OPTIONS: Dict = {"after": 1, "before": -1, None: 0}
 
     # ugly footway processing...
-    # __PLACE_NODE_FIELD = "amenity"
-    # __PLACE_NODE_DEFAULT_VALUE = "park_node"
-    # __FOOTWAY_VALUE = "footway"
-    # __TRUNK_VALUE = "trunk"
-    # __HIGHWAY_FIELD = "highway"
+    # __PLACE_NODE_FIELD: str = "amenity"
+    # __PLACE_NODE_DEFAULT_VALUE: str = "park_node"
+    # __FOOTWAY_VALUE: str = "footway"
+    # __TRUNK_VALUE: str = "trunk"
+    # __HIGHWAY_FIELD: str = "highway"
 
     def __init__(
-        self, logger, network_data, additionnal_nodes, uuid_field, mode_post_processing
-    ):
+        self,
+        logger,
+        network_data: List[Dict],
+        additionnal_nodes: Optional[List[Dict]],
+        uuid_field: str,
+        mode_post_processing: str,
+    ) -> None:
         """
 
         :param logger:
@@ -69,16 +83,16 @@ class NetworkTopology:
 
         self._additionnal_nodes = additionnal_nodes
         if self._additionnal_nodes is None:
-            self._additionnal_nodes = {}
+            self._additionnal_nodes: Dict = {}
 
         # ugly footway processing...
         # self._force_footway_connection = False
 
         self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
 
-        self._output = []
+        self._output: List[Dict] = []
 
-    def run(self):
+    def run(self) -> List[Dict]:
         self._prepare_data()
 
         # if self._force_footway_connection:
@@ -89,7 +103,9 @@ class NetworkTopology:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
-        self._intersections_found = set(self.find_intersections_from_ways())
+        self._intersections_found: Set[Tuple[float, float]] = set(
+            self.find_intersections_from_ways()
+        )
 
         self.logger.info("Build lines")
         for feature in self._network_data.values():
@@ -97,7 +113,7 @@ class NetworkTopology:
 
         return self._output
 
-    # def prepare_footway_nodes(self):
+    # def prepare_footway_nodes(self) -> None:
     #     import itertools
     #
     #     # # add this into __get_nearest_line method
@@ -155,10 +171,12 @@ class NetworkTopology:
     #     }
     #     self._additionnal_nodes = {**self._additionnal_nodes , **footway_additional_nodes}
 
-    def build_lines(self, feature):
+    def build_lines(self, feature: Dict) -> None:
         # compare linecoords and intersections points
         coordinates_list = set(feature[self.__COORDINATES_FIELD])
-        points_intersections = coordinates_list.intersection(self._intersections_found)
+        points_intersections: Set[Tuple[float, float]] = coordinates_list.intersection(
+            self._intersections_found
+        )
 
         # rebuild linestring
         if len(set(feature[self.__COORDINATES_FIELD])) > 1:
@@ -257,7 +275,7 @@ class NetworkTopology:
     def compute_added_node_connections(self):
         self.logger.info("Starting: Adding new nodes on the network")
         self.__node_con_stats = {"connections_added": 0, "line_split": 0}
-        self.__connections_added = {}
+        self.__connections_added: Dict = {}
 
         self.logger.info("Find nearest line for each node")
         node_keys_by_nearest_lines_filled = (
@@ -353,7 +371,11 @@ class NetworkTopology:
             "end_points_found": end_points_found,
         }
 
-    def _topology_builder(self, coordinates, points_intersections):
+    def _topology_builder(
+        self,
+        coordinates: List[Tuple[float, float]],
+        points_intersections: Set[Tuple[float, float]],
+    ):
 
         is_rebuild = False
 
@@ -369,7 +391,7 @@ class NetworkTopology:
                 middle_coordinates_values = self._insert_value(
                     middle_coordinates_values,
                     point_intersection,
-                    tuple([point_intersection]),
+                    tuple([point_intersection]),  # TODO check type
                 )
 
                 middle_coordinates_values = self._insert_value(
@@ -389,7 +411,7 @@ class NetworkTopology:
 
         return coordinates_upd
 
-    def find_intersections_from_ways(self):
+    def find_intersections_from_ways(self) -> Set[Tuple[float, float]]:
         self.logger.info("Starting: Find intersections")
         all_coord_points = Counter(
             [
@@ -409,12 +431,14 @@ class NetworkTopology:
 
         return set(intersections_found)
 
-    def __rtree_generator_func(self):
+    def __rtree_generator_func(
+        self,
+    ) -> Generator[int, Tuple[float, float, float, float], None]:
         for fid, feature in self._network_data.items():
             # fid is an integer
             yield fid, feature[self.__GEOMETRY_FIELD].bounds, None
 
-    def __find_nearest_line_for_each_key_nodes(self):
+    def __find_nearest_line_for_each_key_nodes(self) -> Iterator[int]:
         # find the nearest network arc to interpolate
         self.__tree_index = rtree.index.Index(self.__rtree_generator_func())
 
@@ -436,9 +460,9 @@ class NetworkTopology:
 
         return node_keys_by_nearest_lines_filled
 
-    def __get_nearest_line(self, node_info):
+    def __get_nearest_line(self, node_info: Tuple[int, Dict]) -> None:
         node_uuid, node = node_info
-        distances_computed = []
+        distances_computed: List[Tuple[float, int]] = []
         node_geom = node[self.__GEOMETRY_FIELD]
 
         for index_feature in self.__tree_index.nearest(
@@ -456,47 +480,26 @@ class NetworkTopology:
         self.__node_by_nearest_lines[line_min_index].append(node_uuid)
 
     @staticmethod
-    def find_nearest_geometry(point, geometries):
-        min_dist, min_index = min(
-            (point.distance(geom), k) for (k, geom) in enumerate(geometries)
-        )
-
-        return geometries[min_index], min_dist, min_index
-
-    @staticmethod
-    def _check_inputs(inputs):
+    def _check_inputs(inputs: List[Dict]) -> List[Dict]:
         # TODO add assert
         assert len(inputs) > 0
         return inputs
 
-    def _insert_value(self, list_object, search_value, value_to_add, position=None):
+    def _insert_value(
+        self,
+        list_object: List[Tuple[float, float]],
+        search_value: Tuple[float, float],
+        value_to_add: Union[str, Tuple[Tuple[float, float]]],
+        position: Optional[str] = None,
+    ) -> List[Tuple[float, float]]:
 
         assert position in self.__INSERT_OPTIONS.keys()
 
         index_increment = self.__INSERT_OPTIONS[position]
-        index = list_object.index(search_value) + index_increment
+        index: int = list_object.index(search_value) + index_increment
         list_object[index:index] = value_to_add
 
         return list_object
-
-    @functools.lru_cache(maxsize=2097152)
-    def __compute_interpolation_on_line(self, line_key_found, interpolation_level):
-
-        interpolated_line_coords = interpolate_curve_based_on_original_points(
-            np.array(self._network_data[line_key_found][self.__COORDINATES_FIELD]),
-            interpolation_level,
-        )
-
-        return interpolated_line_coords
-
-
-def compute_interpolation_on_line(line_found, interpolation_level):
-
-    interpolated_line_coords = interpolate_curve_based_on_original_points(
-        line_found, interpolation_level
-    )
-
-    return interpolated_line_coords
 
 
 signature_interpolation_func = nb_types.Array(nb_types.float64, 2, "C")(

@@ -41,7 +41,12 @@ class OsmGtRoads(OsmGtCore):
 
         self._mode = None
 
-    def from_location(self, location_name: str, additionnal_nodes: Optional[gpd.GeoDataFrame], mode: str) -> None:
+    def from_location(
+        self,
+        location_name: str,
+        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        mode: str,
+    ) -> None:
         self._check_transport_mode(mode)
         super().from_location(location_name)
         self._mode = mode
@@ -53,7 +58,12 @@ class OsmGtRoads(OsmGtCore):
             raw_data, additionnal_nodes, mode
         )
 
-    def from_bbox(self, bbox_value: Tuple[float, float, float, float], additionnal_nodes: Optional[gpd.GeoDataFrame], mode: str) -> None:
+    def from_bbox(
+        self,
+        bbox_value: Tuple[float, float, float, float],
+        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        mode: str,
+    ) -> None:
         self._check_transport_mode(mode)
         super().from_bbox(bbox_value)
         self._mode = mode
@@ -65,22 +75,27 @@ class OsmGtRoads(OsmGtCore):
             raw_data, additionnal_nodes, mode
         )
 
-    def get_graph(self) -> GraphHelpers:
-        self.logger.info("Prepare graph")
-        self._check_build_input_data()
+    # def get_graph(self) -> GraphHelpers:
+    #     self.logger.info("Prepare graph")
+    #     self._check_build_input_data()
+    #
+    #     graph = GraphHelpers(is_directed=network_queries[self._mode]["directed_graph"])
+    #
+    #     for feature in self._output_data:
+    #         graph.add_edge(
+    #             Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
+    #             Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
+    #             feature[self._TOPO_FIELD],
+    #             compute_wg84_line_length(shape(feature[self._GEOMETRY_FIELD])),
+    #         )
+    #     return graph
 
-        graph = GraphHelpers(is_directed=network_queries[self._mode]["directed_graph"])
-
-        for feature in self._output_data:
-            graph.add_edge(
-                Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
-                Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
-                feature[self._TOPO_FIELD],
-                compute_wg84_line_length(shape(feature[self._GEOMETRY_FIELD])),
-            )
-        return graph
-
-    def __build_network_topology(self, raw_data: List[Dict], additionnal_nodes: Optional[gpd.GeoDataFrame], mode: str):
+    def __build_network_topology(
+        self,
+        raw_data: List[Dict],
+        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        mode: str,
+    ):
         if additionnal_nodes is not None:
             additionnal_nodes = self._check_topology_field(additionnal_nodes)
             # filter nodes from study_area_geom

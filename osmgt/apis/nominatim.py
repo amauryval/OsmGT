@@ -1,5 +1,6 @@
 from typing import Dict
 from typing import List
+from typing import Set
 
 from osmgt.apis.core import ApiCore
 
@@ -13,7 +14,7 @@ class NominatimApi(ApiCore):
     nominatim_url: str = "https://nominatim.openstreetmap.org/search/?"
 
     query_parameter: str = "q"
-    other_query_parameter: Dict = {
+    other_query_parameter: Set[str] = {
         "street",
         "city",
         "county",
@@ -56,5 +57,5 @@ class NominatimApi(ApiCore):
 
         return input_parameters
 
-    def data(self) -> List:
+    def data(self) -> dict:
         return self.__RESULT_QUERY

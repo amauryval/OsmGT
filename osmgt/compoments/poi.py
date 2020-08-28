@@ -38,7 +38,6 @@ class OsmGtPoi(OsmGtCore):
         raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_points(raw_data)
 
-
     def __build_points(self, raw_data: List[Dict]) -> List[Dict]:
         self.logger.info("Formating data")
 

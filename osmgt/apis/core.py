@@ -28,7 +28,7 @@ class ApiCore:
     def request_query(self, url: str, parameters: Dict) -> Dict:
 
         session = sessions.FuturesSession(max_workers=self.__NB_WORKER)
-        response = session.get(url, params=parameters)  #TODO check type
+        response = session.get(url, params=parameters)  # TODO check type
 
         self.check_request_response(response)
         return response.result().json()

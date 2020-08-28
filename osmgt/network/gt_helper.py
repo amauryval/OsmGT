@@ -61,7 +61,9 @@ class GraphHelpers(Graph):
             else:
                 raise ErrorGraphHelpers("Seems impossible ?")
 
-    def find_vertex_names_from_edge_name(self, edge_name: str) -> Optional[Tuple[str, str]]:
+    def find_vertex_names_from_edge_name(
+        self, edge_name: str
+    ) -> Optional[Tuple[str, str]]:
         edge = self.find_edge_from_name(edge_name)
         if edge is not None:
 
@@ -101,7 +103,13 @@ class GraphHelpers(Graph):
 
         return vertex
 
-    def add_edge(self, source_vertex_name: str, target_vertex_name: str, edge_name: str, weight: Optional[float] = None):
+    def add_edge(
+        self,
+        source_vertex_name: str,
+        target_vertex_name: str,
+        edge_name: str,
+        weight: Optional[float] = None,
+    ):
         """
         Add an edge from 2 vertex name
 
@@ -171,7 +179,9 @@ class GraphHelpers(Graph):
         """
         return self.find_edge_from_name(edge_name) is not None
 
-    def find_edge_from_vertices_name(self, source_vertex_name: str, target_vertex_name: str):
+    def find_edge_from_vertices_name(
+        self, source_vertex_name: str, target_vertex_name: str
+    ):
         """
         Find an edge with its vertices names
 
@@ -190,7 +200,9 @@ class GraphHelpers(Graph):
 
         return self.edge(source_vertex_found, target_vertex_found)
 
-    def edge_exists_from_vertices_name(self, source_vertex_name: str, target_vertex_name: str):
+    def edge_exists_from_vertices_name(
+        self, source_vertex_name: str, target_vertex_name: str
+    ):
         """
         Find if an edge with specific vertices names
 

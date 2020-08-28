@@ -8,7 +8,7 @@ min_2_sec: float = 60
 time_unit: str = "minutes"
 
 # transport modes
-transport_modes: List = ["vehicle", "pedestrian"]
+transport_modes: List[str] = ["vehicle", "pedestrian"]
 
 # POIs overpass query
 poi_query: str = (

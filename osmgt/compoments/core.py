@@ -96,7 +96,9 @@ class OsmGtCore(Logger):
         # reordered because of nominatim
         self._bbox_value = (bbox_value[1], bbox_value[0], bbox_value[3], bbox_value[2])
 
-    def _get_study_area_from_bbox(self, bbox: Tuple[float, float, float, float]) -> None:
+    def _get_study_area_from_bbox(
+        self, bbox: Tuple[float, float, float, float]
+    ) -> None:
         return
 
     def _query_on_overpass_api(self, request: str) -> List[Dict]:
@@ -121,7 +123,9 @@ class OsmGtCore(Logger):
         return raw_data
 
     @staticmethod
-    def _from_bbox_query_builder(bbox_value: Tuple[float, float, float, float], query: str) -> str:
+    def _from_bbox_query_builder(
+        bbox_value: Tuple[float, float, float, float], query: str
+    ) -> str:
         assert isinstance(bbox_value, tuple)
         assert len(bbox_value) == 4
         bbox_value_formated = ", ".join(map(str, bbox_value))
@@ -177,7 +181,9 @@ class OsmGtCore(Logger):
     def _location_osm_default_id_computing(self, osm_location_id: int) -> int:
         return osm_location_id + self._NOMINATIM_DEFAULT_ID
 
-    def _build_feature_from_osm(self, uuid_enum: int, geometry: Union[Point, LineString], properties: Dict) -> Dict:
+    def _build_feature_from_osm(
+        self, uuid_enum: int, geometry: Union[Point, LineString], properties: Dict
+    ) -> Dict:
         properties_found: Dict = properties.get(self._PROPERTIES_OSM_FIELD, {})
         properties_found[self._ID_OSM_FIELD] = properties[self._ID_OSM_FIELD]
 
