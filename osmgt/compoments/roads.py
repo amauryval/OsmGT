@@ -95,7 +95,7 @@ class OsmGtRoads(OsmGtCore):
         raw_data: List[Dict],
         additionnal_nodes: Optional[gpd.GeoDataFrame],
         mode: str,
-    ):
+    ) -> List[Dict]:
         if additionnal_nodes is not None:
             additionnal_nodes = self._check_topology_field(additionnal_nodes)
             # filter nodes from study_area_geom
