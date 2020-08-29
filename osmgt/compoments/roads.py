@@ -75,20 +75,20 @@ class OsmGtRoads(OsmGtCore):
             raw_data, additionnal_nodes, mode
         )
 
-    # def get_graph(self) -> GraphHelpers:
-    #     self.logger.info("Prepare graph")
-    #     self._check_build_input_data()
-    #
-    #     graph = GraphHelpers(is_directed=network_queries[self._mode]["directed_graph"])
-    #
-    #     for feature in self._output_data:
-    #         graph.add_edge(
-    #             Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
-    #             Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
-    #             feature[self._TOPO_FIELD],
-    #             compute_wg84_line_length(shape(feature[self._GEOMETRY_FIELD])),
-    #         )
-    #     return graph
+    def get_graph(self) -> GraphHelpers:
+        self.logger.info("Prepare graph")
+        self._check_build_input_data()
+
+        graph = GraphHelpers(is_directed=network_queries[self._mode]["directed_graph"])
+
+        for feature in self._output_data:
+            graph.add_edge(
+                Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
+                Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
+                feature[self._TOPO_FIELD],
+                compute_wg84_line_length(shape(feature[self._GEOMETRY_FIELD])),
+            )
+        return graph
 
     def __build_network_topology(
         self,
