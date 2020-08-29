@@ -8,12 +8,12 @@ import logging
 
 class Logger:
 
-    _log_dir = "logs"
+    _log_dir: str = "logs"
     _formatter = logging.Formatter(
         "%(asctime)s - %(name)-15s - %(levelname)-8s : %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    _log_date_file_format = datetime.datetime.now().strftime("%Y_%m_%d_%H%M%S")
+    _log_date_file_format: str = datetime.datetime.now().strftime("%Y_%m_%d_%H%M%S")
 
     def __init__(
         self,
@@ -22,7 +22,7 @@ class Logger:
         logger_level="info",
         logger_dir=None,
         raise_error=False,
-    ):
+    ) -> None:
         if not parent:
             self.__logger_name = logger_name if logger_name else self.__class__.__name__
 

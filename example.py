@@ -43,10 +43,10 @@ def test_from_file():
     assert False
 
 
-location_point = Point(4.0697088, 46.0410178)
-isochrones_from_location = OsmGt.isochrone_from_coordinates(
-    location_point, [2, 5, 10], 3, mode="pedestrian"
-)
+# location_point = Point(4.0697088, 46.0410178)
+# isochrones_from_location = OsmGt.isochrone_from_coordinates(
+#     location_point, [2, 5, 10], 3, mode="pedestrian"
+# )
 
 test_from_web()
 # test_from_file()

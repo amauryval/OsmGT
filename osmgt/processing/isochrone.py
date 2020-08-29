@@ -1,3 +1,8 @@
+from typing import Optional
+from typing import List
+from typing import Dict
+from typing import Tuple
+
 from osmgt.compoments.roads import OsmGtRoads
 
 from osmgt.core.global_values import epsg_4326
@@ -18,42 +23,47 @@ except ModuleNotFoundError:
     pass
 
 from shapely.wkt import loads
+from shapely.geometry import base
+from shapely.geometry import Point
+
 from osmgt.geometry.geom_helpers import Concave_hull
 from osmgt.geometry.geom_helpers import reproject
 
 
 class OsmGtIsochrone(OsmGtRoads):
 
-    __DISTANCE_TOLERANCE = 1.2
-    __ISOCHRONE_NAME_FIELD = "iso_name"
+    __DISTANCE_TOLERANCE: float = 1.2
+    __ISOCHRONE_NAME_FIELD: str = "iso_name"
 
-    def __init__(self, isochrones_times, trip_speed=3):
+    def __init__(self, isochrones_times: List, trip_speed: float) -> None:
         super().__init__()
 
-        self.source_node = None
+        self.source_node: Optional[str] = None
 
-        self._trip_speed = trip_speed  # km/h
+        self._trip_speed: float = trip_speed  # km/h
 
         isochrones_times.sort()
         self._raw_isochrones = isochrones_times
         self._isochrones_times = self._prepare_isochrone_values(isochrones_times)
 
-    def _prepare_isochrone_values(self, isochrones_times):
-        speed_to_m_s = self._trip_speed / km_hour_2_m_sec
+    def _prepare_isochrone_values(self, isochrones_times: List) -> List:
+        speed_to_m_s: float = self._trip_speed / km_hour_2_m_sec
 
-        times_reach_time_dist = {
+        times_reach_time_dist: Dict = {
             iso_time: math.ceil((iso_time * min_2_sec) * speed_to_m_s)  # distance
             for iso_time in isochrones_times
         }
-        times_reach_time_dist_reversed = sorted(
+        times_reach_time_dist_reversed: List = sorted(
             times_reach_time_dist.items(), key=lambda x: x[1], reverse=True
         )
         return times_reach_time_dist_reversed
 
-    def from_location_point(self, location_point, mode):
+    def from_location_point(
+        self, location_point: Point, mode: str
+    ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         self.source_node = location_point.wkt
         # compute bbox
-        max_distance = max(self._isochrones_times , key=itemgetter(1))[-1]
+        max_distance = max(self._isochrones_times, key=itemgetter(1))[-1]
         location_point_reproj = reproject(location_point, epsg_4326, epsg_3857)
         location_point_reproj_buffered = location_point_reproj.buffer(
             max_distance * self.__DISTANCE_TOLERANCE
@@ -84,7 +94,7 @@ class OsmGtIsochrone(OsmGtRoads):
             self._network_gdf[self._network_gdf[self.__ISOCHRONE_NAME_FIELD].notnull()],
         )
 
-    def _compute_isochrone(self):
+    def _compute_isochrone(self) -> None:
         graph = self.get_graph()
         source_vertex = graph.find_vertex_from_name(self.source_node)
 
@@ -117,21 +127,26 @@ class OsmGtIsochrone(OsmGtRoads):
                 {self.__ISOCHRONE_NAME_FIELD: isochrone_label, "geometry": polygon}
             )
 
-    def get_gdf(self, verbose=True):
+    def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
         output = super().get_gdf()
         # find iso index pair in order to create hole geom. isochrones are like russian dolls
         iso_values = self._raw_isochrones[::-1]
-        iso_values_map = {x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))}
+        iso_values_map: Dict = {x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))}
         output["geometry"] = output.apply(
-            lambda x: x["geometry"].difference(
+            lambda x: self.__compute_isochrone_difference(
+                x["geometry"],
                 output.loc[
                     output[self.__ISOCHRONE_NAME_FIELD]
                     == iso_values_map[x[self.__ISOCHRONE_NAME_FIELD]]
-                ].iloc[0]["geometry"]
+                    ].iloc[0]['geometry']
             )
             if x[self.__ISOCHRONE_NAME_FIELD] in iso_values_map
             else x["geometry"],
-            axis=1,
+            axis=1
         )
 
         return output
+
+    def __compute_isochrone_difference(self, first_geom: base, remove_part_geom: base) -> base:
+
+        return first_geom.difference(remove_part_geom)

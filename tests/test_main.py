@@ -170,12 +170,11 @@ def test_if_path_can_be_computed(points_gdf_from_coords):
 
 
 def test_if_isochrones_can_be_computed(location_point, isochrone_values):
-    (
-        isochrones_polygon_from_location,
-        isochrones_lines_from_location,
-    ) = OsmGt.isochrone_from_coordinates(
+    data = OsmGt.isochrone_from_coordinates(
         location_point, isochrone_values, 3, mode="pedestrian"
     )
+    isochrones_polygon_from_location, isochrones_lines_from_location = data
+
     assert isochrones_polygon_from_location.shape[0] == 3
     assert set(isochrones_polygon_from_location["iso_name"].to_list()) == set(
         ["2 minutes", "5 minutes", "10 minutes"]
@@ -183,7 +182,7 @@ def test_if_isochrones_can_be_computed(location_point, isochrone_values):
 
     assert isochrones_lines_from_location.shape[0] > 0
     assert set(isochrones_lines_from_location["iso_name"].to_list()) == set(
-        ["2 minutes" , "5 minutes" , "10 minutes"]
+        ["2 minutes", "5 minutes", "10 minutes"]
     )
 
 
@@ -196,8 +195,8 @@ def test_if_shortest_path_can_be_computed(start_node, end_node):
             (start_node, end_node),
             (start_node, end_node),
             (start_node, end_node),
-            (start_node, end_node)
+            (start_node, end_node),
         ],
-        mode="pedestrian"
+        mode="pedestrian",
     )
     assert shortest_paths.shape[0] == 1

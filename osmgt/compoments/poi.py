@@ -1,5 +1,10 @@
-from osmgt.compoments.core import OsmGtCore
+import geopandas as gpd
+from typing import Tuple
+from typing import List
+from typing import Optional
+from typing import Dict
 
+from osmgt.compoments.core import OsmGtCore
 
 from shapely.geometry import Point
 
@@ -12,12 +17,12 @@ class ErrorPoiData(Exception):
 
 class OsmGtPoi(OsmGtCore):
 
-    _FEATURE_OSM_TYPE = "node"
+    _FEATURE_OSM_TYPE: str = "node"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def from_location(self, location_name):
+    def from_location(self, location_name: str):
         super().from_location(location_name)
 
         request = self._from_location_name_query_builder(self._location_id, poi_query)
@@ -26,16 +31,14 @@ class OsmGtPoi(OsmGtCore):
 
         return self
 
-    def from_bbox(self, bbox_value):
+    def from_bbox(self, bbox_value: Tuple[float, float, float, float]) -> None:
         super().from_bbox(bbox_value)
 
         request = self._from_bbox_query_builder(self._bbox_value, poi_query)
         raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_points(raw_data)
 
-        return self
-
-    def __build_points(self, raw_data):
+    def __build_points(self, raw_data: List[Dict]) -> List[Dict]:
         self.logger.info("Formating data")
 
         raw_data = filter(

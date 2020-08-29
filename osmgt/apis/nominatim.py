@@ -1,3 +1,7 @@
+from typing import Dict
+from typing import List
+from typing import Set
+
 from osmgt.apis.core import ApiCore
 
 
@@ -7,10 +11,10 @@ class ErrorNominatimApi(ValueError):
 
 class NominatimApi(ApiCore):
 
-    nominatim_url = "https://nominatim.openstreetmap.org/search/?"
+    nominatim_url: str = "https://nominatim.openstreetmap.org/search/?"
 
-    query_parameter = "q"
-    other_query_parameter = {
+    query_parameter: str = "q"
+    other_query_parameter: Set[str] = {
         "street",
         "city",
         "county",
@@ -18,18 +22,18 @@ class NominatimApi(ApiCore):
         "country",
         "postalcode",
     }
-    format_parameter = {"format": "json", "polygon": "1", "polygon_geojson": "1"}
+    format_parameter: Dict = {"format": "json", "polygon": "1", "polygon_geojson": "1"}
 
-    _output = []
+    _output: List = []
 
-    def __init__(self, logger, **params):
+    def __init__(self, logger, **params) -> None:
         super().__init__()
-        self.logger = logger
+        self.logger = logger  # TODO check type
 
-        parameters = self.__check_parameters(params)
+        parameters: Dict = self.__check_parameters(params)
         self.__RESULT_QUERY = self.request_query(self.nominatim_url, parameters)
 
-    def __check_parameters(self, input_parameters):
+    def __check_parameters(self, input_parameters: Dict) -> Dict:
 
         if self.query_parameter in input_parameters:
             # clean arguments set
@@ -53,5 +57,5 @@ class NominatimApi(ApiCore):
 
         return input_parameters
 
-    def data(self):
+    def data(self) -> dict:
         return self.__RESULT_QUERY

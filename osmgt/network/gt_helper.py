@@ -1,3 +1,8 @@
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+
 from graph_tool import Graph
 
 from graph_tool.all import graph_draw
@@ -29,23 +34,26 @@ class GraphHelpers(Graph):
     - find_vertex_names_from_edge_name()
     """
 
-    def __init__(self, is_directed=True):
+    def __init__(self, logger, is_directed: bool = True) -> None:
         """
+        :param logger: logger
+        :type logger:
         :param is_directed: is directed or not
         :type is_directed: bool
         """
         super(GraphHelpers, self).__init__(directed=is_directed)
 
+        self._logger = logger
         self.vertex_names = self.new_vertex_property("string")
         self.edge_names = self.new_edge_property("string")
 
         self.edge_weights = self.new_edge_property("double")
 
-        self.vertices_content = {}
-        self.edges_content = {}
-        self.edges_vertices_content = {}
+        self.vertices_content: Dict = {}
+        self.edges_content: Dict = {}
+        self.edges_vertices_content: Dict = {}
 
-    def find_edges_from_vertex(self, vertex_name):
+    def find_edges_from_vertex(self, vertex_name: str) -> List[str]:
         vertex = self.find_vertex_from_name(vertex_name)
         if vertex is not None:
             all_edges_found = vertex.all_edges()
@@ -56,7 +64,9 @@ class GraphHelpers(Graph):
             else:
                 raise ErrorGraphHelpers("Seems impossible ?")
 
-    def find_vertex_names_from_edge_name(self, edge_name):
+    def find_vertex_names_from_edge_name(
+        self, edge_name: str
+    ) -> Optional[Tuple[str, str]]:
         edge = self.find_edge_from_name(edge_name)
         if edge is not None:
 
@@ -76,7 +86,7 @@ class GraphHelpers(Graph):
 
         return None
 
-    def add_vertex(self, vertex_name):
+    def add_vertex(self, vertex_name: str):
         """
         Add a vertex
 
@@ -96,7 +106,13 @@ class GraphHelpers(Graph):
 
         return vertex
 
-    def add_edge(self, source_vertex_name, target_vertex_name, edge_name, weight=None):
+    def add_edge(
+        self,
+        source_vertex_name: str,
+        target_vertex_name: str,
+        edge_name: str,
+        weight: Optional[float] = None,
+    ):
         """
         Add an edge from 2 vertex name
 
@@ -106,7 +122,7 @@ class GraphHelpers(Graph):
         :type target_vertex_name: str
         :param edge_name: edge name
         :type edge_name: str
-        :param weight: wieght value
+        :param weight: weight value
         :type weight: float, default None
         :return: Edge object
         :rtype: graph_tool.libgraph_tool_core.Edge
@@ -141,7 +157,7 @@ class GraphHelpers(Graph):
 
             return None
 
-    def find_edge_from_name(self, edge_name):
+    def find_edge_from_name(self, edge_name: str):
         """
         Find an edge
 
@@ -155,7 +171,7 @@ class GraphHelpers(Graph):
         except KeyError:
             return None
 
-    def edge_exists_from_name(self, edge_name):
+    def edge_exists_from_name(self, edge_name: str):
         """
         check if an edge exists
 
@@ -166,7 +182,9 @@ class GraphHelpers(Graph):
         """
         return self.find_edge_from_name(edge_name) is not None
 
-    def find_edge_from_vertices_name(self, source_vertex_name, target_vertex_name):
+    def find_edge_from_vertices_name(
+        self, source_vertex_name: str, target_vertex_name: str
+    ):
         """
         Find an edge with its vertices names
 
@@ -185,7 +203,9 @@ class GraphHelpers(Graph):
 
         return self.edge(source_vertex_found, target_vertex_found)
 
-    def edge_exists_from_vertices_name(self, source_vertex_name, target_vertex_name):
+    def edge_exists_from_vertices_name(
+        self, source_vertex_name: str, target_vertex_name: str
+    ):
         """
         Find if an edge with specific vertices names
 
@@ -201,7 +221,7 @@ class GraphHelpers(Graph):
             is not None
         )
 
-    def find_vertex_from_name(self, vertex_name):
+    def find_vertex_from_name(self, vertex_name: str):
         """
         find a vertex
 
@@ -216,7 +236,7 @@ class GraphHelpers(Graph):
         except KeyError:
             return None
 
-    def vertex_exists_from_name(self, vertex_name):
+    def vertex_exists_from_name(self, vertex_name: str) -> bool:
         """
         check if a vertex exists
 
@@ -228,7 +248,8 @@ class GraphHelpers(Graph):
 
         return self.find_vertex_from_name(vertex_name) is not None
 
-    def plot(self, output_file_with_extension=None):
+    def plot(self, output_file_with_extension: Optional[str] = None):
+        self._logger.info("Graph to PNG file")
         pos = sfdp_layout(self)
         graph_draw(
             self,
