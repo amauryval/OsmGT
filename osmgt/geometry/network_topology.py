@@ -433,7 +433,7 @@ class NetworkTopology:
 
     def __rtree_generator_func(
         self,
-    ) -> Generator[int, Tuple[float, float, float, float], None]:
+    ) -> Iterator[Tuple[int, Tuple[str, str, str, float], None]]:
         for fid, feature in self._network_data.items():
             # fid is an integer
             yield fid, feature[self.__GEOMETRY_FIELD].bounds, None

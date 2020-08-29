@@ -96,11 +96,11 @@ def some_line_features():
                     (4.07132541293213457, 46.03636692445581957),
                     (4.07195460627399886, 46.0366250550576126),
                     (4.07215358194621313, 46.03668152112675216),
-                    (4.0724305345710512, 46.03630508066581228)
+                    (4.0724305345710512, 46.03630508066581228),
                 ]
             ),
             "properties": {"uuid": 12, "id": "12", "oneway": "yes"},
-        }
+        },
     ]
     output_gdf = build_geojson_features(all_features)
 
@@ -145,8 +145,7 @@ def some_point_features():
         {
             "geometry": Point((4.07101188185213569, 46.0373516329414727)),
             "properties": {"uuid": 9, "id": "9"},
-        }
-
+        },
     ]
     output_gdf = build_geojson_features(all_features)
 

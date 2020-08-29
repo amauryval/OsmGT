@@ -1,11 +1,16 @@
 import pytest
 
+from osmgt.helpers.logger import Logger
+
 from osmgt.network.gt_helper import GraphHelpers
 from osmgt.network.gt_helper import ExistingVertex
 
 
+def init_logger():
+    return Logger(logger_name="graph_test").logger
+
 def create_undirected_graph(point_a, point_b, point_c):
-    graph = GraphHelpers()
+    graph = GraphHelpers(init_logger())
     edge_1 = graph.add_edge(point_a.wkt, point_b.wkt, "edge_1")
     edge_2 = graph.add_edge(point_b.wkt, point_c.wkt, "edge_2")
     edge_3 = graph.add_edge(point_b.wkt, point_c.wkt, "edge_2")
@@ -14,7 +19,7 @@ def create_undirected_graph(point_a, point_b, point_c):
 
 
 def create_weighted_undirected_graph(point_a, point_b, point_c):
-    graph = GraphHelpers()
+    graph = GraphHelpers(init_logger())
     edge_1 = graph.add_edge(point_a.wkt, point_b.wkt, "edge_1", 10.2)
     edge_2 = graph.add_edge(point_b.wkt, point_c.wkt, "edge_2", 15.9)
     edge_3 = graph.add_edge(point_b.wkt, point_c.wkt, "edge_2", 25)
@@ -23,7 +28,7 @@ def create_weighted_undirected_graph(point_a, point_b, point_c):
 
 
 def test_create_vertices(point_a, point_b):
-    graph = GraphHelpers()
+    graph = GraphHelpers(init_logger())
 
     vertex_a = graph.add_vertex(point_a.wkt)
     vertex_b = graph.add_vertex(point_b.wkt)

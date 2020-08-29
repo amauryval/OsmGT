@@ -38,7 +38,7 @@ class OsmGtCore(Logger):
 
     _QUERY_ELEMENTS_FIELD: str = "elements"
     __USELESS_COLUMNS: List = []
-    _location_id: None = None
+    _location_id: Optional[int] = None
 
     _NOMINATIM_DEFAULT_ID: int = 3600000000  # this is it
     _NOMINATIM_OSM_ID_FIELD: str = "osm_id"
@@ -59,13 +59,13 @@ class OsmGtCore(Logger):
     def __init__(self) -> None:
         super().__init__()
 
-        self.study_area_geom: None
+        self.study_area_geom: Optional[Polygon] = None
 
-        self._output_data: Optional[Union[gpd.geodataframe, List[Dict]]]
+        self._output_data: Optional[Union[gpd.geodataframe, List[Dict]]] = None
         self._bbox_value: Optional[Tuple[float, float, float, float]] = None
         self._bbox_mode: bool = False
 
-    def from_location(self, location_name: str) -> None:
+    def from_location(self, location_name: str, *args) -> None:
         self.logger.info(f"From location: {location_name}")
         self.logger.info("Loading data...")
 
@@ -92,7 +92,7 @@ class OsmGtCore(Logger):
         self._bbox_mode: bool = True
         self.logger.info(f"From bbox: {bbox_value}")
         self.logger.info("Loading data...")
-        self.study_area_geom: Polygon = box(*bbox_value, ccw=True)
+        self.study_area_geom = box(*bbox_value, ccw=True)
         # reordered because of nominatim
         self._bbox_value = (bbox_value[1], bbox_value[0], bbox_value[3], bbox_value[2])
 

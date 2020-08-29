@@ -3,6 +3,7 @@ from typing import Tuple
 from typing import List
 from typing import Optional
 from typing import Dict
+from typing import Iterator
 
 
 from osmgt.compoments.core import OsmGtCore
@@ -79,16 +80,21 @@ class OsmGtRoads(OsmGtCore):
         self.logger.info("Prepare graph")
         self._check_build_input_data()
 
-        graph = GraphHelpers(is_directed=network_queries[self._mode]["directed_graph"])
+        graph = GraphHelpers(self.logger, is_directed=network_queries[self._mode]["directed_graph"])
 
         for feature in self._output_data:
-            graph.add_edge(
-                Point(feature[self._GEOMETRY_FIELD].coords[0]).wkt,
-                Point(feature[self._GEOMETRY_FIELD].coords[-1]).wkt,
-                feature[self._TOPO_FIELD],
-                compute_wg84_line_length(shape(feature[self._GEOMETRY_FIELD])),
-            )
+            graph.add_edge(*self.__compute_edges(feature))
+
         return graph
+
+    def __compute_edges(self, feature: Dict) -> Tuple[str, str, str, float]:
+        coordinates = feature[self._GEOMETRY_FIELD]
+        return (
+            Point(coordinates.coords[0]).wkt,
+            Point(coordinates.coords[-1]).wkt,
+            feature[self._TOPO_FIELD],
+            compute_wg84_line_length(shape(coordinates))
+        )
 
     def __build_network_topology(
         self,

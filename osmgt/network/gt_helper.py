@@ -34,13 +34,16 @@ class GraphHelpers(Graph):
     - find_vertex_names_from_edge_name()
     """
 
-    def __init__(self, is_directed: bool = True) -> None:
+    def __init__(self, logger, is_directed: bool = True) -> None:
         """
+        :param logger: logger
+        :type logger:
         :param is_directed: is directed or not
         :type is_directed: bool
         """
         super(GraphHelpers, self).__init__(directed=is_directed)
 
+        self._logger = logger
         self.vertex_names = self.new_vertex_property("string")
         self.edge_names = self.new_edge_property("string")
 
@@ -246,7 +249,7 @@ class GraphHelpers(Graph):
         return self.find_vertex_from_name(vertex_name) is not None
 
     def plot(self, output_file_with_extension: Optional[str] = None):
-
+        self._logger.info("Graph to PNG file")
         pos = sfdp_layout(self)
         graph_draw(
             self,

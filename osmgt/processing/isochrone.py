@@ -23,6 +23,7 @@ except ModuleNotFoundError:
     pass
 
 from shapely.wkt import loads
+from shapely.geometry import base
 from shapely.geometry import Point
 
 from osmgt.geometry.geom_helpers import Concave_hull
@@ -130,17 +131,22 @@ class OsmGtIsochrone(OsmGtRoads):
         output = super().get_gdf()
         # find iso index pair in order to create hole geom. isochrones are like russian dolls
         iso_values = self._raw_isochrones[::-1]
-        iso_values_map = {x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))}
+        iso_values_map: Dict = {x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))}
         output["geometry"] = output.apply(
-            lambda x: x["geometry"].difference(
+            lambda x: self.__compute_isochrone_difference(
+                x["geometry"],
                 output.loc[
                     output[self.__ISOCHRONE_NAME_FIELD]
                     == iso_values_map[x[self.__ISOCHRONE_NAME_FIELD]]
-                ].iloc[0]["geometry"]
+                    ].iloc[0]['geometry']
             )
             if x[self.__ISOCHRONE_NAME_FIELD] in iso_values_map
             else x["geometry"],
-            axis=1,
+            axis=1
         )
 
         return output
+
+    def __compute_isochrone_difference(self, first_geom: base, remove_part_geom: base) -> base:
+
+        return first_geom.difference(remove_part_geom)
