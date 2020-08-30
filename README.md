@@ -5,7 +5,7 @@ OsmGT
 [![codecov](https://codecov.io/gh/amauryval/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/wiralyki/osmgt)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-OpenStreetMap (OSM) network analysis based on graph-tools (GT): 
+OpenStreetMap (OSM) network analysis based on [graph-tools](https://graph-tool.skewed.de/) (GT): 
 * Find data (roads and pois)
 * graph creation (and topology processing)
 * isochrone builder
