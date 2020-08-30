@@ -125,7 +125,7 @@ shortest_path_found = roads_from_location_gdf[roads_from_location_gdf['topo_uuid
 ```
 
 
-# How to test it 
+# How to run the dockerfile 
 ```
 docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
 ```
