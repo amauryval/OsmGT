@@ -9,6 +9,7 @@ def test_connect_lines(some_line_features, some_point_features):
         some_line_features,
         some_point_features,
         "uuid",
+        "id",
         "pedestrian",
     ).run()
     all_uuid = [feature["uuid"] for feature in raw_data_topology_rebuild]

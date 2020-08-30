@@ -77,10 +77,12 @@ class OsmGtShortestPath(OsmGtRoads):
     def from_bbox(
         self,
         bbox_value: Tuple[float, float, float, float],
-        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        additionnal_nodes: None,
         mode: str,
     ) -> gpd.GeoDataFrame:
-        super().from_bbox(bbox_value, additionnal_nodes, mode)
+        super().from_bbox(
+            bbox_value, additionnal_nodes=self._additionnal_nodes_gdf, mode=mode
+        )
         self._compute_data_and_graph()
 
         return self.get_gdf()
@@ -91,7 +93,7 @@ class OsmGtShortestPath(OsmGtRoads):
 
         self._output_data = []
 
-        with concurrent.futures.ThreadPoolExecutor(4) as executor:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self._compute_shortest_path, self._source_target_points)
 
         return self.get_gdf()
@@ -117,11 +119,21 @@ class OsmGtShortestPath(OsmGtRoads):
 
             gdf_copy = self._gdf.copy(deep=True)
             # # get path by using edge names
-            path_geoms = gdf_copy[
+            osm_roads_features = gdf_copy[
                 gdf_copy[self._TOPO_FIELD].isin(
                     [self._graph.edge_names[edge] for edge in path_edges]
                 )
-            ]["geometry"].to_list()
+            ]
+
+            path_geoms = osm_roads_features[self._GEOMETRY_FIELD].to_list()
+            path_osm_ids = filter(
+                lambda x: isinstance(x, str),
+                osm_roads_features[self._ID_OSM_FIELD].to_list(),
+            )
+            path_osm_urls = filter(
+                lambda x: isinstance(x, str),
+                osm_roads_features[self._OSM_URL_FIELD].to_list(),
+            )
 
             # reorder linestring
             path_found = linemerge(path_geoms)
@@ -131,8 +143,10 @@ class OsmGtShortestPath(OsmGtRoads):
 
             self._output_data.append(
                 {
-                    "source_node": source_node,
-                    "target_node": target_node,
+                    "source_node": source_node.wkt,
+                    "target_node": target_node.wkt,
+                    "osm_ids": ", ".join(path_osm_ids),
+                    "osm_urls": ", ".join(path_osm_urls),
                     "geometry": path_found,
                 }
             )

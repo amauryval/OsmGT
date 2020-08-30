@@ -65,6 +65,7 @@ class NetworkTopology:
         network_data: List[Dict],
         additionnal_nodes: Optional[List[Dict]],
         uuid_field: str,
+        original_field_id: str,
         mode_post_processing: str,
     ) -> None:
         """
@@ -89,6 +90,7 @@ class NetworkTopology:
         # self._force_footway_connection = False
 
         self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
+        self._original_field_id = original_field_id
 
         self._output: List[Dict] = []
 
@@ -363,6 +365,7 @@ class NetworkTopology:
                 self.__GEOMETRY_FIELD: connection,
                 self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_ADDED,
                 self.__FIELD_ID: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
+                self._original_field_id: f"{self.__TOPOLOGY_TAG_ADDED}_{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
             }
 
         return {

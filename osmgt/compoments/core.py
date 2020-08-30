@@ -21,6 +21,8 @@ from shapely.geometry import LineString
 from shapely.geometry import Polygon
 from shapely.geometry import box
 
+from osmgt.core.global_values import osm_url
+
 
 class ErrorOsmGtCore(Exception):
     pass
@@ -55,6 +57,9 @@ class OsmGtCore(Logger):
     _FEATURE_TYPE_OSM_FIELD: str = "type"
     _PROPERTIES_OSM_FIELD: str = "tags"
     _ID_OSM_FIELD: str = "id"
+    _OSM_URL_FIELD: str = "osm_url"
+
+    _FEATURE_OSM_TYPE: Optional[str] = None
 
     def __init__(self) -> None:
         super().__init__()
@@ -109,18 +114,6 @@ class OsmGtCore(Logger):
         geo_tag_query: str = "area.searchArea"
         query = query.format(geo_filter=geo_tag_query)
         return f"area({location_osm_id})->.searchArea;({query});{out_geom_query};"
-
-    def _build_network_from_gdf(self, input_gdf: gpd.GeoDataFrame) -> List[Dict]:
-        if isinstance(input_gdf, gpd.GeoDataFrame):
-            input_gdf: gpd.GeoDataFrame = self._check_topology_field(input_gdf)
-            raw_data: List[Dict] = input_gdf.to_dict("records")
-
-        else:
-            raise IncompatibleFormat(
-                f"{type(input_gdf)} type not supported. Use a geodataframe."
-            )
-
-        return raw_data
 
     @staticmethod
     def _from_bbox_query_builder(
@@ -185,7 +178,10 @@ class OsmGtCore(Logger):
         self, uuid_enum: int, geometry: Union[Point, LineString], properties: Dict
     ) -> Dict:
         properties_found: Dict = properties.get(self._PROPERTIES_OSM_FIELD, {})
-        properties_found[self._ID_OSM_FIELD] = properties[self._ID_OSM_FIELD]
+        properties_found[self._ID_OSM_FIELD] = str(properties[self._ID_OSM_FIELD])
+        properties_found[
+            self._OSM_URL_FIELD
+        ] = f"{osm_url}/{self._FEATURE_OSM_TYPE}/{properties_found[self._ID_OSM_FIELD]}"
 
         # used for topology
         properties_found[
