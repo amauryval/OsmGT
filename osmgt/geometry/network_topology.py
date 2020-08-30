@@ -365,7 +365,7 @@ class NetworkTopology:
                 self.__GEOMETRY_FIELD: connection,
                 self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_ADDED,
                 self.__FIELD_ID: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
-                self._original_field_id: f"{self.__TOPOLOGY_TAG_ADDED}_{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
+                self._original_field_id: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
             }
 
         return {
