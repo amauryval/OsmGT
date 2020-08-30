@@ -110,18 +110,6 @@ class OsmGtCore(Logger):
         query = query.format(geo_filter=geo_tag_query)
         return f"area({location_osm_id})->.searchArea;({query});{out_geom_query};"
 
-    def _build_network_from_gdf(self, input_gdf: gpd.GeoDataFrame) -> List[Dict]:
-        if isinstance(input_gdf, gpd.GeoDataFrame):
-            input_gdf: gpd.GeoDataFrame = self._check_topology_field(input_gdf)
-            raw_data: List[Dict] = input_gdf.to_dict("records")
-
-        else:
-            raise IncompatibleFormat(
-                f"{type(input_gdf)} type not supported. Use a geodataframe."
-            )
-
-        return raw_data
-
     @staticmethod
     def _from_bbox_query_builder(
         bbox_value: Tuple[float, float, float, float], query: str
