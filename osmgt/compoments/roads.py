@@ -131,6 +131,7 @@ class OsmGtRoads(OsmGtCore):
             raw_data_restructured,
             additionnal_nodes,
             self._TOPO_FIELD,
+            self._ID_OSM_FIELD,
             mode,
         ).run()
 

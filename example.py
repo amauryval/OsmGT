@@ -14,7 +14,7 @@ def test_from_web():
 
     # poi_from_osmgt_file_found = OsmGt.roads_from_osmgt_file(f"{poi_output_name}.osmgt")
     poi_gdf = poi_from_web_found.get_gdf()[
-        ["topo_uuid", "id", "name", "amenity", "geometry"]
+        ["topo_uuid", "id", "name", "amenity", "geometry", "osm_url"]
     ]
     poi_gdf.to_file(f"{poi_output_name}.shp", driver="ESRI Shapefile")
 
@@ -25,7 +25,7 @@ def test_from_web():
     # network_from_web_found = OsmGt.roads_from_bbox(bbox, additionnal_nodes=poi_gdf, mode="vehicle")
 
     network_from_osmgt_file_found = network_from_web_found.get_gdf()[
-        ["topo_uuid", "id", "name", "highway", "geometry", "topology"]
+        ["topo_uuid", "id", "name", "highway", "geometry", "topology", "osm_url"]
     ]
     print("ok")
     network_from_osmgt_file_found.to_file(

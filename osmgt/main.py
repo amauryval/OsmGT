@@ -37,15 +37,15 @@ class OsmGt:
 
     @staticmethod
     def roads_from_bbox(
-        bbox_value: Tuple[float, float, float, float],
+        bbox_values: Tuple[float, float, float, float],
         mode: str = "pedestrian",
         additionnal_nodes: Optional[gpd.GeoDataFrame] = None,
     ) -> OsmGtRoads:
         """
         Get OpenStreetMap roads from a bbox
 
-        :param bbox_value: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
-        :type bbox_value: tuple of float
+        :param bbox_values: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
+        :type bbox_values: tuple of float
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
         :param additionnal_nodes: Addtionnals nodes to connect on the network
@@ -54,7 +54,7 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
         osm_road = OsmGtRoads()
-        osm_road.from_bbox(bbox_value, additionnal_nodes, mode)
+        osm_road.from_bbox(bbox_values , additionnal_nodes , mode)
         return osm_road
 
     @staticmethod
@@ -72,17 +72,17 @@ class OsmGt:
         return osm_poi
 
     @staticmethod
-    def poi_from_bbox(bbox_value: Tuple[float, float, float, float]) -> OsmGtPoi:
+    def poi_from_bbox(bbox_values: Tuple[float, float, float, float]) -> OsmGtPoi:
         """
         Find OSM POIs from a bbox value
 
-        :param bbox_value: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
-        :type bbox_value: tuple of float
+        :param bbox_values: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
+        :type bbox_values: tuple of float
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
         """
         osm_poi = OsmGtPoi()
-        osm_poi.from_bbox(bbox_value)
+        osm_poi.from_bbox(bbox_values)
         return osm_poi
 
     @staticmethod
@@ -116,7 +116,7 @@ class OsmGt:
         location_name: str,
         source_target_points: List[Tuple[Point, Point]],
         mode: str = "pedestrian",
-    ) -> OsmGtShortestPath:
+    ) -> gpd.GeoDataFrame:
         """
 
         :param location_name: the name of the location
@@ -125,10 +125,33 @@ class OsmGt:
         :type source_target_points: list of tuple (shapely.geometry.Point)
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of :
-        :return: geodataframe containing the shortest path
+        :return: geodataframe containing all the shortest paths
         :rtype: geopandas.GeoDataFrame
         """
 
         return OsmGtShortestPath(source_target_points).from_location(
             location_name, None, mode
+        )
+
+
+    @staticmethod
+    def shortest_path_from_bbox(
+        bbox_values: Tuple[float, float, float, float],
+        source_target_points: List[Tuple[Point, Point]],
+        mode: str = "pedestrian",
+    ) -> gpd.GeoDataFrame:
+        """
+
+        :param bbox_values: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
+        :type bbox_values: tuple of float
+        :param source_target_points: list of tuple source and target points
+        :type source_target_points: list of tuple (shapely.geometry.Point)
+        :param mode: the transport mode
+        :type mode: str, default 'pedestrian', one of :
+        :return: geodataframe containing all the shortest paths
+        :rtype: geopandas.GeoDataFrame
+        """
+
+        return OsmGtShortestPath(source_target_points).from_bbox(
+            bbox_values, None, mode
         )

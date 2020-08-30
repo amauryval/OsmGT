@@ -153,13 +153,13 @@ def some_point_features():
 
 
 @pytest.fixture
-def pois_default_columns_from_output():
-    return ["id", "topo_uuid", "geometry"]
+def default_columns_from_output():
+    return ["id", "topo_uuid", "geometry", "osm_url"]
 
 
 @pytest.fixture
-def roads_default_columns_from_output():
-    return ["id", "topo_uuid", "geometry"]
+def shortest_path_default_columns_from_output():
+    return ['source_node', 'target_node', 'osm_ids', 'osm_urls', 'geometry']
 
 
 @pytest.fixture
@@ -170,10 +170,35 @@ def points_gdf_from_coords():
 
 
 @pytest.fixture
-def start_node():
-    return Point(4.0697088, 46.0410178)
+def start_and_end_nodes():
+    return (
+        Point(4.0697088, 46.0410178), Point(4.0757785, 46.0315038)
+    )
 
 
 @pytest.fixture
-def end_node():
-    return Point(4.0757785, 46.0315038)
+def start_and_end_nodes_2():
+    return (
+        Point(-74.004110, 40.722584), Point(-74.000205, 40.721494)
+    )
+
+@pytest.fixture
+def start_and_end_nodes_3():
+    return (
+        Point(-74.004110, 40.722584), Point(4.0757785, 46.0315038)
+    )
+
+
+@pytest.fixture()
+def bbox_values_1():
+    return (4.0237426757812, 46.019674567761, 4.1220188140869, 46.072575637028)
+
+
+@pytest.fixture()
+def bbox_values_2():
+    return (-74.018433, 40.718087, -73.982749, 40.733356)
+
+
+@pytest.fixture()
+def bbox_values_3():
+    return (4.042110, 46.006263, 4.098072, 46.057509)

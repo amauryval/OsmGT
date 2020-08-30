@@ -1,5 +1,7 @@
 from typing import List
 
+osm_url = "https://www.openstreetmap.org"
+
 epsg_4326: str = "4326"
 epsg_3857: str = "3857"
 
