@@ -75,7 +75,10 @@ class OsmGtShortestPath(OsmGtRoads):
         return self.get_gdf()
 
     def from_bbox(
-        self, bbox_value: Tuple[float, float, float, float], additionnal_nodes: None, mode: str,
+        self,
+        bbox_value: Tuple[float, float, float, float],
+        additionnal_nodes: None,
+        mode: str,
     ) -> gpd.GeoDataFrame:
         super().from_bbox(
             bbox_value, additionnal_nodes=self._additionnal_nodes_gdf, mode=mode
@@ -123,8 +126,14 @@ class OsmGtShortestPath(OsmGtRoads):
             ]
 
             path_geoms = osm_roads_features[self._GEOMETRY_FIELD].to_list()
-            path_osm_ids = filter(lambda x: isinstance(x, str), osm_roads_features[self._ID_OSM_FIELD].to_list())
-            path_osm_urls = filter(lambda x: isinstance(x, str), osm_roads_features[self._OSM_URL_FIELD].to_list())
+            path_osm_ids = filter(
+                lambda x: isinstance(x, str),
+                osm_roads_features[self._ID_OSM_FIELD].to_list(),
+            )
+            path_osm_urls = filter(
+                lambda x: isinstance(x, str),
+                osm_roads_features[self._OSM_URL_FIELD].to_list(),
+            )
 
             # reorder linestring
             path_found = linemerge(path_geoms)

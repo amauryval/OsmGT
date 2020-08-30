@@ -54,7 +54,7 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
         osm_road = OsmGtRoads()
-        osm_road.from_bbox(bbox_values , additionnal_nodes , mode)
+        osm_road.from_bbox(bbox_values, additionnal_nodes, mode)
         return osm_road
 
     @staticmethod
@@ -132,7 +132,6 @@ class OsmGt:
         return OsmGtShortestPath(source_target_points).from_location(
             location_name, None, mode
         )
-
 
     @staticmethod
     def shortest_path_from_bbox(

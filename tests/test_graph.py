@@ -9,6 +9,7 @@ from osmgt.network.gt_helper import ExistingVertex
 def init_logger():
     return Logger(logger_name="graph_test", logger_dir="test").logger
 
+
 def create_undirected_graph(point_a, point_b, point_c):
     graph = GraphHelpers(init_logger())
     edge_1 = graph.add_edge(point_a.wkt, point_b.wkt, "edge_1")

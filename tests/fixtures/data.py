@@ -159,7 +159,7 @@ def default_columns_from_output():
 
 @pytest.fixture
 def shortest_path_default_columns_from_output():
-    return ['source_node', 'target_node', 'osm_ids', 'osm_urls', 'geometry']
+    return ["source_node", "target_node", "osm_ids", "osm_urls", "geometry"]
 
 
 @pytest.fixture
@@ -171,22 +171,17 @@ def points_gdf_from_coords():
 
 @pytest.fixture
 def start_and_end_nodes():
-    return (
-        Point(4.0697088, 46.0410178), Point(4.0757785, 46.0315038)
-    )
+    return (Point(4.0697088, 46.0410178), Point(4.0757785, 46.0315038))
 
 
 @pytest.fixture
 def start_and_end_nodes_2():
-    return (
-        Point(-74.004110, 40.722584), Point(-74.000205, 40.721494)
-    )
+    return (Point(-74.004110, 40.722584), Point(-74.000205, 40.721494))
+
 
 @pytest.fixture
 def start_and_end_nodes_3():
-    return (
-        Point(-74.004110, 40.722584), Point(4.0757785, 46.0315038)
-    )
+    return (Point(-74.004110, 40.722584), Point(4.0757785, 46.0315038))
 
 
 @pytest.fixture()

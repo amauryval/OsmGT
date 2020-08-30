@@ -179,7 +179,9 @@ class OsmGtCore(Logger):
     ) -> Dict:
         properties_found: Dict = properties.get(self._PROPERTIES_OSM_FIELD, {})
         properties_found[self._ID_OSM_FIELD] = str(properties[self._ID_OSM_FIELD])
-        properties_found[self._OSM_URL_FIELD] = f"{osm_url}/{self._FEATURE_OSM_TYPE}/{properties_found[self._ID_OSM_FIELD]}"
+        properties_found[
+            self._OSM_URL_FIELD
+        ] = f"{osm_url}/{self._FEATURE_OSM_TYPE}/{properties_found[self._ID_OSM_FIELD]}"
 
         # used for topology
         properties_found[
