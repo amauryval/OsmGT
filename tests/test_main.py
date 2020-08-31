@@ -199,11 +199,11 @@ def test_if_shortest_path_from_bbox_with_an_outside_node_on_pairs(
 
 
 def test_if_isochrone_from_distance(location_point, isochrone_values):
-    isochrones_polygons_from_location, isochrones_lines_from_location = OsmGt.isochrone_distance_from_coordinates(
-        location_point,
-        [1000],
-        3,
-        mode="pedestrian"
+    (
+        isochrones_polygons_from_location,
+        isochrones_lines_from_location,
+    ) = OsmGt.isochrone_distance_from_coordinates(
+        location_point, [1000], 3, mode="pedestrian"
     )
 
     assert isochrones_polygons_from_location.shape[0] == 1

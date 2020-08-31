@@ -40,7 +40,12 @@ class OsmGtIsochrone(OsmGtRoads):
     __ISOCHRONE_NAME_FIELD: str = "iso_name"
     __ISODISTANCE_NAME_FIELD: str = "iso_distance"
 
-    def __init__(self, trip_speed: float, isochrones_times: Optional[List], distance_to_compute: Optional[List] = None) -> None:
+    def __init__(
+        self,
+        trip_speed: float,
+        isochrones_times: Optional[List],
+        distance_to_compute: Optional[List] = None,
+    ) -> None:
         super().__init__()
 
         self.source_node: Optional[str] = None
@@ -51,20 +56,28 @@ class OsmGtIsochrone(OsmGtRoads):
         distance_to_compute = distance_to_compute
 
         if isochrones_times is None and distance_to_compute is None:
-            raise IsochroneArgError("class needs one of 'isochrones_times' and 'distance_to_compute'")
+            raise IsochroneArgError(
+                "class needs one of 'isochrones_times' and 'distance_to_compute'"
+            )
         elif isochrones_times is not None and distance_to_compute is not None:
-            raise IsochroneArgError("class needs one of 'isochrones_times' and 'distance_to_compute'")
+            raise IsochroneArgError(
+                "class needs one of 'isochrones_times' and 'distance_to_compute'"
+            )
 
         if isochrones_times is not None:
-            self._isochrones_times = self._prepare_isochrone_values_from_times(isochrones_times)
+            self._isochrones_times = self._prepare_isochrone_values_from_times(
+                isochrones_times
+            )
         elif distance_to_compute is not None:
-            self._isochrones_times = self._prepare_isochrone_values_from_distance(distance_to_compute)
+            self._isochrones_times = self._prepare_isochrone_values_from_distance(
+                distance_to_compute
+            )
 
     def _prepare_isochrone_values_from_times(self, isochrones_times: List) -> List:
         isochrones_times.sort()
         speed_to_m_s: float = self._trip_speed / km_hour_2_m_sec
 
-        #iso time = min
+        # iso time = min
         times_reach_time_dist: Dict = {
             iso_time: math.ceil((iso_time * min_2_sec) * speed_to_m_s)  # distance
             for iso_time in isochrones_times
@@ -75,12 +88,14 @@ class OsmGtIsochrone(OsmGtRoads):
         self._raw_isochrones = isochrones_times
         return times_reach_time_dist_reversed
 
-    def _prepare_isochrone_values_from_distance(self, distance_to_compute: List) -> List:
+    def _prepare_isochrone_values_from_distance(
+        self, distance_to_compute: List
+    ) -> List:
         distance_to_compute.sort()
         speed_to_m_s: float = self._trip_speed / km_hour_2_m_sec
 
         times_reach_time_dist: Dict = {
-            distance / speed_to_m_s / min_2_sec: distance # distance
+            distance / speed_to_m_s / min_2_sec: distance  # distance
             for distance in distance_to_compute
         }
         times_reach_time_dist_reversed: List = sorted(
@@ -114,7 +129,7 @@ class OsmGtIsochrone(OsmGtRoads):
             location_point_reproj_buffered_bounds,
             additionnal_nodes=additionnal_nodes_gdf,
             mode=mode,
-            interpolate_lines=True
+            interpolate_lines=True,
         )
 
         self._network_gdf = super().get_gdf()
@@ -163,17 +178,26 @@ class OsmGtIsochrone(OsmGtRoads):
                 {
                     self.__ISOCHRONE_NAME_FIELD: isochrone_label,
                     self.__ISODISTANCE_NAME_FIELD: dist,
-                    "geometry": polygon
-                 }
+                    "geometry": polygon,
+                }
             )
         self.__dissolve_network_roads()
 
     def __dissolve_network_roads(self) -> None:
-        self._network_gdf[self._TOPO_FIELD].replace(r'_[0-9]+$', '', regex=True, inplace=True)
-        self._network_gdf[self._TOPO_FIELD] = self._network_gdf[self._TOPO_FIELD] + "__" + self._network_gdf[self.__ISOCHRONE_NAME_FIELD]
-        self._network_gdf = self._network_gdf.dissolve(by=self._TOPO_FIELD).reset_index()
-        self._network_gdf[self._TOPO_FIELD].replace(r'__.+$', '', regex=True, inplace=True)
-
+        self._network_gdf[self._TOPO_FIELD].replace(
+            r"_[0-9]+$", "", regex=True, inplace=True
+        )
+        self._network_gdf[self._TOPO_FIELD] = (
+            self._network_gdf[self._TOPO_FIELD]
+            + "__"
+            + self._network_gdf[self.__ISOCHRONE_NAME_FIELD]
+        )
+        self._network_gdf = self._network_gdf.dissolve(
+            by=self._TOPO_FIELD
+        ).reset_index()
+        self._network_gdf[self._TOPO_FIELD].replace(
+            r"__.+$", "", regex=True, inplace=True
+        )
 
     def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
         output = super().get_gdf()

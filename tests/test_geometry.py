@@ -62,7 +62,7 @@ def test_connect_lines_interpolate_lines(some_line_features, some_point_features
         "uuid",
         "id",
         "pedestrian",
-        True
+        True,
     ).run()
 
     all_uuid = [feature["uuid"] for feature in raw_data_topology_rebuild]

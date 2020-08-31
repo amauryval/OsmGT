@@ -111,7 +111,7 @@ class ConcaveHull:
                 s = (a + b + c) / self.__SEMIPERIMETER_DIVISOR
 
                 # Area of triangle by Heron's formula
-                delta = (s * (s - a) * (s - b) * (s - c))
+                delta = s * (s - a) * (s - b) * (s - c)
                 if delta > 0:
                     area = math.sqrt(delta)
                     if area > 0:

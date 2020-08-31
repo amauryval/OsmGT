@@ -47,7 +47,7 @@ class OsmGtRoads(OsmGtCore):
         location_name: str,
         additionnal_nodes: Optional[gpd.GeoDataFrame],
         mode: str,
-        interpolate_lines: bool = False
+        interpolate_lines: bool = False,
     ) -> None:
         self._check_transport_mode(mode)
         super().from_location(location_name)
@@ -65,7 +65,7 @@ class OsmGtRoads(OsmGtCore):
         bbox_value: Tuple[float, float, float, float],
         additionnal_nodes: Optional[gpd.GeoDataFrame],
         mode: str,
-        interpolate_lines: bool = False
+        interpolate_lines: bool = False,
     ) -> None:
         self._check_transport_mode(mode)
         super().from_bbox(bbox_value)
@@ -105,7 +105,7 @@ class OsmGtRoads(OsmGtCore):
         raw_data: List[Dict],
         additionnal_nodes: Optional[gpd.GeoDataFrame],
         mode: str,
-        interpolate_lines: bool
+        interpolate_lines: bool,
     ) -> List[Dict]:
         if additionnal_nodes is not None:
             additionnal_nodes = self._check_topology_field(additionnal_nodes)
@@ -138,7 +138,7 @@ class OsmGtRoads(OsmGtCore):
             self._TOPO_FIELD,
             self._ID_OSM_FIELD,
             mode,
-            interpolate_lines
+            interpolate_lines,
         ).run()
 
         return raw_data_topology_rebuild

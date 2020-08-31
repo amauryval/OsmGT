@@ -67,7 +67,7 @@ class NetworkTopology:
         uuid_field: str,
         original_field_id: str,
         mode_post_processing: str,
-        improve_line_output: bool = False
+        improve_line_output: bool = False,
     ) -> None:
         """
 
@@ -234,7 +234,9 @@ class NetworkTopology:
 
         return new_elements
 
-    def _direction_processing(self, input_feature: Dict, direction: Optional[str] = None):
+    def _direction_processing(
+        self, input_feature: Dict, direction: Optional[str] = None
+    ):
         new_features = []
         input_feature_copy = dict(input_feature)
 
@@ -245,7 +247,9 @@ class NetworkTopology:
 
             for idx, sub_line_coords in enumerate(new_lines_coords):
                 new_features.append(
-                    self.__proceed_direction_geom(direction, input_feature_copy, sub_line_coords, idx)
+                    self.__proceed_direction_geom(
+                        direction, input_feature_copy, sub_line_coords, idx
+                    )
                 )
         else:
             new_coords = list(self._split_line(input_feature_copy, 1))
@@ -256,7 +260,9 @@ class NetworkTopology:
 
         return new_features
 
-    def __proceed_direction_geom(self, direction, input_feature, sub_line_coords, idx=None):
+    def __proceed_direction_geom(
+        self, direction, input_feature, sub_line_coords, idx=None
+    ):
         feature = dict(input_feature)
 
         if idx is not None:
@@ -281,8 +287,7 @@ class NetworkTopology:
 
     def _split_line(self, feature, interpolation_level):
         new_line_coords = interpolate_curve_based_on_original_points(
-            np.array(feature[self.__COORDINATES_FIELD]),
-            interpolation_level,
+            np.array(feature[self.__COORDINATES_FIELD]), interpolation_level,
         )
         return new_line_coords
 
