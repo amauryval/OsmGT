@@ -394,7 +394,7 @@ class NetworkTopology:
                 middle_coordinates_values = self._insert_value(
                     middle_coordinates_values,
                     point_intersection,
-                    tuple([point_intersection]),  # TODO check type
+                    tuple([point_intersection]),
                 )
 
                 middle_coordinates_values = self._insert_value(

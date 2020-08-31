@@ -58,7 +58,7 @@ def compute_wg84_line_length(input_geom: LineString) -> float:
     return total_length
 
 
-class Concave_hull:
+class ConcaveHull:
     # source: http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/
     __TOLERANCE_VALUE: float = 1.87
 
