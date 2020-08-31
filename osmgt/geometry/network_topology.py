@@ -67,6 +67,7 @@ class NetworkTopology:
         uuid_field: str,
         original_field_id: str,
         mode_post_processing: str,
+        improve_line_output: bool = False
     ) -> None:
         """
 
@@ -81,6 +82,7 @@ class NetworkTopology:
 
         self._network_data = self._check_inputs(network_data)
         self._mode_post_processing = mode_post_processing
+        self._improve_line_output = improve_line_output
 
         self._additionnal_nodes = additionnal_nodes
         if self._additionnal_nodes is None:
@@ -214,7 +216,7 @@ class NetworkTopology:
         if self._mode_post_processing == "vehicle":
             # by default
             new_forward_feature = self._direction_processing(input_feature, "forward")
-            new_elements.append(new_forward_feature)
+            new_elements.extend(new_forward_feature)
             if input_feature.get("junction", None) in ["roundabout", "jughandle"]:
                 return new_elements
 
@@ -222,34 +224,67 @@ class NetworkTopology:
                 new_backward_feature = self._direction_processing(
                     input_feature, "backward"
                 )
-                new_elements.append(new_backward_feature)
+                new_elements.extend(new_backward_feature)
 
         elif self._mode_post_processing == "pedestrian":
-            # it's the default behavior in fact
+            # it's the default behavior
 
             feature = self._direction_processing(input_feature)
-            new_elements.append(feature)
+            new_elements.extend(feature)
 
         return new_elements
 
-    def _direction_processing(self, input_feature, direction=None):
+    def _direction_processing(self, input_feature: Dict, direction: Optional[str] = None):
+        new_features = []
+        input_feature_copy = dict(input_feature)
+
+        if self._improve_line_output:
+            new_coords = list(self._split_line(input_feature_copy, 3))
+            new_lines_coords = list(zip(new_coords, new_coords[1:]))
+            del input_feature_copy[self.__COORDINATES_FIELD]
+
+            for idx, sub_line_coords in enumerate(new_lines_coords):
+                new_features.append(
+                    self.__proceed_direction_geom(direction, input_feature_copy, sub_line_coords, idx)
+                )
+        else:
+            new_coords = list(self._split_line(input_feature_copy, 1))
+            del input_feature_copy[self.__COORDINATES_FIELD]
+            new_features.append(
+                self.__proceed_direction_geom(direction, input_feature_copy, new_coords)
+            )
+
+        return new_features
+
+    def __proceed_direction_geom(self, direction, input_feature, sub_line_coords, idx=None):
         feature = dict(input_feature)
 
+        if idx is not None:
+            idx = f"_{idx}"
+        else:
+            idx = ""
+
         if direction == "backward":
-            new_linestring = LineString(feature[self.__COORDINATES_FIELD][::-1])
+            new_linestring = LineString(sub_line_coords[::-1])
         elif direction in ["forward", None]:
-            new_linestring = LineString(feature[self.__COORDINATES_FIELD])
+            new_linestring = LineString(sub_line_coords)
         else:
             raise NetworkTopologyError(f"Direction issue: value '{direction}' found")
         feature[self.__GEOMETRY_FIELD] = new_linestring
 
         if direction is not None:
-            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}_{direction}"
+            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}{idx}_{direction}"
         else:
-            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}"
+            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}{idx}"
 
-        del feature[self.__COORDINATES_FIELD]
         return feature
+
+    def _split_line(self, feature, interpolation_level):
+        new_line_coords = interpolate_curve_based_on_original_points(
+            np.array(feature[self.__COORDINATES_FIELD]),
+            interpolation_level,
+        )
+        return new_line_coords
 
     def _prepare_data(self):
 
@@ -365,7 +400,7 @@ class NetworkTopology:
                 self.__GEOMETRY_FIELD: connection,
                 self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_ADDED,
                 self.__FIELD_ID: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
-                self._original_field_id: f"{self.__TOPOLOGY_TAG_ADDED}_{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
+                self._original_field_id: f"{self.__TOPOLOGY_TAG_ADDED}_{node_key}",
             }
 
         return {
@@ -394,7 +429,7 @@ class NetworkTopology:
                 middle_coordinates_values = self._insert_value(
                     middle_coordinates_values,
                     point_intersection,
-                    tuple([point_intersection]),  # TODO check type
+                    tuple([point_intersection]),
                 )
 
                 middle_coordinates_values = self._insert_value(

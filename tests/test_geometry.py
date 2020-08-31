@@ -12,8 +12,10 @@ def test_connect_lines(some_line_features, some_point_features):
         "id",
         "pedestrian",
     ).run()
-    all_uuid = [feature["uuid"] for feature in raw_data_topology_rebuild]
 
+    all_uuid = [feature["uuid"] for feature in raw_data_topology_rebuild]
+    for f in raw_data_topology_rebuild:
+        print(f["geometry"])
     assert len(raw_data_topology_rebuild) == 18
     # check duplicated
     assert len(all_uuid) == len(all_uuid)
@@ -44,6 +46,36 @@ def test_connect_lines(some_line_features, some_point_features):
     for feature in raw_data_topology_rebuild:
         if feature["topology"] == "unchanged":
             assert "_" not in feature["uuid"]
+
+        if feature["topology"] == "split":
+            assert "_" in feature["uuid"]
+
+        if feature["topology"] == "added":
+            assert "added_" in feature["uuid"]
+
+
+def test_connect_lines_interpolate_lines(some_line_features, some_point_features):
+    raw_data_topology_rebuild = NetworkTopology(
+        OsmGtCore().logger,
+        some_line_features,
+        some_point_features,
+        "uuid",
+        "id",
+        "pedestrian",
+        True
+    ).run()
+
+    all_uuid = [feature["uuid"] for feature in raw_data_topology_rebuild]
+    for f in raw_data_topology_rebuild:
+        print(f["geometry"])
+    assert len(raw_data_topology_rebuild) == 96
+    # check duplicated
+    assert len(all_uuid) == len(all_uuid)
+    assert len(all_uuid) == len(set(all_uuid))
+
+    for feature in raw_data_topology_rebuild:
+        if feature["topology"] == "unchanged":
+            assert "_" in feature["uuid"]
 
         if feature["topology"] == "split":
             assert "_" in feature["uuid"]

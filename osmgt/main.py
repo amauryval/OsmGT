@@ -106,7 +106,33 @@ class OsmGt:
         """
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
-            isochrones_times, trip_speed
+            trip_speed, isochrones_times
+        ).from_location_point(coordinates, mode)
+
+        return isochrone_polygons_gdf, isochrone_lines_gdf
+
+    @staticmethod
+    def isochrone_distance_from_coordinates(
+        coordinates: Point,
+        distances: List,
+        trip_speed: float,
+        mode: str = "pedestrian",
+    ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+        """
+        :param coordinates: location points
+        :type coordinates: shapely.geometry.Point
+        :param distances: distances (meters)
+        :type distances: list of int
+        :param trip_speed: trip speed in km/h
+        :type trip_speed: int
+        :param mode: the transport mode
+        :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
+        :return: 2 geodataframe : isochrones polygons and isochrones lines (roads)
+        :rtype: tuple(geopandas.GeoDataFrame)
+        """
+
+        isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
+            trip_speed, None, distances
         ).from_location_point(coordinates, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf

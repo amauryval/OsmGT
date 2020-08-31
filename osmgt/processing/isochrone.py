@@ -26,29 +26,45 @@ from shapely.wkt import loads
 from shapely.geometry import base
 from shapely.geometry import Point
 
-from osmgt.geometry.geom_helpers import Concave_hull
+from osmgt.geometry.geom_helpers import ConcaveHull
 from osmgt.geometry.geom_helpers import reproject
+
+
+class IsochroneArgError(Exception):
+    pass
 
 
 class OsmGtIsochrone(OsmGtRoads):
 
     __DISTANCE_TOLERANCE: float = 1.2
     __ISOCHRONE_NAME_FIELD: str = "iso_name"
+    __ISODISTANCE_NAME_FIELD: str = "iso_distance"
 
-    def __init__(self, isochrones_times: List, trip_speed: float) -> None:
+    def __init__(self, trip_speed: float, isochrones_times: Optional[List], distance_to_compute: Optional[List] = None) -> None:
         super().__init__()
 
         self.source_node: Optional[str] = None
 
         self._trip_speed: float = trip_speed  # km/h
 
-        isochrones_times.sort()
-        self._raw_isochrones = isochrones_times
-        self._isochrones_times = self._prepare_isochrone_values(isochrones_times)
+        isochrones_times = isochrones_times
+        distance_to_compute = distance_to_compute
 
-    def _prepare_isochrone_values(self, isochrones_times: List) -> List:
+        if isochrones_times is None and distance_to_compute is None:
+            raise IsochroneArgError("class needs one of 'isochrones_times' and 'distance_to_compute'")
+        elif isochrones_times is not None and distance_to_compute is not None:
+            raise IsochroneArgError("class needs one of 'isochrones_times' and 'distance_to_compute'")
+
+        if isochrones_times is not None:
+            self._isochrones_times = self._prepare_isochrone_values_from_times(isochrones_times)
+        elif distance_to_compute is not None:
+            self._isochrones_times = self._prepare_isochrone_values_from_distance(distance_to_compute)
+
+    def _prepare_isochrone_values_from_times(self, isochrones_times: List) -> List:
+        isochrones_times.sort()
         speed_to_m_s: float = self._trip_speed / km_hour_2_m_sec
 
+        #iso time = min
         times_reach_time_dist: Dict = {
             iso_time: math.ceil((iso_time * min_2_sec) * speed_to_m_s)  # distance
             for iso_time in isochrones_times
@@ -56,11 +72,27 @@ class OsmGtIsochrone(OsmGtRoads):
         times_reach_time_dist_reversed: List = sorted(
             times_reach_time_dist.items(), key=lambda x: x[1], reverse=True
         )
+        self._raw_isochrones = isochrones_times
+        return times_reach_time_dist_reversed
+
+    def _prepare_isochrone_values_from_distance(self, distance_to_compute: List) -> List:
+        distance_to_compute.sort()
+        speed_to_m_s: float = self._trip_speed / km_hour_2_m_sec
+
+        times_reach_time_dist: Dict = {
+            distance / speed_to_m_s / min_2_sec: distance # distance
+            for distance in distance_to_compute
+        }
+        times_reach_time_dist_reversed: List = sorted(
+            times_reach_time_dist.items(), key=lambda x: x[1], reverse=True
+        )
+        self._raw_isochrones = list(times_reach_time_dist.keys())
         return times_reach_time_dist_reversed
 
     def from_location_point(
         self, location_point: Point, mode: str
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+
         self.source_node = location_point.wkt
         # compute bbox
         max_distance = max(self._isochrones_times, key=itemgetter(1))[-1]
@@ -82,6 +114,7 @@ class OsmGtIsochrone(OsmGtRoads):
             location_point_reproj_buffered_bounds,
             additionnal_nodes=additionnal_nodes_gdf,
             mode=mode,
+            interpolate_lines=True
         )
 
         self._network_gdf = super().get_gdf()
@@ -112,7 +145,7 @@ class OsmGtIsochrone(OsmGtRoads):
 
             points = [loads(graph.vertex_names[vertex]) for vertex in pred]
 
-            concave_hull_proc = Concave_hull(points)
+            concave_hull_proc = ConcaveHull(points)
             polygon = concave_hull_proc.polygon()
 
             network_gdf_copy_mask = self._network_gdf.within(polygon)
@@ -122,10 +155,25 @@ class OsmGtIsochrone(OsmGtRoads):
             self._network_gdf.loc[
                 network_gdf_copy_mask, self.__ISOCHRONE_NAME_FIELD
             ] = isochrone_label
+            self._network_gdf.loc[
+                network_gdf_copy_mask, self.__ISODISTANCE_NAME_FIELD
+            ] = dist
 
             self._output_data.append(
-                {self.__ISOCHRONE_NAME_FIELD: isochrone_label, "geometry": polygon}
+                {
+                    self.__ISOCHRONE_NAME_FIELD: isochrone_label,
+                    self.__ISODISTANCE_NAME_FIELD: dist,
+                    "geometry": polygon
+                 }
             )
+        self.__dissolve_network_roads()
+
+    def __dissolve_network_roads(self) -> None:
+        self._network_gdf[self._TOPO_FIELD].replace(r'_[0-9]+$', '', regex=True, inplace=True)
+        self._network_gdf[self._TOPO_FIELD] = self._network_gdf[self._TOPO_FIELD] + "__" + self._network_gdf[self.__ISOCHRONE_NAME_FIELD]
+        self._network_gdf = self._network_gdf.dissolve(by=self._TOPO_FIELD).reset_index()
+        self._network_gdf[self._TOPO_FIELD].replace(r'__.+$', '', regex=True, inplace=True)
+
 
     def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
         output = super().get_gdf()

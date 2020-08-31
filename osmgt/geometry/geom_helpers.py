@@ -58,7 +58,7 @@ def compute_wg84_line_length(input_geom: LineString) -> float:
     return total_length
 
 
-class Concave_hull:
+class ConcaveHull:
     # source: http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/
     __TOLERANCE_VALUE: float = 1.87
 
@@ -111,14 +111,18 @@ class Concave_hull:
                 s = (a + b + c) / self.__SEMIPERIMETER_DIVISOR
 
                 # Area of triangle by Heron's formula
-                area = math.sqrt(s * (s - a) * (s - b) * (s - c))
-                circum_r = a * b * c / (self.__HERON_FORMULA_DIVISOR * area)
+                delta = (s * (s - a) * (s - b) * (s - c))
+                if delta > 0:
+                    area = math.sqrt(delta)
+                    if area > 0:
+                        circum_r = a * b * c / (self.__HERON_FORMULA_DIVISOR * area)
 
-                # Here's the radius filter.
-                if circum_r < 1.0 / self.__TOLERANCE_VALUE:
-                    self.add_edge(coords, ia, ib)
-                    self.add_edge(coords, ib, ic)
-                    self.add_edge(coords, ic, ia)
+                        # Here's the radius filter.
+                        if circum_r < 1.0 / self.__TOLERANCE_VALUE:
+                            self.add_edge(coords, ia, ib)
+                            self.add_edge(coords, ib, ic)
+                            self.add_edge(coords, ic, ia)
+
             multilinestring_built = MultiLineString(self._edge_points)
             self._triangles: List = list(polygonize(multilinestring_built))
 
