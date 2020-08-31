@@ -38,6 +38,7 @@ class OsmGtIsochrone(OsmGtRoads):
 
     __DISTANCE_TOLERANCE: float = 1.2
     __ISOCHRONE_NAME_FIELD: str = "iso_name"
+    __ISODISTANCE_NAME_FIELD: str = "iso_distance"
 
     def __init__(self, trip_speed: float, isochrones_times: Optional[List], distance_to_compute: Optional[List] = None) -> None:
         super().__init__()
@@ -113,6 +114,7 @@ class OsmGtIsochrone(OsmGtRoads):
             location_point_reproj_buffered_bounds,
             additionnal_nodes=additionnal_nodes_gdf,
             mode=mode,
+            interpolate_lines=True
         )
 
         self._network_gdf = super().get_gdf()
@@ -153,10 +155,25 @@ class OsmGtIsochrone(OsmGtRoads):
             self._network_gdf.loc[
                 network_gdf_copy_mask, self.__ISOCHRONE_NAME_FIELD
             ] = isochrone_label
+            self._network_gdf.loc[
+                network_gdf_copy_mask, self.__ISODISTANCE_NAME_FIELD
+            ] = dist
 
             self._output_data.append(
-                {self.__ISOCHRONE_NAME_FIELD: isochrone_label, "geometry": polygon}
+                {
+                    self.__ISOCHRONE_NAME_FIELD: isochrone_label,
+                    self.__ISODISTANCE_NAME_FIELD: dist,
+                    "geometry": polygon
+                 }
             )
+        self.__dissolve_network_roads()
+
+    def __dissolve_network_roads(self) -> None:
+        self._network_gdf[self._TOPO_FIELD].replace(r'_[0-9]+$', '', regex=True, inplace=True)
+        self._network_gdf[self._TOPO_FIELD] = self._network_gdf[self._TOPO_FIELD] + "__" + self._network_gdf[self.__ISOCHRONE_NAME_FIELD]
+        self._network_gdf = self._network_gdf.dissolve(by=self._TOPO_FIELD).reset_index()
+        self._network_gdf[self._TOPO_FIELD].replace(r'__.+$', '', regex=True, inplace=True)
+
 
     def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
         output = super().get_gdf()
