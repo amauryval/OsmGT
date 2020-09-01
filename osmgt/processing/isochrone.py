@@ -18,6 +18,7 @@ import geopandas as gpd
 import pandas as pd
 
 try:
+    from graph_tool.topology import extract_largest_component
     from graph_tool.topology import shortest_distance
 except ModuleNotFoundError:
     pass
@@ -29,6 +30,45 @@ from shapely.geometry import Point
 from osmgt.geometry.geom_helpers import ConcaveHull
 from osmgt.geometry.geom_helpers import reproject
 
+# to facilitate debugging
+try:
+    from osmgt.network.gt_helper import GraphHelpers
+except ModuleNotFoundError:
+    pass
+
+
+def split_multiline_to_lines(input_gdf, epsg_data):
+    """
+    split each linestring row from a geodataframe to point
+
+    :param input_gdf: your geodataframe containing linestrings
+    :type input_gdf: Geopandas.GeoDataframe
+    :param epsg_data:
+    :type epsg_data: str
+    :return: your geodataframe exploded containing points
+    :rtype: Pandas.Dataframe
+    """
+
+    # prepare indexed columns
+    columns_index = input_gdf.columns.tolist()
+    # without geometry column.. because we want explode it
+    columns_index.remove("geometry")
+
+    # convert the linestring to a list of points
+    input_gdf["geometry"] = input_gdf["geometry"].apply(lambda x: x.geoms if x.geom_type == "MultiLineString" else x)
+    # set index with columns_index variable (without geometry)
+    input_gdf.set_index(columns_index, inplace=True)
+    output = input_gdf["geometry"].explode().reset_index()
+    # TODO add id with explode for each linestring created, and then MERGE based on topo_uuid
+    geometry = output["geometry"]
+    output: gpd.GeoDataFrame = gpd.GeoDataFrame(
+        output.drop(["geometry"], axis=1),
+        crs=f"EPSG:{epsg_data}",
+        geometry=geometry.to_list(),
+    )
+
+    return output
+
 
 class IsochroneArgError(Exception):
     pass
@@ -39,6 +79,8 @@ class OsmGtIsochrone(OsmGtRoads):
     __DISTANCE_TOLERANCE: float = 1.2
     __ISOCHRONE_NAME_FIELD: str = "iso_name"
     __ISODISTANCE_NAME_FIELD: str = "iso_distance"
+    __DISSOLVE_NAME_FIELD: str = "__dissolve__"
+    __TOPO_FIELD_REGEX_CLEANER = r"_[0-9]+$"
 
     def __init__(
         self,
@@ -50,7 +92,8 @@ class OsmGtIsochrone(OsmGtRoads):
 
         self.source_node: Optional[str] = None
 
-        self._trip_speed: float = trip_speed  # km/h
+        # trip_speed in km/h
+        self._speed_to_m_s: float = trip_speed / km_hour_2_m_sec
 
         isochrones_times = isochrones_times
         distance_to_compute = distance_to_compute
@@ -75,34 +118,31 @@ class OsmGtIsochrone(OsmGtRoads):
 
     def _prepare_isochrone_values_from_times(self, isochrones_times: List) -> List:
         isochrones_times.sort()
-        speed_to_m_s: float = self._trip_speed / km_hour_2_m_sec
 
         # iso time = min
-        times_reach_time_dist: Dict = {
-            iso_time: math.ceil((iso_time * min_2_sec) * speed_to_m_s)  # distance
+        times_dist: Dict = {
+            iso_time: math.ceil((iso_time * min_2_sec) * self._speed_to_m_s)  # distance
             for iso_time in isochrones_times
         }
-        times_reach_time_dist_reversed: List = sorted(
-            times_reach_time_dist.items(), key=lambda x: x[1], reverse=True
-        )
-        self._raw_isochrones = isochrones_times
-        return times_reach_time_dist_reversed
+        return self._compute_isochrones_ingredient(times_dist)
 
     def _prepare_isochrone_values_from_distance(
         self, distance_to_compute: List
     ) -> List:
         distance_to_compute.sort()
-        speed_to_m_s: float = self._trip_speed / km_hour_2_m_sec
 
-        times_reach_time_dist: Dict = {
-            distance / speed_to_m_s / min_2_sec: distance  # distance
+        times_dist: Dict = {
+            distance / self._speed_to_m_s / min_2_sec: distance  # distance
             for distance in distance_to_compute
         }
-        times_reach_time_dist_reversed: List = sorted(
-            times_reach_time_dist.items(), key=lambda x: x[1], reverse=True
+        return self._compute_isochrones_ingredient(times_dist)
+
+    def _compute_isochrones_ingredient(self, input_ingredients: Dict) -> List:
+
+        times_dist: List = sorted(
+            input_ingredients.items(), key=lambda x: x[1], reverse=True
         )
-        self._raw_isochrones = list(times_reach_time_dist.keys())
-        return times_reach_time_dist_reversed
+        return times_dist
 
     def from_location_point(
         self, location_point: Point, mode: str
@@ -123,7 +163,7 @@ class OsmGtIsochrone(OsmGtRoads):
         df = pd.DataFrame(additionnal_nodes)
         geometry = df["geometry"]
         additionnal_nodes_gdf = gpd.GeoDataFrame(
-            df.drop(["geometry"], axis=1), crs=4326, geometry=geometry.to_list(),
+            df.drop(["geometry"], axis=1), crs=int(epsg_4326), geometry=geometry.to_list(),
         )
         self.from_bbox(
             location_point_reproj_buffered_bounds,
@@ -185,24 +225,26 @@ class OsmGtIsochrone(OsmGtRoads):
 
     def __dissolve_network_roads(self) -> None:
         self._network_gdf[self._TOPO_FIELD].replace(
-            r"_[0-9]+$", "", regex=True, inplace=True
+            self.__TOPO_FIELD_REGEX_CLEANER, "", regex=True, inplace=True
         )
-        self._network_gdf[self._TOPO_FIELD] = (
+
+        self._network_gdf[self.__DISSOLVE_NAME_FIELD] = (
             self._network_gdf[self._TOPO_FIELD]
             + "__"
             + self._network_gdf[self.__ISOCHRONE_NAME_FIELD]
         )
         self._network_gdf = self._network_gdf.dissolve(
-            by=self._TOPO_FIELD
-        ).reset_index()
-        self._network_gdf[self._TOPO_FIELD].replace(
-            r"__.+$", "", regex=True, inplace=True
-        )
+            by=self.__DISSOLVE_NAME_FIELD
+        ).reset_index(drop=True)
+
+        # convert multilinestring to linestrings
+        self._network_gdf = split_multiline_to_lines(self._network_gdf, epsg_4326)
+
 
     def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
         output = super().get_gdf()
         # find iso index pair in order to create hole geom. isochrones are like russian dolls
-        iso_values = self._raw_isochrones[::-1]
+        iso_values = sorted(list(map(lambda x: x[0], self._isochrones_times)), reverse=True)
         iso_values_map: Dict = {
             x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))
         }

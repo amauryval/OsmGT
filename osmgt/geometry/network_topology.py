@@ -4,7 +4,6 @@ from typing import Dict
 from typing import Optional
 from typing import Set
 from typing import Union
-from typing import Generator
 from typing import Iterator
 
 from scipy import spatial
@@ -25,6 +24,7 @@ from numba import jit
 from numba import types as nb_types
 
 import concurrent.futures
+import copy
 
 
 class NetworkTopologyError(Exception):
@@ -36,6 +36,7 @@ class NetworkTopology:
     # TODO oneway field to arg
 
     __INTERPOLATION_LEVEL: int = 7
+    __INTERPOLATION_LINE_LEVEL = 4
     __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND: int = 10
 
     __NUMBER_OF_NODES_INTERSECTIONS: int = 2
@@ -221,9 +222,8 @@ class NetworkTopology:
                 return new_elements
 
             if input_feature.get(self.__ONEWAY_FIELD, None) != "yes":
-                new_backward_feature = self._direction_processing(
-                    input_feature, "backward"
-                )
+
+                new_backward_feature = self._direction_processing(input_feature, "backward")
                 new_elements.extend(new_backward_feature)
 
         elif self._mode_post_processing == "pedestrian":
@@ -241,7 +241,7 @@ class NetworkTopology:
         input_feature_copy = dict(input_feature)
 
         if self._improve_line_output:
-            new_coords = list(self._split_line(input_feature_copy, 3))
+            new_coords = list(self._split_line(input_feature_copy, self.__INTERPOLATION_LINE_LEVEL))
             new_lines_coords = list(zip(new_coords, new_coords[1:]))
             del input_feature_copy[self.__COORDINATES_FIELD]
 
@@ -285,7 +285,7 @@ class NetworkTopology:
 
         return feature
 
-    def _split_line(self, feature, interpolation_level):
+    def _split_line(self, feature: Dict, interpolation_level: int) -> List:
         new_line_coords = interpolate_curve_based_on_original_points(
             np.array(feature[self.__COORDINATES_FIELD]), interpolation_level,
         )
@@ -328,7 +328,7 @@ class NetworkTopology:
         self._bestlines_found = []
         # for nearest_line_key in node_keys_by_nearest_lines_filled:
         #     self.split_line(nearest_line_key)
-        with concurrent.futures.ThreadPoolExecutor(4) as executor:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self.split_line, node_keys_by_nearest_lines_filled)
 
         self._network_data = {**self._network_data, **self.__connections_added}

@@ -148,7 +148,7 @@ class ConcaveHull:
         self._edge_points.append(coords[[i, j]])
 
 
-def reproject(geometry: base, from_epsg: int, to_epsg: int) -> base:
+def reproject(geometry: base, from_epsg: str, to_epsg: str) -> base:
     """
     pyproj_reprojection
 
