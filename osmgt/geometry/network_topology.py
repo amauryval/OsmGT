@@ -109,9 +109,7 @@ class NetworkTopology:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
-        self._intersections_found = set(
-            self.find_intersections_from_ways()
-        )
+        self._intersections_found = set(self.find_intersections_from_ways())
 
         self.logger.info("Build lines")
         for feature in self._network_data.values():

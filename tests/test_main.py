@@ -84,7 +84,7 @@ def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_values_2).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(
-        bbox_values_2, additionnal_nodes=poi_from_web_found_gdf
+        bbox_values_2, additional_nodes=poi_from_web_found_gdf
     )
     graph_computed = network_from_web_found.get_graph()
 
