@@ -18,13 +18,10 @@ from collections import Counter
 
 from more_itertools import split_at
 
-import functools
-
 from numba import jit
 from numba import types as nb_types
 
 import concurrent.futures
-import copy
 
 
 class NetworkTopologyError(Exception):
@@ -36,7 +33,7 @@ class NetworkTopology:
     # TODO oneway field to arg
 
     __INTERPOLATION_LEVEL: int = 7
-    __INTERPOLATION_LINE_LEVEL = 4
+    __INTERPOLATION_LINE_LEVEL: int = 4
     __NB_OF_NEAREST_LINE_ELEMENTS_TO_FIND: int = 10
 
     __NUMBER_OF_NODES_INTERSECTIONS: int = 2
@@ -64,7 +61,7 @@ class NetworkTopology:
         self,
         logger,
         network_data: List[Dict],
-        additionnal_nodes: Optional[List[Dict]],
+        additional_nodes: Optional[List[Dict]],
         uuid_field: str,
         original_field_id: str,
         mode_post_processing: str,
@@ -74,20 +71,22 @@ class NetworkTopology:
 
         :param logger:
         :type network_data: list of dict
-        :type additionnal_nodes: list of dict
+        :type additional_nodes: list of dict
         :type uuid_field: str
         :type mode_post_processing: str
         """
         self.logger = logger
-        self.logger.info("Network cleaning STARTS!")
+        self.logger.info("Network cleaning...")
 
-        self._network_data = self._check_inputs(network_data)
+        self.__topology_stats: dict = {"to add": 0, "to split": 0}
+
+        self._network_data: Union[List[Dict], Dict] = self._check_inputs(network_data)
         self._mode_post_processing = mode_post_processing
         self._improve_line_output = improve_line_output
 
-        self._additionnal_nodes = additionnal_nodes
-        if self._additionnal_nodes is None:
-            self._additionnal_nodes: Dict = {}
+        self._additional_nodes = additional_nodes
+        if self._additional_nodes is None:
+            self._additional_nodes: Dict = {}
 
         # ugly footway processing...
         # self._force_footway_connection = False
@@ -95,6 +94,8 @@ class NetworkTopology:
         self.__FIELD_ID = uuid_field  # have to be an integer.. thank rtree...
         self._original_field_id = original_field_id
 
+        self._intersections_found: Optional[Set[Tuple[float, float]]] = None
+        self.__connections_added: Dict = {}
         self._output: List[Dict] = []
 
     def run(self) -> List[Dict]:
@@ -104,11 +105,11 @@ class NetworkTopology:
         #     self.prepare_footway_nodes()
 
         # connect all the added nodes
-        if len(self._additionnal_nodes) > 0:
+        if len(self._additional_nodes) > 0:
             self.compute_added_node_connections()
 
         # find all the existing intersection from coordinates
-        self._intersections_found: Set[Tuple[float, float]] = set(
+        self._intersections_found = set(
             self.find_intersections_from_ways()
         )
 
@@ -166,18 +167,18 @@ class NetworkTopology:
     #
     #     nodes_footway_bounds = set(all_unique_points).intersection(set(all_unique_fl_points))
     #     footway_additional_nodes = {
-    #         len(self._additionnal_nodes) + idx: {
+    #         len(self._additional_nodes) + idx: {
     #             self.__COORDINATES_FIELD: coords,
-    #             self.__FIELD_ID: len(self._additionnal_nodes) + idx,
+    #             self.__FIELD_ID: len(self._additional_nodes) + idx,
     #             self.__GEOMETRY_FIELD: Point([coords]),
     #             self.__PLACE_NODE_FIELD: self.__PLACE_NODE_DEFAULT_VALUE
     #         }
-    #         for idx, coords in enumerate(nodes_footway_bounds , start=1)  # take care if additionnal node is none
+    #         for idx, coords in enumerate(nodes_footway_bounds , start=1)  # take care if additional node is none
     #     }
-    #     self._additionnal_nodes = {**self._additionnal_nodes , **footway_additional_nodes}
+    #     self._additional_nodes = {**self._additional_nodes , **footway_additional_nodes}
 
     def build_lines(self, feature: Dict) -> None:
-        # compare linecoords and intersections points
+        # compare line coords and intersections points
         coordinates_list = set(feature[self.__COORDINATES_FIELD])
         points_intersections: Set[Tuple[float, float]] = coordinates_list.intersection(
             self._intersections_found
@@ -223,7 +224,9 @@ class NetworkTopology:
 
             if input_feature.get(self.__ONEWAY_FIELD, None) != "yes":
 
-                new_backward_feature = self._direction_processing(input_feature, "backward")
+                new_backward_feature = self._direction_processing(
+                    input_feature, "backward"
+                )
                 new_elements.extend(new_backward_feature)
 
         elif self._mode_post_processing == "pedestrian":
@@ -241,7 +244,9 @@ class NetworkTopology:
         input_feature_copy = dict(input_feature)
 
         if self._improve_line_output:
-            new_coords = list(self._split_line(input_feature_copy, self.__INTERPOLATION_LINE_LEVEL))
+            new_coords = list(
+                self._split_line(input_feature_copy, self.__INTERPOLATION_LINE_LEVEL)
+            )
             new_lines_coords = list(zip(new_coords, new_coords[1:]))
             del input_feature_copy[self.__COORDINATES_FIELD]
 
@@ -301,8 +306,8 @@ class NetworkTopology:
             }
             for feature in self._network_data
         }
-        if self._additionnal_nodes is not None:
-            self._additionnal_nodes = {
+        if self._additional_nodes is not None:
+            self._additional_nodes = {
                 feature[self.__FIELD_ID]: {
                     **{
                         self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[
@@ -311,13 +316,11 @@ class NetworkTopology:
                     },
                     **feature,
                 }
-                for feature in self._additionnal_nodes
+                for feature in self._additional_nodes
             }
 
     def compute_added_node_connections(self):
         self.logger.info("Starting: Adding new nodes on the network")
-        self.__node_con_stats = {"connections_added": 0, "line_split": 0}
-        self.__connections_added: Dict = {}
 
         self.logger.info("Find nearest line for each node")
         node_keys_by_nearest_lines_filled = (
@@ -325,18 +328,16 @@ class NetworkTopology:
         )
 
         self.logger.info("Split line")
-        self._bestlines_found = []
         # for nearest_line_key in node_keys_by_nearest_lines_filled:
         #     self.split_line(nearest_line_key)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self.split_line, node_keys_by_nearest_lines_filled)
 
-        self._network_data = {**self._network_data, **self.__connections_added}
+        self._network_data: Dict = {**self._network_data, **self.__connections_added}
 
-        stats_infos = ", ".join(
-            [f"{key}: {value}" for key, value in self.__node_con_stats.items()]
+        self.logger.info(
+            f"Topology lines checker: {', '.join([f'{key}: {value}' for key, value in self.__topology_stats.items()])}"
         )
-        self.logger.info(f"Done: Adding new nodes on the network ; {stats_infos}")
 
     def split_line(self, node_key_by_nearest_lines):
         nearest_line_content = self.__node_by_nearest_lines[node_key_by_nearest_lines]
@@ -355,11 +356,11 @@ class NetworkTopology:
         ]
         linestring_with_new_nodes.extend(end_points_found)
         linestring_with_new_nodes = set(linestring_with_new_nodes)
-        self.__node_con_stats["line_split"] += len(
+        self.__topology_stats["to split"] += len(
             linestring_with_new_nodes.intersection(end_points_found)
         )
 
-        # build new linestrings
+        # build new LineStrings
         linestring_linked_updated = list(
             filter(lambda x: x in linestring_with_new_nodes, item["interpolated_line"],)
         )
@@ -376,22 +377,22 @@ class NetworkTopology:
             self.__INTERPOLATION_LEVEL,
         )
         line_tree = spatial.cKDTree(interpolated_line_coords)
-        interpolated_line_coords_reformated = list(map(tuple, interpolated_line_coords))
+        interpolated_line_coords_rebuilt = list(map(tuple, interpolated_line_coords))
 
         nodes_coords = [
-            self._additionnal_nodes[node_key][self.__COORDINATES_FIELD]
+            self._additional_nodes[node_key][self.__COORDINATES_FIELD]
             for node_key in node_keys
         ]
         _, nearest_line_object_idxes = line_tree.query(nodes_coords)
         end_points_found = [
-            interpolated_line_coords_reformated[nearest_line_key]
+            interpolated_line_coords_rebuilt[nearest_line_key]
             for nearest_line_key in nearest_line_object_idxes
         ]
 
         connections_coords = list(
             zip(node_keys, list(zip(nodes_coords, end_points_found)))
         )
-        self.__node_con_stats["connections_added"] += len(connections_coords)
+        self.__topology_stats["to add"] += len(connections_coords)
 
         connections_coords_valid = list(
             filter(lambda x: len(set(x[-1])) > 0, connections_coords)
@@ -399,7 +400,7 @@ class NetworkTopology:
         for node_key, connection in connections_coords_valid:
 
             # to split line at node (and also if node is on the network). it builds intersection used to split lines
-            # additionnal are converted to lines
+            # additional are converted to lines
             self.__connections_added[f"from_node_id_{node_key}"] = {
                 self.__COORDINATES_FIELD: connection,
                 self.__GEOMETRY_FIELD: connection,
@@ -409,7 +410,7 @@ class NetworkTopology:
             }
 
         return {
-            "interpolated_line": interpolated_line_coords_reformated,
+            "interpolated_line": interpolated_line_coords_rebuilt,
             "original_line_key": nearest_line_key,
             "end_points_found": end_points_found,
         }
@@ -421,6 +422,7 @@ class NetworkTopology:
     ):
 
         is_rebuild = False
+        coordinates_updated: List[List[Tuple[float, float]]] = []
 
         # split coordinates found at intersection to respect the topology
         first_value, *middle_coordinates_values, last_value = coordinates
@@ -447,12 +449,12 @@ class NetworkTopology:
                 is_rebuild = True
 
         if is_rebuild:
-            coordinates_upd = list(split_at(coordinates, lambda x: x == "_"))
+            coordinates_updated = list(split_at(coordinates, lambda x: x == "_"))
 
         if not is_rebuild:
-            coordinates_upd = list([coordinates])
+            coordinates_updated = list([coordinates])
 
-        return coordinates_upd
+        return coordinates_updated
 
     def find_intersections_from_ways(self) -> Set[Tuple[float, float]]:
         self.logger.info("Starting: Find intersections")
@@ -490,10 +492,10 @@ class NetworkTopology:
             (key, []) for key in self._network_data.keys()
         )
 
-        # not working because rtree cannot be multithreaded
+        # not working because rtree cannot be MultiThreaded
         # with concurrent.futures.ThreadPoolExecutor(4) as executor:
-        #     executor.map(self.__get_nearest_line, self._additionnal_nodes.items())
-        for node_info in self._additionnal_nodes.items():
+        #     executor.map(self.__get_nearest_line, self._additional_nodes.items())
+        for node_info in self._additional_nodes.items():
             self.__get_nearest_line(node_info)
 
         node_keys_by_nearest_lines_filled = filter(
@@ -557,10 +559,10 @@ def interpolate_curve_based_on_original_points(x, n):
     if n > 1:
         m = 0.5 * (x[:-1] + x[1:])
         if x.ndim == 2:
-            msize = (x.shape[0] + m.shape[0], x.shape[1])
+            m_size = (x.shape[0] + m.shape[0], x.shape[1])
         else:
             raise NotImplementedError
-        x_new = np.empty(msize, dtype=x.dtype)
+        x_new = np.empty(m_size, dtype=x.dtype)
         x_new[0::2] = x
         x_new[1::2] = m
         return interpolate_curve_based_on_original_points(x_new, n - 1)

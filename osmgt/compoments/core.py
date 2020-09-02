@@ -61,6 +61,8 @@ class OsmGtCore(Logger):
 
     _FEATURE_OSM_TYPE: Optional[str] = None
 
+    _OUTPUT_EXPECTED_GEOM_TYPE: Optional[str] = None
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -101,11 +103,6 @@ class OsmGtCore(Logger):
         # reordered because of nominatim
         self._bbox_value = (bbox_value[1], bbox_value[0], bbox_value[3], bbox_value[2])
 
-    def _get_study_area_from_bbox(
-        self, bbox: Tuple[float, float, float, float]
-    ) -> None:
-        return
-
     def _query_on_overpass_api(self, request: str) -> List[Dict]:
         return OverpassApi(self.logger).query(request)[self._QUERY_ELEMENTS_FIELD]
 
@@ -121,8 +118,8 @@ class OsmGtCore(Logger):
     ) -> str:
         assert isinstance(bbox_value, tuple)
         assert len(bbox_value) == 4
-        bbox_value_formated = ", ".join(map(str, bbox_value))
-        query = query.format(geo_filter=bbox_value_formated)
+        bbox_value_str = ", ".join(map(str, bbox_value))
+        query = query.format(geo_filter=bbox_value_str)
         return f"({query});{out_geom_query};"
 
     def _check_topology_field(self, input_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -134,15 +131,14 @@ class OsmGtCore(Logger):
 
     def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
         if verbose:
-            self.logger.info("Prepare Geodataframe")
+            self.logger.info("Prepare GeoDataframe")
 
         if len(self._output_data) == 0:
             raise EmptyData(
-                "Geodataframe creation is impossible, because no data has been found"
+                "GeoDataframe creation is impossible, because no data has been found"
             )
 
         if not isinstance(self._output_data, gpd.GeoDataFrame):
-            self._check_build_input_data()
             # more performance comparing .from_features() method
             df: pd.DataFrame = pd.DataFrame(self._output_data)
             geometry = df[self._GEOMETRY_FIELD]  # TODO check type
@@ -155,14 +151,23 @@ class OsmGtCore(Logger):
         else:
             output_gdf: gpd.GeoDataFrame = self._output_data
 
+        self._check_build_input_data(output_gdf)
+
         output_gdf: gpd.GeoDataFrame = self._clean_attributes(output_gdf)
-        self.logger.info("Geodataframe Ready")
+
+        self.logger.info("GeoDataframe Ready")
 
         return output_gdf
 
-    def _check_build_input_data(self) -> None:
-        if self._output_data is None:
-            raise ErrorOsmGtCore("Data is empty!")
+    def _check_build_input_data(self, output_gdf) -> None:
+        if output_gdf.shape[0] == 0:
+            raise EmptyData("Data is empty!")
+
+        geom_types_found = set(output_gdf[self._GEOMETRY_FIELD].geom_type.to_list())
+        if geom_types_found != {self._OUTPUT_EXPECTED_GEOM_TYPE}:
+            raise ErrorOsmGtCore(
+                f"Output geom type not supported! Only {self._OUTPUT_EXPECTED_GEOM_TYPE} supported ; {geom_types_found} found"
+            )
 
     def _clean_attributes(self, input_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         for col_name in input_gdf.columns:

@@ -1,3 +1,7 @@
+import warnings
+
+import logging
+
 from typing import Optional
 from typing import List
 from typing import Dict
@@ -18,7 +22,6 @@ import geopandas as gpd
 import pandas as pd
 
 try:
-    from graph_tool.topology import extract_largest_component
     from graph_tool.topology import shortest_distance
 except ModuleNotFoundError:
     pass
@@ -26,9 +29,9 @@ except ModuleNotFoundError:
 from shapely.wkt import loads
 from shapely.geometry import base
 from shapely.geometry import Point
+from shapely.geometry import MultiPoint
 
-from osmgt.geometry.geom_helpers import ConcaveHull
-from osmgt.geometry.geom_helpers import reproject
+from osmgt.geometry.geom_helpers import reprojection, split_multiline_to_lines
 
 # to facilitate debugging
 try:
@@ -36,38 +39,7 @@ try:
 except ModuleNotFoundError:
     pass
 
-
-def split_multiline_to_lines(input_gdf, epsg_data):
-    """
-    split each linestring row from a geodataframe to point
-
-    :param input_gdf: your geodataframe containing linestrings
-    :type input_gdf: Geopandas.GeoDataframe
-    :param epsg_data:
-    :type epsg_data: str
-    :return: your geodataframe exploded containing points
-    :rtype: Pandas.Dataframe
-    """
-
-    # prepare indexed columns
-    columns_index = input_gdf.columns.tolist()
-    # without geometry column.. because we want explode it
-    columns_index.remove("geometry")
-
-    # convert the linestring to a list of points
-    input_gdf["geometry"] = input_gdf["geometry"].apply(lambda x: x.geoms if x.geom_type == "MultiLineString" else x)
-    # set index with columns_index variable (without geometry)
-    input_gdf.set_index(columns_index, inplace=True)
-    output = input_gdf["geometry"].explode().reset_index()
-    # TODO add id with explode for each linestring created, and then MERGE based on topo_uuid
-    geometry = output["geometry"]
-    output: gpd.GeoDataFrame = gpd.GeoDataFrame(
-        output.drop(["geometry"], axis=1),
-        crs=f"EPSG:{epsg_data}",
-        geometry=geometry.to_list(),
-    )
-
-    return output
+warnings.simplefilter(action="ignore", category=UserWarning)
 
 
 class IsochroneArgError(Exception):
@@ -76,11 +48,17 @@ class IsochroneArgError(Exception):
 
 class OsmGtIsochrone(OsmGtRoads):
 
+    logging.getLogger("geopandas.geodataframe").setLevel(logging.CRITICAL)
+
     __DISTANCE_TOLERANCE: float = 1.2
     __ISOCHRONE_NAME_FIELD: str = "iso_name"
     __ISODISTANCE_NAME_FIELD: str = "iso_distance"
     __DISSOLVE_NAME_FIELD: str = "__dissolve__"
     __TOPO_FIELD_REGEX_CLEANER = r"_[0-9]+$"
+
+    __CLEANING_NETWORK_BUFFER_VALUE: float = 0.000001
+    __CLEANING_NETWORK_CAP_STYLE: int = 3
+    __CLEANING_NETWORK_RESOLUTION: int = 4
 
     def __init__(
         self,
@@ -89,6 +67,7 @@ class OsmGtIsochrone(OsmGtRoads):
         distance_to_compute: Optional[List] = None,
     ) -> None:
         super().__init__()
+        self.logger.info("Isochrone processing...")
 
         self.source_node: Optional[str] = None
 
@@ -137,7 +116,8 @@ class OsmGtIsochrone(OsmGtRoads):
         }
         return self._compute_isochrones_ingredient(times_dist)
 
-    def _compute_isochrones_ingredient(self, input_ingredients: Dict) -> List:
+    @staticmethod
+    def _compute_isochrones_ingredient(input_ingredients: Dict) -> List:
 
         times_dist: List = sorted(
             input_ingredients.items(), key=lambda x: x[1], reverse=True
@@ -151,23 +131,25 @@ class OsmGtIsochrone(OsmGtRoads):
         self.source_node = location_point.wkt
         # compute bbox
         max_distance = max(self._isochrones_times, key=itemgetter(1))[-1]
-        location_point_reproj = reproject(location_point, epsg_4326, epsg_3857)
+        location_point_reproj = reprojection(location_point, epsg_4326, epsg_3857)
         location_point_reproj_buffered = location_point_reproj.buffer(
             max_distance * self.__DISTANCE_TOLERANCE
         )
-        location_point_reproj_buffered_bounds = reproject(
+        location_point_reprojected_buffered_bounds = reprojection(
             location_point_reproj_buffered, epsg_3857, epsg_4326
         ).bounds
 
-        additionnal_nodes = [{self._TOPO_FIELD: 0, "geometry": location_point}]
-        df = pd.DataFrame(additionnal_nodes)
+        additional_nodes = [{self._TOPO_FIELD: 0, "geometry": location_point}]
+        df = pd.DataFrame(additional_nodes)
         geometry = df["geometry"]
-        additionnal_nodes_gdf = gpd.GeoDataFrame(
-            df.drop(["geometry"], axis=1), crs=int(epsg_4326), geometry=geometry.to_list(),
+        additional_nodes_gdf = gpd.GeoDataFrame(
+            df.drop(["geometry"], axis=1),
+            crs=int(epsg_4326),
+            geometry=geometry.to_list(),
         )
         self.from_bbox(
-            location_point_reproj_buffered_bounds,
-            additionnal_nodes=additionnal_nodes_gdf,
+            location_point_reprojected_buffered_bounds,
+            additional_nodes=additional_nodes_gdf,
             mode=mode,
             interpolate_lines=True,
         )
@@ -175,12 +157,11 @@ class OsmGtIsochrone(OsmGtRoads):
         self._network_gdf = super().get_gdf()
 
         self._compute_isochrone()
-        isochrones = self.get_gdf()
 
-        return (
-            isochrones,
-            self._network_gdf[self._network_gdf[self.__ISOCHRONE_NAME_FIELD].notnull()],
-        )
+        self._OUTPUT_EXPECTED_GEOM_TYPE = "Polygon"  # mandatory
+        isochrones_gdf = self.get_gdf(verbose=False)
+
+        return isochrones_gdf, self._network_gdf
 
     def _compute_isochrone(self) -> None:
         graph = self.get_graph()
@@ -190,6 +171,9 @@ class OsmGtIsochrone(OsmGtRoads):
         self._output_data = []
 
         for iso_time, dist in self._isochrones_times:
+            isochrone_label = f"{iso_time} {time_unit}"
+            self.logger.info(f"Compute isochrone: {isochrone_label} => {dist} meters")
+
             pred = shortest_distance(
                 graph,
                 source=source_vertex,
@@ -199,13 +183,8 @@ class OsmGtIsochrone(OsmGtRoads):
             )[1]
 
             points = [loads(graph.vertex_names[vertex]) for vertex in pred]
-
-            concave_hull_proc = ConcaveHull(points)
-            polygon = concave_hull_proc.polygon()
-
+            polygon = MultiPoint(points).convex_hull
             network_gdf_copy_mask = self._network_gdf.within(polygon)
-
-            isochrone_label = f"{iso_time} {time_unit}"
 
             self._network_gdf.loc[
                 network_gdf_copy_mask, self.__ISOCHRONE_NAME_FIELD
@@ -221,9 +200,9 @@ class OsmGtIsochrone(OsmGtRoads):
                     "geometry": polygon,
                 }
             )
-        self.__dissolve_network_roads()
+        self.__clean_network()
 
-    def __dissolve_network_roads(self) -> None:
+    def __clean_network(self) -> None:
         self._network_gdf[self._TOPO_FIELD].replace(
             self.__TOPO_FIELD_REGEX_CLEANER, "", regex=True, inplace=True
         )
@@ -237,14 +216,34 @@ class OsmGtIsochrone(OsmGtRoads):
             by=self.__DISSOLVE_NAME_FIELD
         ).reset_index(drop=True)
 
-        # convert multilinestring to linestrings
-        self._network_gdf = split_multiline_to_lines(self._network_gdf, epsg_4326)
+        # convert multilinestring to LineStrings
+        self._network_gdf = split_multiline_to_lines(
+            self._network_gdf, epsg_4326, self._TOPO_FIELD
+        )
 
+        self._network_gdf = self._network_gdf[
+            self._network_gdf[self.__ISOCHRONE_NAME_FIELD].notnull()
+        ]
+
+        gdf_copy = self._network_gdf.copy(deep=True)
+        network_polygon = gdf_copy.buffer(
+            self.__CLEANING_NETWORK_BUFFER_VALUE,
+            cap_style=self.__CLEANING_NETWORK_CAP_STYLE,
+            resolution=self.__CLEANING_NETWORK_RESOLUTION,
+        ).unary_union
+        if network_polygon.geom_type == "MultiPolygon":
+            geom_areas = [(geom.area, geom) for geom in network_polygon.geoms]
+            network_polygon = max(geom_areas)[-1]
+
+        network_mask = self._network_gdf.within(network_polygon)
+        self._network_gdf = self._network_gdf.loc[network_mask]
 
     def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
-        output = super().get_gdf()
+        output = super().get_gdf(verbose=verbose)
         # find iso index pair in order to create hole geom. isochrones are like russian dolls
-        iso_values = sorted(list(map(lambda x: x[0], self._isochrones_times)), reverse=True)
+        iso_values = sorted(
+            list(map(lambda x: x[0], self._isochrones_times)), reverse=True
+        )
         iso_values_map: Dict = {
             x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))
         }
@@ -263,8 +262,9 @@ class OsmGtIsochrone(OsmGtRoads):
 
         return output
 
+    @staticmethod
     def __compute_isochrone_difference(
-        self, first_geom: base, remove_part_geom: base
+        first_geom: base, remove_part_geom: base
     ) -> base:
 
         return first_geom.difference(remove_part_geom)
