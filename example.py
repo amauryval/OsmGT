@@ -20,7 +20,7 @@ def test_from_web():
 
     # get NETWORK
     network_from_web_found = OsmGt.roads_from_location(
-        location, additionnal_nodes=poi_gdf, mode="vehicle"
+        location, additional_nodes=poi_gdf, mode="vehicle"
     )
     # network_from_web_found = OsmGt.roads_from_bbox(bbox, additionnal_nodes=poi_gdf, mode="vehicle")
 

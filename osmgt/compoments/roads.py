@@ -3,16 +3,16 @@ from typing import Tuple
 from typing import List
 from typing import Optional
 from typing import Dict
-from typing import Iterator
-
 
 from osmgt.compoments.core import OsmGtCore
+from osmgt.compoments.core import EmptyData
 
 from osmgt.geometry.network_topology import NetworkTopology
 from osmgt.geometry.geom_helpers import compute_wg84_line_length
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
+from shapely.geometry import shape
 
 # to facilitate debugging
 try:
@@ -20,7 +20,6 @@ try:
 except ModuleNotFoundError:
     pass
 
-from shapely.geometry import shape
 
 from osmgt.core.global_values import network_queries
 
@@ -29,13 +28,15 @@ class NetWorkGeomIncompatible(Exception):
     pass
 
 
-class AdditionnalNodesOutsideWorkingArea(Exception):
+class AdditionalNodesOutsideWorkingArea(Exception):
     pass
 
 
 class OsmGtRoads(OsmGtCore):
 
     _FEATURE_OSM_TYPE: str = "way"
+
+    _OUTPUT_EXPECTED_GEOM_TYPE = "LineString"
 
     def __init__(self) -> None:
         super().__init__()
@@ -45,7 +46,7 @@ class OsmGtRoads(OsmGtCore):
     def from_location(
         self,
         location_name: str,
-        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        additional_nodes: Optional[gpd.GeoDataFrame],
         mode: str,
         interpolate_lines: bool = False,
     ) -> None:
@@ -57,13 +58,13 @@ class OsmGtRoads(OsmGtCore):
         request = self._from_location_name_query_builder(self._location_id, query)
         raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_network_topology(
-            raw_data, additionnal_nodes, mode, interpolate_lines
+            raw_data, additional_nodes, mode, interpolate_lines
         )
 
     def from_bbox(
         self,
         bbox_value: Tuple[float, float, float, float],
-        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        additional_nodes: Optional[gpd.GeoDataFrame],
         mode: str,
         interpolate_lines: bool = False,
     ) -> None:
@@ -75,12 +76,12 @@ class OsmGtRoads(OsmGtCore):
         request = self._from_bbox_query_builder(self._bbox_value, query)
         raw_data = self._query_on_overpass_api(request)
         self._output_data = self.__build_network_topology(
-            raw_data, additionnal_nodes, mode, interpolate_lines
+            raw_data, additional_nodes, mode, interpolate_lines
         )
 
     def get_graph(self) -> GraphHelpers:
         self.logger.info("Prepare graph")
-        self._check_build_input_data()
+        self._check_network_output_data()
 
         graph = GraphHelpers(
             self.logger, is_directed=network_queries[self._mode]["directed_graph"]
@@ -90,6 +91,22 @@ class OsmGtRoads(OsmGtCore):
             graph.add_edge(*self.__compute_edges(feature))
 
         return graph
+
+    def _check_network_output_data(self):
+
+        if len(self._output_data) == 0:
+            raise EmptyData("Data is empty!")
+
+        # here we check the first feature, all feature should have the same structure
+        first_feature = self._output_data[0]
+        assert (
+            self._GEOMETRY_FIELD in first_feature
+        ), f"{self._GEOMETRY_FIELD} key not found!"
+        assert (
+            first_feature[self._GEOMETRY_FIELD].geom_type
+            == self._OUTPUT_EXPECTED_GEOM_TYPE
+        ), f"{self._GEOMETRY_FIELD} key not found!"
+        assert self._TOPO_FIELD in first_feature, f"{self._TOPO_FIELD} key not found!"
 
     def __compute_edges(self, feature: Dict) -> Tuple[str, str, str, float]:
         coordinates = feature[self._GEOMETRY_FIELD]
@@ -103,38 +120,38 @@ class OsmGtRoads(OsmGtCore):
     def __build_network_topology(
         self,
         raw_data: List[Dict],
-        additionnal_nodes: Optional[gpd.GeoDataFrame],
+        additional_nodes: Optional[gpd.GeoDataFrame],
         mode: str,
         interpolate_lines: bool,
     ) -> List[Dict]:
-        if additionnal_nodes is not None:
-            additionnal_nodes = self._check_topology_field(additionnal_nodes)
+        if additional_nodes is not None:
+            additional_nodes = self._check_topology_field(additional_nodes)
             # filter nodes from study_area_geom
-            additionnal_nodes_mask = additionnal_nodes.intersects(self.study_area_geom)
-            additionnal_nodes_filtered = additionnal_nodes.loc[additionnal_nodes_mask]
+            additional_nodes_mask = additional_nodes.intersects(self.study_area_geom)
+            additional_nodes_filtered = additional_nodes.loc[additional_nodes_mask]
 
-            if additionnal_nodes_filtered.shape[0] != additionnal_nodes.shape[0]:
-                additionnal_nodes_outside = set(
-                    map(lambda x: x.wkt, additionnal_nodes["geometry"].to_list())
+            if additional_nodes_filtered.shape[0] != additional_nodes.shape[0]:
+                additional_nodes_outside = set(
+                    map(lambda x: x.wkt, additional_nodes["geometry"].to_list())
                 ).difference(
                     set(
                         map(
                             lambda x: x.wkt,
-                            additionnal_nodes_filtered["geometry"].to_list(),
+                            additional_nodes_filtered["geometry"].to_list(),
                         )
                     )
                 )
-                raise AdditionnalNodesOutsideWorkingArea(
-                    f"These following points are outside the working area: {', '.join(additionnal_nodes_outside)}"
+                raise AdditionalNodesOutsideWorkingArea(
+                    f"These following points are outside the working area: {', '.join(additional_nodes_outside)}"
                 )
 
-            additionnal_nodes = additionnal_nodes_filtered.to_dict("records")
+            additional_nodes = additional_nodes_filtered.to_dict("records")
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)
         raw_data_topology_rebuild = NetworkTopology(
             self.logger,
             raw_data_restructured,
-            additionnal_nodes,
+            additional_nodes,
             self._TOPO_FIELD,
             self._ID_OSM_FIELD,
             mode,
@@ -144,7 +161,7 @@ class OsmGtRoads(OsmGtCore):
         return raw_data_topology_rebuild
 
     def __rebuild_network_data(self, raw_data: List[Dict]) -> List[Dict]:
-        self.logger.info("Formating data")
+        self.logger.info("Rebuild network data")
 
         raw_data = filter(
             lambda x: x[self._FEATURE_TYPE_OSM_FIELD] == self._FEATURE_OSM_TYPE,

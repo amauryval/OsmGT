@@ -68,7 +68,7 @@ def test_connect_lines_interpolate_lines(some_line_features, some_point_features
     all_uuid = [feature["uuid"] for feature in raw_data_topology_rebuild]
     for f in raw_data_topology_rebuild:
         print(f["geometry"])
-    assert len(raw_data_topology_rebuild) == 96
+    assert len(raw_data_topology_rebuild) == 192
     # check duplicated
     assert len(all_uuid) == len(all_uuid)
     assert len(all_uuid) == len(set(all_uuid))

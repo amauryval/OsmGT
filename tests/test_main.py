@@ -3,7 +3,7 @@ import pytest
 from osmgt import OsmGt
 
 from graph_tool.topology import shortest_path
-from osmgt.compoments.roads import AdditionnalNodesOutsideWorkingArea
+from osmgt.compoments.roads import AdditionalNodesOutsideWorkingArea
 
 
 def output_data_common_asserts(
@@ -84,7 +84,7 @@ def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
     poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_values_2).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(
-        bbox_values_2, additionnal_nodes=poi_from_web_found_gdf
+        bbox_values_2, additional_nodes=poi_from_web_found_gdf
     )
     graph_computed = network_from_web_found.get_graph()
 
@@ -110,6 +110,12 @@ def test_if_isochrones_can_be_computed(location_point, isochrone_values):
         "5 minutes",
         "10 minutes",
     }
+    assert set(isochrones_polygon_from_location.columns.to_list()) == {
+        "geometry",
+        "iso_name",
+        "iso_distance",
+    }
+    assert "__dissolve__" not in isochrones_polygon_from_location.columns.to_list()
 
     assert isochrones_lines_from_location.shape[0] > 0
     assert set(isochrones_lines_from_location["iso_name"].to_list()) == {
@@ -117,6 +123,38 @@ def test_if_isochrones_can_be_computed(location_point, isochrone_values):
         "5 minutes",
         "10 minutes",
     }
+    assert set(isochrones_lines_from_location.columns.to_list()).intersection(
+        {"geometry", "iso_name", "iso_distance"}
+    )
+    assert "__dissolve__" not in isochrones_lines_from_location.columns.to_list()
+
+
+def test_if_isochrone_from_distance(location_point, isochrone_values):
+    (
+        isochrones_polygons_from_location,
+        isochrones_lines_from_location,
+    ) = OsmGt.isochrone_distance_from_coordinates(
+        location_point, [1000], 3, mode="pedestrian"
+    )
+
+    assert isochrones_polygons_from_location.shape[0] == 1
+    assert isochrones_lines_from_location.shape[0] > 0
+
+    assert set(isochrones_polygons_from_location.columns.to_list()) == {
+        "geometry",
+        "iso_name",
+        "iso_distance",
+    }
+    assert "__dissolve__" not in isochrones_polygons_from_location.columns.to_list()
+    assert set(isochrones_polygons_from_location["iso_name"].to_list()) == {
+        "20.0 minutes"
+    }
+
+    assert set(isochrones_lines_from_location.columns.to_list()).intersection(
+        {"geometry", "iso_name", "iso_distance"}
+    )
+    assert "__dissolve__" not in isochrones_lines_from_location.columns.to_list()
+    assert set(isochrones_lines_from_location["iso_name"].to_list()) == {"20.0 minutes"}
 
 
 def test_if_shortest_path_from_location_with_duplicated_nodes_pairs(
@@ -145,7 +183,7 @@ def test_if_shortest_path_from_bbox_with_duplicated_nodes_pairs(
 def test_if_shortest_path_from_location_with_an_outside_nodes_pairs(
     start_and_end_nodes, start_and_end_nodes_2
 ):
-    with pytest.raises(AdditionnalNodesOutsideWorkingArea) as excinfo:
+    with pytest.raises(AdditionalNodesOutsideWorkingArea) as excinfo:
         _ = OsmGt.shortest_path_from_location(
             "roanne", [start_and_end_nodes, start_and_end_nodes_2,], mode="pedestrian",
         )
@@ -158,7 +196,7 @@ def test_if_shortest_path_from_location_with_an_outside_nodes_pairs(
 def test_if_shortest_path_from_bbox_with_an_outside_nodes_pairs(
     bbox_values_3, start_and_end_nodes, start_and_end_nodes_2
 ):
-    with pytest.raises(AdditionnalNodesOutsideWorkingArea) as excinfo:
+    with pytest.raises(AdditionalNodesOutsideWorkingArea) as excinfo:
         _ = OsmGt.shortest_path_from_bbox(
             bbox_values_3,
             [start_and_end_nodes, start_and_end_nodes_2,],
@@ -173,7 +211,7 @@ def test_if_shortest_path_from_bbox_with_an_outside_nodes_pairs(
 def test_if_shortest_path_from_location_with_an_outside_node_on_pairs(
     start_and_end_nodes, start_and_end_nodes_3
 ):
-    with pytest.raises(AdditionnalNodesOutsideWorkingArea) as excinfo:
+    with pytest.raises(AdditionalNodesOutsideWorkingArea) as excinfo:
         _ = OsmGt.shortest_path_from_location(
             "roanne", [start_and_end_nodes, start_and_end_nodes_3,], mode="pedestrian",
         )
@@ -186,7 +224,7 @@ def test_if_shortest_path_from_location_with_an_outside_node_on_pairs(
 def test_if_shortest_path_from_bbox_with_an_outside_node_on_pairs(
     bbox_values_3, start_and_end_nodes, start_and_end_nodes_3
 ):
-    with pytest.raises(AdditionnalNodesOutsideWorkingArea) as excinfo:
+    with pytest.raises(AdditionalNodesOutsideWorkingArea) as excinfo:
         _ = OsmGt.shortest_path_from_bbox(
             bbox_values_3,
             [start_and_end_nodes, start_and_end_nodes_3,],
@@ -196,16 +234,3 @@ def test_if_shortest_path_from_bbox_with_an_outside_node_on_pairs(
             "These following points are outside the working area: POINT (-74.00411 40.722584)"
             == str(excinfo.value)
         )
-
-
-def test_if_isochrone_from_distance(location_point, isochrone_values):
-    (
-        isochrones_polygons_from_location,
-        isochrones_lines_from_location,
-    ) = OsmGt.isochrone_distance_from_coordinates(
-        location_point, [1000], 3, mode="pedestrian"
-    )
-
-    assert isochrones_polygons_from_location.shape[0] == 1
-    assert isochrones_lines_from_location.shape[0] > 0
-    # TODO add more assert

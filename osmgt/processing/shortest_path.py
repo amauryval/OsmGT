@@ -1,6 +1,4 @@
-from typing import Optional
 from typing import List
-from typing import Dict
 from typing import Tuple
 
 from osmgt.compoments.roads import OsmGtRoads
@@ -27,16 +25,18 @@ import concurrent.futures
 class OsmGtShortestPath(OsmGtRoads):
     def __init__(self, source_target_points: List[Tuple[Point, Point]]) -> None:
         super().__init__()
+        self.logger.info("Shortest path processing...")
 
         self._source_target_points = self._check_nodes(source_target_points)
         self._all_points = chain(*self._source_target_points)
 
         self._graph = None
         self._gdf = None
-        self._additionnal_nodes_gdf = self._prepare_addtionnal_nodes()
+        self._additional_nodes_gdf = self._prepare_addtionnal_nodes()
 
+    @staticmethod
     def _check_nodes(
-        self, source_target_points: List[Tuple[Point, Point]]
+        source_target_points: List[Tuple[Point, Point]]
     ) -> List[Tuple[Point, Point]]:
 
         source_target_points_cleaned = set(
@@ -52,23 +52,23 @@ class OsmGtShortestPath(OsmGtRoads):
 
     def _prepare_addtionnal_nodes(self) -> gpd.GeoDataFrame:
 
-        additionnal_nodes = [
+        additional_nodes = [
             {self._TOPO_FIELD: enum, "geometry": geom}
             for enum, geom in enumerate(self._all_points)
         ]
-        df = pd.DataFrame(additionnal_nodes)
+        df = pd.DataFrame(additional_nodes)
         geometry = df["geometry"]
-        additionnal_nodes_gdf = gpd.GeoDataFrame(
+        additional_nodes_gdf = gpd.GeoDataFrame(
             df.drop(["geometry"], axis=1), crs=4326, geometry=geometry.to_list(),
         )
 
-        return additionnal_nodes_gdf
+        return additional_nodes_gdf
 
     def from_location(
-        self, location_name: str, additionnal_nodes: None, mode: str
+        self, location_name: str, additional_nodes: None, mode: str
     ) -> gpd.GeoDataFrame:
         super().from_location(
-            location_name, additionnal_nodes=self._additionnal_nodes_gdf, mode=mode
+            location_name, additional_nodes=self._additional_nodes_gdf, mode=mode
         )
         self._compute_data_and_graph()
 
@@ -77,11 +77,11 @@ class OsmGtShortestPath(OsmGtRoads):
     def from_bbox(
         self,
         bbox_value: Tuple[float, float, float, float],
-        additionnal_nodes: None,
+        additional_nodes: None,
         mode: str,
     ) -> gpd.GeoDataFrame:
         super().from_bbox(
-            bbox_value, additionnal_nodes=self._additionnal_nodes_gdf, mode=mode
+            bbox_value, additional_nodes=self._additional_nodes_gdf, mode=mode
         )
         self._compute_data_and_graph()
 
@@ -107,7 +107,9 @@ class OsmGtShortestPath(OsmGtRoads):
             source_vertex = self._graph.find_vertex_from_name(source_node_wkt)
             target_vertex = self._graph.find_vertex_from_name(target_node_wkt)
 
-            self.logger.info(f"Compute path from {source_vertex} to {target_vertex}")
+            self.logger.info(
+                f"Compute shortest path from {source_vertex} to {target_vertex}"
+            )
 
             # shortest path computing...
             _, path_edges = shortest_path(

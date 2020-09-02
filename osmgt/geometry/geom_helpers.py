@@ -1,27 +1,16 @@
 from typing import List
-from typing import Tuple
-from typing import Set
-from typing import Optional
 
+from typing import Union
+
+import geopandas as gpd
 from pyproj import Geod
 from pyproj import Transformer
 
-from shapely.ops import transform
-from shapely.ops import unary_union
-from shapely.ops import polygonize
+from shapely.ops import transform, linemerge
 
 from shapely.geometry import base
-from shapely.geometry import LineString
 from shapely.geometry import MultiLineString
-from shapely.geometry import Point
-from shapely.geometry import MultiPoint
 from shapely.geometry import LineString
-
-from scipy.spatial import Delaunay
-
-import numpy as np
-
-import math
 
 
 def compute_wg84_line_length(input_geom: LineString) -> float:
@@ -51,106 +40,16 @@ def compute_wg84_line_length(input_geom: LineString) -> float:
             else:
                 coords = pair[0] + pair[1]
 
-            wgs84_geod = Geod(ellps="WGS84")
-            _, _, length_computed = wgs84_geod.inv(*coords)
+            wgs84_geodetic = Geod(ellps="WGS84")
+            _, _, length_computed = wgs84_geodetic.inv(*coords)
             total_length += length_computed
 
     return total_length
 
 
-class ConcaveHull:
-    # source: http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/
-    __TOLERANCE_VALUE: float = 1.87
-
-    # Do not change values
-    __SQUARED_VALUE: int = 2
-    __SEMIPERIMETER_DIVISOR: int = 2
-    __HERON_FORMULA_DIVISOR: int = 4
-    __MIN_NUMBER_OF_POINTS: int = 4
-
-    def __init__(self, points: List[Point]):
-        """
-        :param points: list of shapely points
-        :type: list of shapely point
-        """
-        self._points = points
-
-        self.__edges: Set[Tuple[float, float]] = set()
-        self._edge_points: List[Tuple[Tuple[float, float]]] = []  # TODO check type
-        self._compute()
-
-    def _compute(self) -> None:
-        result: Optional[MultiPoint] = self._check_points_number()
-
-        if result is None:
-            coords = np.array([point.coords[0] for point in self._points])
-            triangulation = Delaunay(coords)
-            # loop over triangles:
-            # ia, ib, ic = indices of corner points of the
-            # triangle
-            for ia, ib, ic in triangulation.vertices:
-                pa = coords[ia]
-                pb = coords[ib]
-                pc = coords[ic]
-
-                # Lengths of sides of triangle
-                a = math.sqrt(
-                    (pa[0] - pb[0]) ** self.__SQUARED_VALUE
-                    + (pa[1] - pb[1]) ** self.__SQUARED_VALUE
-                )
-                b = math.sqrt(
-                    (pb[0] - pc[0]) ** self.__SQUARED_VALUE
-                    + (pb[1] - pc[1]) ** self.__SQUARED_VALUE
-                )
-                c = math.sqrt(
-                    (pc[0] - pa[0]) ** self.__SQUARED_VALUE
-                    + (pc[1] - pa[1]) ** self.__SQUARED_VALUE
-                )
-
-                # Semiperimeter of triangle
-                s = (a + b + c) / self.__SEMIPERIMETER_DIVISOR
-
-                # Area of triangle by Heron's formula
-                delta = s * (s - a) * (s - b) * (s - c)
-                if delta > 0:
-                    area = math.sqrt(delta)
-                    if area > 0:
-                        circum_r = a * b * c / (self.__HERON_FORMULA_DIVISOR * area)
-
-                        # Here's the radius filter.
-                        if circum_r < 1.0 / self.__TOLERANCE_VALUE:
-                            self.add_edge(coords, ia, ib)
-                            self.add_edge(coords, ib, ic)
-                            self.add_edge(coords, ic, ia)
-
-            multilinestring_built = MultiLineString(self._edge_points)
-            self._triangles: List = list(polygonize(multilinestring_built))
-
-    def polygon(self):
-        return unary_union(self._triangles)
-
-    def points(self) -> List:
-        return self._edge_points
-
-    def _check_points_number(self) -> Optional[MultiPoint]:
-        if len(self._points) < self.__MIN_NUMBER_OF_POINTS:
-            return MultiPoint(self._points).convex_hull
-
-    def add_edge(self, coords, i: float, j: float) -> None:
-        """
-        Add a line between the i-th and j-th points,
-        if not in the list already
-        """
-        if (i, j) in self.__edges or (j, i) in self.__edges:
-            # already added
-            return
-        self.__edges.add((i, j))
-        self._edge_points.append(coords[[i, j]])
-
-
-def reproject(geometry: base, from_epsg: int, to_epsg: int) -> base:
+def reprojection(geometry: base, from_epsg: str, to_epsg: str) -> base:
     """
-    pyproj_reprojection
+    reprojection
 
     :type geometry: shapely.geometry.*
     :type from_epsg: int
@@ -167,17 +66,54 @@ def reproject(geometry: base, from_epsg: int, to_epsg: int) -> base:
     return geometry
 
 
-def multilinestring_continuity(linestrings: List[LineString]) -> List[LineString]:
+def line_conversion(
+    input_geometry: Union[LineString, MultiLineString]
+) -> Union[LineString, List[LineString]]:
 
+    if input_geometry.geom_type == "LineString":
+        return [input_geometry]
+    elif input_geometry.geom_type == "MultiLineString":
+        line_merged = linemerge([line_geom for line_geom in input_geometry.geoms])
+        if line_merged.geom_type == "LineString":
+            return [line_merged]
+        elif line_merged.geom_type == "MultiLineString":
+            return line_merged.geoms
+        else:
+            raise TypeError(f"Geometry type unexpected: {line_merged.geom_type}")
+
+
+def split_multiline_to_lines(
+    input_gdf: gpd.GeoDataFrame, epsg_data: str, id_field: str
+) -> gpd.GeoDataFrame:
     """
-    :param linestrings: linestring with different orientations, directed with the last coords of the first element
-    :type linestrings: list of shapely.geometry.MultiLineString
-    :return: re-oriented MultiLineSting
-    :rtype: shapely.geometry.MultiLineString
+    split each linestring row from a GeoDataframe to point
+
+    :param input_gdf: your GeoDataframe containing LineStrings
+    :type input_gdf: Geopandas.GeoDataframe
+    :param epsg_data:
+    :type epsg_data: str
+    :param id_field:
+    :type id_field: str
+    :return: your GeoDataframe exploded containing points
+    :rtype: Pandas.Dataframe
     """
 
-    dict_line = {key: value for key, value in enumerate(linestrings)}
-    for key, line in dict_line.items():
-        if key != 0 and dict_line[key - 1].coords[-1] == line.coords[-1]:
-            dict_line[key] = LineString(line.coords[::-1])
-    return [v for _, v in dict_line.items()]
+    # prepare indexed columns
+    columns_index = input_gdf.columns.tolist()
+    # without geometry column.. because we want explode it
+    columns_index.remove("geometry")
+
+    # convert the linestring to a list of points
+    input_gdf["geometry"] = input_gdf["geometry"].apply(lambda x: line_conversion(x))
+    # set index with columns_index variable (without geometry)
+    input_gdf.set_index(columns_index, inplace=True)
+    output = input_gdf["geometry"].explode().reset_index()
+    output[id_field] = output[id_field] + output.index.map(str)
+    geometry = output["geometry"]
+    output: gpd.GeoDataFrame = gpd.GeoDataFrame(
+        output.drop(["geometry"], axis=1),
+        crs=f"EPSG:{epsg_data}",
+        geometry=geometry.to_list(),
+    )
+
+    return output

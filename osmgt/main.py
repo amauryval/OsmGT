@@ -17,7 +17,7 @@ class OsmGt:
     def roads_from_location(
         location_name: str,
         mode: str = "pedestrian",
-        additionnal_nodes: Optional[gpd.GeoDataFrame] = None,
+        additional_nodes: Optional[gpd.GeoDataFrame] = None,
     ) -> OsmGtRoads:
         """
         Get OpenStreetMap roads from a location name
@@ -26,35 +26,35 @@ class OsmGt:
         :type location_name: the name of the location
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
-        :param additionnal_nodes: Addtionnals nodes to connect on the network
-        :type additionnal_nodes: geopandas.GeoDataFrame
+        :param additional_nodes: additional nodes to connect on the network
+        :type additional_nodes: geopandas.GeoDataFrame
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
         """
         osm_road = OsmGtRoads()
-        osm_road.from_location(location_name, additionnal_nodes, mode)
+        osm_road.from_location(location_name, additional_nodes, mode)
         return osm_road
 
     @staticmethod
     def roads_from_bbox(
         bbox_values: Tuple[float, float, float, float],
         mode: str = "pedestrian",
-        additionnal_nodes: Optional[gpd.GeoDataFrame] = None,
+        additional_nodes: Optional[gpd.GeoDataFrame] = None,
     ) -> OsmGtRoads:
         """
         Get OpenStreetMap roads from a bbox
 
-        :param bbox_values: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
+        :param bbox_values: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
         :type bbox_values: tuple of float
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
-        :param additionnal_nodes: Addtionnals nodes to connect on the network
-        :type additionnal_nodes: geopandas.GeoDataFrame
+        :param additional_nodes: additional nodes to connect on the network
+        :type additional_nodes: geopandas.GeoDataFrame
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
         """
         osm_road = OsmGtRoads()
-        osm_road.from_bbox(bbox_values, additionnal_nodes, mode)
+        osm_road.from_bbox(bbox_values, additional_nodes, mode)
         return osm_road
 
     @staticmethod
@@ -68,7 +68,7 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
         osm_poi = OsmGtPoi()
-        osm_poi.from_location(location_name)
+        osm_poi.from_location(location_name,)
         return osm_poi
 
     @staticmethod
@@ -76,7 +76,7 @@ class OsmGt:
         """
         Find OSM POIs from a bbox value
 
-        :param bbox_values: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
+        :param bbox_values: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
         :type bbox_values: tuple of float
         :return: OsmGtRoads class
         :rtype: OsmGtRoads
@@ -101,7 +101,7 @@ class OsmGt:
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
-        :return: 2 geodataframe : isochrones polygons and isochrones lines (roads)
+        :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
 
@@ -127,7 +127,7 @@ class OsmGt:
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
-        :return: 2 geodataframe : isochrones polygons and isochrones lines (roads)
+        :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
 
@@ -150,8 +150,8 @@ class OsmGt:
         :param source_target_points: list of tuple source and target points
         :type source_target_points: list of tuple (shapely.geometry.Point)
         :param mode: the transport mode
-        :type mode: str, default 'pedestrian', one of :
-        :return: geodataframe containing all the shortest paths
+        :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
+        :return: GeoDataframe containing all the shortest paths
         :rtype: geopandas.GeoDataFrame
         """
 
@@ -167,13 +167,13 @@ class OsmGt:
     ) -> gpd.GeoDataFrame:
         """
 
-        :param bbox_values: a bbox value : (minx , miny , maxx , maxy) or (min_lng, min_lat, max_lng, max_lat)
+        :param bbox_values: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
         :type bbox_values: tuple of float
         :param source_target_points: list of tuple source and target points
         :type source_target_points: list of tuple (shapely.geometry.Point)
         :param mode: the transport mode
-        :type mode: str, default 'pedestrian', one of :
-        :return: geodataframe containing all the shortest paths
+        :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
+        :return: GeoDataframe containing all the shortest paths
         :rtype: geopandas.GeoDataFrame
         """
 
