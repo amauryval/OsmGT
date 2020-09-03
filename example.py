@@ -9,7 +9,7 @@ def test_from_web():
     # bbox = (-74.018433, 40.718087, -73.982749, 40.733356)
 
     # get POI
-    poi_from_web_found = OsmGt.poi_from_location(location)
+    poi_from_web_found = OsmGt.pois_from_location(location)
     # poi_from_web_found = OsmGt.poi_from_bbox(bbox)
 
     # poi_from_osmgt_file_found = OsmGt.roads_from_osmgt_file(f"{poi_output_name}.osmgt")

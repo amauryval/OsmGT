@@ -44,7 +44,7 @@ def output_data_common_asserts(
 
 def test_run_from_location_name_func(default_columns_from_output):
     location_name = "roanne"
-    poi_from_web_found_gdf = OsmGt.poi_from_location(location_name).get_gdf()
+    poi_from_web_found_gdf = OsmGt.pois_from_location(location_name).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_location(
         location_name, "pedestrian", poi_from_web_found_gdf
@@ -63,7 +63,7 @@ def test_run_from_location_name_func(default_columns_from_output):
 
 def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
 
-    poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_values_1).get_gdf()
+    poi_from_web_found_gdf = OsmGt.pois_from_bbox(bbox_values_1).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(
         bbox_values_1, "vehicle", poi_from_web_found_gdf
@@ -81,7 +81,7 @@ def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
 
 
 def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
-    poi_from_web_found_gdf = OsmGt.poi_from_bbox(bbox_values_2).get_gdf()
+    poi_from_web_found_gdf = OsmGt.pois_from_bbox(bbox_values_2).get_gdf()
 
     network_from_web_found = OsmGt.roads_from_bbox(
         bbox_values_2, additional_nodes=poi_from_web_found_gdf
@@ -99,7 +99,7 @@ def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
 
 
 def test_if_isochrones_can_be_computed(location_point, isochrone_values):
-    data = OsmGt.isochrone_from_coordinates(
+    data = OsmGt.isochrone_from_source_node(
         location_point, isochrone_values, 3, mode="pedestrian"
     )
     isochrones_polygon_from_location, isochrones_lines_from_location = data
@@ -133,7 +133,7 @@ def test_if_isochrone_from_distance(location_point, isochrone_values):
     (
         isochrones_polygons_from_location,
         isochrones_lines_from_location,
-    ) = OsmGt.isochrone_distance_from_coordinates(
+    ) = OsmGt.isochrone_distance_from_source_node(
         location_point, [1000], 3, mode="pedestrian"
     )
 

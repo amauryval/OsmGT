@@ -58,7 +58,7 @@ class OsmGt:
         return osm_road
 
     @staticmethod
-    def poi_from_location(location_name: str) -> OsmGtPoi:
+    def pois_from_location(location_name: str) -> OsmGtPoi:
         """
         Find OSM POIs from a location name
 
@@ -72,7 +72,7 @@ class OsmGt:
         return osm_poi
 
     @staticmethod
-    def poi_from_bbox(bbox_values: Tuple[float, float, float, float]) -> OsmGtPoi:
+    def pois_from_bbox(bbox_values: Tuple[float, float, float, float]) -> OsmGtPoi:
         """
         Find OSM POIs from a bbox value
 
@@ -86,15 +86,15 @@ class OsmGt:
         return osm_poi
 
     @staticmethod
-    def isochrone_from_coordinates(
-        coordinates: Point,
+    def isochrone_from_source_node(
+        source_node: Point,
         isochrones_times: List[float],
         trip_speed: float,
         mode: str = "pedestrian",
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
-        :param coordinates: location points
-        :type coordinates: shapely.geometry.Point
+        :param source_node: location points
+        :type source_node: shapely.geometry.Point
         :param isochrones_times: isochrones to build (in minutes)
         :type isochrones_times: list of int
         :param trip_speed: trip speed in km/h
@@ -107,20 +107,20 @@ class OsmGt:
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
             trip_speed, isochrones_times
-        ).from_location_point(coordinates, mode)
+        ).from_location_point(source_node, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf
 
     @staticmethod
-    def isochrone_distance_from_coordinates(
-        coordinates: Point,
+    def isochrone_distance_from_source_node(
+        source_node: Point,
         distances: List,
         trip_speed: float,
         mode: str = "pedestrian",
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
-        :param coordinates: location points
-        :type coordinates: shapely.geometry.Point
+        :param source_node: location points
+        :type source_node: shapely.geometry.Point
         :param distances: distances (meters)
         :type distances: list of int
         :param trip_speed: trip speed in km/h
@@ -133,7 +133,7 @@ class OsmGt:
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
             trip_speed, None, distances
-        ).from_location_point(coordinates, mode)
+        ).from_location_point(source_node, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf
 
