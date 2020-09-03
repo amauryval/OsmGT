@@ -14172,7 +14172,7 @@ Wall time: 3.92 s
 <span class="n">trip_speed</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># km/h</span>
 
 <span class="n">location_point</span> <span class="o">=</span> <span class="n">source_node</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span>
-<span class="n">isochrones_polygons_from_location</span><span class="p">,</span> <span class="n">isochrones_lines_from_location</span> <span class="o">=</span> <span class="n">OsmGt</span><span class="o">.</span><span class="n">isochrone_from_coordinates</span><span class="p">(</span>
+<span class="n">isochrones_polygons_from_location</span><span class="p">,</span> <span class="n">isochrones_lines_from_location</span> <span class="o">=</span> <span class="n">OsmGt</span><span class="o">.</span><span class="n">isochrone_from_source_node</span><span class="p">(</span>
     <span class="n">location_point</span><span class="p">,</span>
     <span class="nb">list</span><span class="p">(</span><span class="n">isochrones_polygon_values</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
     <span class="n">trip_speed</span><span class="p">,</span>
@@ -14358,7 +14358,7 @@ Wall time: 3.78 s
 <span class="n">trip_speed</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># km/h</span>
 
 <span class="n">location_point</span> <span class="o">=</span> <span class="n">source_node</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span>
-<span class="n">isochrones_polygons_from_location</span><span class="p">,</span> <span class="n">isochrones_lines_from_location</span> <span class="o">=</span> <span class="n">OsmGt</span><span class="o">.</span><span class="n">isochrone_distance_from_coordinates</span><span class="p">(</span>
+<span class="n">isochrones_polygons_from_location</span><span class="p">,</span> <span class="n">isochrones_lines_from_location</span> <span class="o">=</span> <span class="n">OsmGt</span><span class="o">.</span><span class="n">isochrone_distance_from_source_node</span><span class="p">(</span>
     <span class="n">location_point</span><span class="p">,</span>
     <span class="p">[</span><span class="mi">1000</span><span class="p">],</span>  <span class="c1"># meters</span>
     <span class="n">trip_speed</span><span class="p">,</span>
