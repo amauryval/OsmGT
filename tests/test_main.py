@@ -2,7 +2,6 @@ import pytest
 
 from osmgt import OsmGt
 
-from graph_tool.topology import shortest_path
 from osmgt.compoments.roads import AdditionalNodesOutsideWorkingArea
 
 
@@ -13,15 +12,16 @@ def output_data_common_asserts(
     graph_computed,
 ):
     # check POI
-    assert poi_from_web_found_gdf.shape[0] > 0
-    assert poi_from_web_found_gdf.shape[-1] > 0
-    # check all values are unique
-    all_values = list(poi_from_web_found_gdf["topo_uuid"].values)
-    assert len(set(all_values)) == len(all_values)
-    # check columns output
-    columns_computed = poi_from_web_found_gdf.columns
-    for colunm_expected in default_columns_from_output:
-        assert colunm_expected in columns_computed
+    if poi_from_web_found_gdf is not None:
+        assert poi_from_web_found_gdf.shape[0] > 0
+        assert poi_from_web_found_gdf.shape[-1] > 0
+        # check all values are unique
+        all_values = list(poi_from_web_found_gdf["topo_uuid"].values)
+        assert len(set(all_values)) == len(all_values)
+        # check columns output
+        columns_computed = poi_from_web_found_gdf.columns
+        for colunm_expected in default_columns_from_output:
+            assert colunm_expected in columns_computed
 
     # check network
     assert network_from_web_found_gdf.shape[0] > 0
@@ -42,7 +42,7 @@ def output_data_common_asserts(
     assert len(graph_computed.vertices_content) > 0
 
 
-def test_run_from_location_name_func(default_columns_from_output):
+def test_run_from_location_name_with_additional_nodes(default_columns_from_output):
     location_name = "roanne"
     poi_from_web_found_gdf = OsmGt.pois_from_location(location_name).get_gdf()
 
@@ -50,7 +50,6 @@ def test_run_from_location_name_func(default_columns_from_output):
         location_name, "pedestrian", poi_from_web_found_gdf
     )
     graph_computed = network_from_web_found.get_graph()
-
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
     output_data_common_asserts(
@@ -59,6 +58,47 @@ def test_run_from_location_name_func(default_columns_from_output):
         default_columns_from_output,
         graph_computed,
     )
+
+    network_from_web_found_topology_gdfs = network_from_web_found.topology_checker()
+
+    assert {
+        "lines_unchanged",
+        "lines_added",
+        "lines_split",
+        "nodes_added",
+        "intersections_added",
+    } == set(network_from_web_found_topology_gdfs.keys())
+    for topology_gdf in network_from_web_found_topology_gdfs.values():
+        assert topology_gdf.shape[0] > 0
+        assert topology_gdf.shape[1] == 5
+
+
+def test_run_from_location_name_without_additional_nodes(default_columns_from_output):
+    location_name = "roanne"
+
+    network_from_web_found = OsmGt.roads_from_location(location_name, "pedestrian")
+    graph_computed = network_from_web_found.get_graph()
+    network_from_web_found_gdf = network_from_web_found.get_gdf()
+
+    output_data_common_asserts(
+        None, network_from_web_found_gdf, default_columns_from_output, graph_computed,
+    )
+
+    network_from_web_found_topology_gdfs = network_from_web_found.topology_checker()
+
+    assert {
+        "lines_unchanged",
+        "lines_added",
+        "lines_split",
+        "nodes_added",
+        "intersections_added",
+    } == set(network_from_web_found_topology_gdfs.keys())
+    for title, topology_gdf in network_from_web_found_topology_gdfs.items():
+        if title in ["nodes_added", "lines_added"]:
+            assert topology_gdf.shape[0] == 0
+        else:
+            assert topology_gdf.shape[0] > 0
+        assert topology_gdf.shape[1] == 5
 
 
 def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
@@ -69,7 +109,6 @@ def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
         bbox_values_1, "vehicle", poi_from_web_found_gdf
     )
     graph_computed = network_from_web_found.get_graph()
-
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
     output_data_common_asserts(
@@ -87,7 +126,6 @@ def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
         bbox_values_2, additional_nodes=poi_from_web_found_gdf
     )
     graph_computed = network_from_web_found.get_graph()
-
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
     output_data_common_asserts(

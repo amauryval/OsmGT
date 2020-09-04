@@ -12,6 +12,13 @@ time_unit: str = "minutes"
 # transport modes
 transport_modes: List[str] = ["vehicle", "pedestrian"]
 
+# direction tags
+forward_tag: str = "forward"
+backward_tag: str = "backward"
+
+# topology
+topology_fields: List[str] = ["topo_uuid", "id", "topology", "osm_url", "geometry"]
+
 # POIs overpass query
 poi_query: str = (
     'node[~"^(amenity)$"~"('

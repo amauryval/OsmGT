@@ -23,6 +23,9 @@ from numba import types as nb_types
 
 import concurrent.futures
 
+from osmgt.core.global_values import forward_tag
+from osmgt.core.global_values import backward_tag
+
 
 class NetworkTopologyError(Exception):
     pass
@@ -215,7 +218,7 @@ class NetworkTopology:
 
         if self._mode_post_processing == "vehicle":
             # by default
-            new_forward_feature = self._direction_processing(input_feature, "forward")
+            new_forward_feature = self._direction_processing(input_feature, forward_tag)
             new_elements.extend(new_forward_feature)
             if input_feature.get("junction", None) in ["roundabout", "jughandle"]:
                 return new_elements
@@ -223,7 +226,7 @@ class NetworkTopology:
             if input_feature.get(self.__ONEWAY_FIELD, None) != "yes":
 
                 new_backward_feature = self._direction_processing(
-                    input_feature, "backward"
+                    input_feature, backward_tag
                 )
                 new_elements.extend(new_backward_feature)
 

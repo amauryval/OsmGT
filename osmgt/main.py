@@ -37,15 +37,15 @@ class OsmGt:
 
     @staticmethod
     def roads_from_bbox(
-        bbox_values: Tuple[float, float, float, float],
+        bbox_value: Tuple[float, float, float, float],
         mode: str = "pedestrian",
         additional_nodes: Optional[gpd.GeoDataFrame] = None,
     ) -> OsmGtRoads:
         """
         Get OpenStreetMap roads from a bbox
 
-        :param bbox_values: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
-        :type bbox_values: tuple of float
+        :param bbox_value: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
+        :type bbox_value: tuple of float
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
         :param additional_nodes: additional nodes to connect on the network
@@ -54,7 +54,7 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
         osm_road = OsmGtRoads()
-        osm_road.from_bbox(bbox_values, additional_nodes, mode)
+        osm_road.from_bbox(bbox_value, additional_nodes, mode)
         return osm_road
 
     @staticmethod
@@ -161,14 +161,14 @@ class OsmGt:
 
     @staticmethod
     def shortest_path_from_bbox(
-        bbox_values: Tuple[float, float, float, float],
+        bbox_value: Tuple[float, float, float, float],
         source_target_points: List[Tuple[Point, Point]],
         mode: str = "pedestrian",
     ) -> gpd.GeoDataFrame:
         """
 
-        :param bbox_values: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
-        :type bbox_values: tuple of float
+        :param bbox_value: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
+        :type bbox_value: tuple of float
         :param source_target_points: list of tuple source and target points
         :type source_target_points: list of tuple (shapely.geometry.Point)
         :param mode: the transport mode
@@ -178,5 +178,5 @@ class OsmGt:
         """
 
         return OsmGtShortestPath(source_target_points).from_bbox(
-            bbox_values, None, mode
+            bbox_value, None, mode
         )
