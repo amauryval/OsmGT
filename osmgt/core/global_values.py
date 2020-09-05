@@ -1,4 +1,5 @@
 from typing import List
+from typing import Dict
 
 osm_url = "https://www.openstreetmap.org"
 
@@ -97,5 +98,24 @@ network_queries: dict = {
         "path"
         ')$"]["area"!~"."]({geo_filter});',
         "directed_graph": False,
+    },
+}
+
+isochrone_display_mode: Dict[str, Dict] = {
+    "web": {
+        "path_buffered": 0.00001,
+        "dilatation": 0.001,
+        "erosion": -0.001,
+        "cap_style": 1,
+        "join_style": 1,
+        "resolution": 8,
+    },
+    "orthogonal": {
+        "path_buffered": 0.00001,
+        "dilatation": 0.001,
+        "erosion": -0.001,
+        "cap_style": 2,
+        "join_style": 3,
+        "resolution": 8,
     },
 }

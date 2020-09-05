@@ -1,5 +1,4 @@
 from typing import List
-
 from typing import Union
 
 import geopandas as gpd
@@ -8,17 +7,15 @@ from pyproj import Transformer
 
 from shapely.ops import transform
 from shapely.ops import linemerge
-from shapely.ops import split
 
 from shapely.geometry import base
 from shapely.geometry import MultiLineString
 from shapely.geometry import Point
 
-from shapely.geometry import Polygon
 from shapely.geometry import LineString
 
 
-def compute_wg84_line_length(input_geom: LineString) -> float:
+def compute_wg84_line_length(input_geom: Union[LineString, MultiLineString]) -> float:
     """
     Compute the length of a wg84 line (LineString and MultiLineString)
 
@@ -52,7 +49,7 @@ def compute_wg84_line_length(input_geom: LineString) -> float:
     return total_length
 
 
-def reprojection(geometry: base, from_epsg: int, to_epsg: int) -> base:
+def reprojection(geometry: base, from_epsg: str, to_epsg: str) -> base:
     """
     reprojection
 
@@ -132,10 +129,8 @@ def split_linestring_to_points(
 
     :param input_gdf: GeoDataframe containing LineStrings
     :type input_gdf: Geopandas.GeoDataframe
-    :param epsg_data:
+    :param epsg_data: epsg value
     :type epsg_data: str
-    :param id_field:
-    :type id_field: str
     :param positions: list containing point index position to filter
     :type positions: list of int
     :return: your GeoDataframe exploded containing points
@@ -160,43 +155,3 @@ def split_linestring_to_points(
     )
 
     return output
-
-
-def snap_polygon_to_nearest_points(polygon, points):
-    """
-
-    :param polygon:
-    :param points:
-    :return:
-
-    polygon = Polygon([(1,1), (2, 1), (2, 2), (1, 2), (1, 1)])
-    points = [Point(1.3, 1.4)]
-    snap_polygon_to_nearest_points(polygon, points)
-    """
-
-    linearing_coordinates = polygon.exterior.coords[:]
-    linestrings_built = list(map(
-        lambda x: LineString(x), list(zip(linearing_coordinates, linearing_coordinates[1:]))
-    ))
-
-    for point in points:
-        _, line_pos = min([
-            (point.distance(line), pos)
-            for pos, line in enumerate(linestrings_built)
-        ])
-        line_found = linestrings_built[line_pos]
-
-        # create a twin node into the line found
-        end_point = line_found.interpolate(line_found.project(point))
-        line_updated = split(line_found, end_point)
-        line_updated = linemerge(line_updated.geoms)
-
-        # find the position of the twin coordinate
-        line_updated_coordinates = line_updated.coords[:]
-        end_point_position = line_updated_coordinates.index(end_point.coords[0])
-        line_updated_coordinates[end_point_position] = point.coords[0]
-
-        linestrings_built[line_pos] = LineString(line_updated_coordinates)
-
-    # linestrings to polygon
-    return Polygon(linemerge(linestrings_built))
