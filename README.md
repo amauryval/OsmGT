@@ -35,11 +35,6 @@ Only on Linux
 conda install -c amauryval osmgt
 ```
 
-# A (very) short documentation...
-
-Check example.html example (doc is coming)
-
-
 # How to run the dockerfile 
 ```
 docker build -t osmgt . && docker run -p 8888:8888 osmgt:latest
