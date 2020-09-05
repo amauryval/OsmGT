@@ -1,19 +1,21 @@
 from typing import List
-
 from typing import Union
 
 import geopandas as gpd
 from pyproj import Geod
 from pyproj import Transformer
 
-from shapely.ops import transform, linemerge
+from shapely.ops import transform
+from shapely.ops import linemerge
 
 from shapely.geometry import base
 from shapely.geometry import MultiLineString
+from shapely.geometry import Point
+
 from shapely.geometry import LineString
 
 
-def compute_wg84_line_length(input_geom: LineString) -> float:
+def compute_wg84_line_length(input_geom: Union[LineString, MultiLineString]) -> float:
     """
     Compute the length of a wg84 line (LineString and MultiLineString)
 
@@ -86,9 +88,9 @@ def split_multiline_to_lines(
     input_gdf: gpd.GeoDataFrame, epsg_data: str, id_field: str
 ) -> gpd.GeoDataFrame:
     """
-    split each linestring row from a GeoDataframe to point
+    Convert MultiLinestring GeoDataframe rows to LineString rows
 
-    :param input_gdf: your GeoDataframe containing LineStrings
+    :param input_gdf: GeoDataframe containing MultiLineStrings or LineString
     :type input_gdf: Geopandas.GeoDataframe
     :param epsg_data:
     :type epsg_data: str
@@ -112,8 +114,44 @@ def split_multiline_to_lines(
     geometry = output["geometry"]
     output: gpd.GeoDataFrame = gpd.GeoDataFrame(
         output.drop(["geometry"], axis=1),
-        crs=f"EPSG:{epsg_data}",
         geometry=geometry.to_list(),
+        crs=f"EPSG:{epsg_data}",
+    )
+
+    return output
+
+
+def split_linestring_to_points(
+    input_gdf: gpd.GeoDataFrame, epsg_data: str, positions: list = [0, -1]
+) -> gpd.GeoDataFrame:
+    """
+    split each Linestring GeoDataframe rows to points rows
+
+    :param input_gdf: GeoDataframe containing LineStrings
+    :type input_gdf: Geopandas.GeoDataframe
+    :param epsg_data: epsg value
+    :type epsg_data: str
+    :param positions: list containing point index position to filter
+    :type positions: list of int
+    :return: your GeoDataframe exploded containing points
+    :rtype: Pandas.Dataframe
+    """
+    columns_without_geometry = input_gdf.columns.tolist()
+    columns_without_geometry.remove("geometry")
+
+    input_gdf_copy = input_gdf.copy(deep=True)
+
+    input_gdf_copy["geometry"] = input_gdf_copy["geometry"].apply(
+        lambda geom: [Point(geom.coords[pos]) for pos in positions]
+    )
+
+    input_gdf_copy.set_index(columns_without_geometry, inplace=True)
+    output = input_gdf_copy["geometry"].explode().reset_index()
+    geometry = output["geometry"]
+    output = gpd.GeoDataFrame(
+        output.drop(["geometry"], axis=1),
+        geometry=geometry.to_list(),
+        crs=f"EPSG:{epsg_data}",
     )
 
     return output

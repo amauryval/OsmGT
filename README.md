@@ -19,7 +19,10 @@ OpenStreetMap (OSM) network analysis based on [graph-tools](https://graph-tool.s
 * isochrone builder
 * shortest path 
 
-# Check the jupyter notebook output
+
+# Documentation
+
+[Open the wiki](https://github.com/amauryval/osmgt/wiki/OsmGT-Wiki)
 
 [Open the example](https://amauryval.github.io/osmgt/)
 
@@ -35,6 +38,7 @@ conda install -c amauryval osmgt
 # A (very) short documentation...
 
 Check example.html example (doc is coming)
+
 
 # How to run the dockerfile 
 ```

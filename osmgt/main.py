@@ -37,15 +37,15 @@ class OsmGt:
 
     @staticmethod
     def roads_from_bbox(
-        bbox_values: Tuple[float, float, float, float],
+        bbox_value: Tuple[float, float, float, float],
         mode: str = "pedestrian",
         additional_nodes: Optional[gpd.GeoDataFrame] = None,
     ) -> OsmGtRoads:
         """
         Get OpenStreetMap roads from a bbox
 
-        :param bbox_values: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
-        :type bbox_values: tuple of float
+        :param bbox_value: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
+        :type bbox_value: tuple of float
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
         :param additional_nodes: additional nodes to connect on the network
@@ -54,11 +54,11 @@ class OsmGt:
         :rtype: OsmGtRoads
         """
         osm_road = OsmGtRoads()
-        osm_road.from_bbox(bbox_values, additional_nodes, mode)
+        osm_road.from_bbox(bbox_value, additional_nodes, mode)
         return osm_road
 
     @staticmethod
-    def poi_from_location(location_name: str) -> OsmGtPoi:
+    def pois_from_location(location_name: str) -> OsmGtPoi:
         """
         Find OSM POIs from a location name
 
@@ -72,7 +72,7 @@ class OsmGt:
         return osm_poi
 
     @staticmethod
-    def poi_from_bbox(bbox_values: Tuple[float, float, float, float]) -> OsmGtPoi:
+    def pois_from_bbox(bbox_values: Tuple[float, float, float, float]) -> OsmGtPoi:
         """
         Find OSM POIs from a bbox value
 
@@ -86,54 +86,60 @@ class OsmGt:
         return osm_poi
 
     @staticmethod
-    def isochrone_from_coordinates(
-        coordinates: Point,
+    def isochrone_from_source_node(
+        source_node: Point,
         isochrones_times: List[float],
         trip_speed: float,
         mode: str = "pedestrian",
+        display_mode: str = "orthogonal",
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
-        :param coordinates: location points
-        :type coordinates: shapely.geometry.Point
+        :param source_node: location points
+        :type source_node: shapely.geometry.Point
         :param isochrones_times: isochrones to build (in minutes)
         :type isochrones_times: list of int
         :param trip_speed: trip speed in km/h
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
+        :param display_mode: the isochrone display mode, one of : web, orthogonal
+        :type display_mode: str, default 'orthogonal'
         :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
-            trip_speed, isochrones_times
-        ).from_location_point(coordinates, mode)
+            trip_speed, isochrones_times, display_mode=display_mode
+        ).from_location_point(source_node, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf
 
     @staticmethod
-    def isochrone_distance_from_coordinates(
-        coordinates: Point,
+    def isochrone_distance_from_source_node(
+        source_node: Point,
         distances: List,
         trip_speed: float,
         mode: str = "pedestrian",
+        display_mode: str = "orthogonal",
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
-        :param coordinates: location points
-        :type coordinates: shapely.geometry.Point
+        :param source_node: location points
+        :type source_node: shapely.geometry.Point
         :param distances: distances (meters)
         :type distances: list of int
         :param trip_speed: trip speed in km/h
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
+        :param display_mode: the isochrone display mode, one of : web, orthogonal
+        :type display_mode: str, default 'orthogonal'
         :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
-            trip_speed, None, distances
-        ).from_location_point(coordinates, mode)
+            trip_speed, None, distances, display_mode=display_mode
+        ).from_location_point(source_node, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf
 
@@ -161,14 +167,14 @@ class OsmGt:
 
     @staticmethod
     def shortest_path_from_bbox(
-        bbox_values: Tuple[float, float, float, float],
+        bbox_value: Tuple[float, float, float, float],
         source_target_points: List[Tuple[Point, Point]],
         mode: str = "pedestrian",
     ) -> gpd.GeoDataFrame:
         """
 
-        :param bbox_values: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
-        :type bbox_values: tuple of float
+        :param bbox_value: a bbox value : (min_x , min_y , max_x , max_y) or (min_lng, min_lat, max_lng, max_lat)
+        :type bbox_value: tuple of float
         :param source_target_points: list of tuple source and target points
         :type source_target_points: list of tuple (shapely.geometry.Point)
         :param mode: the transport mode
@@ -177,6 +183,4 @@ class OsmGt:
         :rtype: geopandas.GeoDataFrame
         """
 
-        return OsmGtShortestPath(source_target_points).from_bbox(
-            bbox_values, None, mode
-        )
+        return OsmGtShortestPath(source_target_points).from_bbox(bbox_value, None, mode)

@@ -4,11 +4,16 @@ from typing import List
 from typing import Optional
 from typing import Dict
 
+from osmgt.core.global_values import epsg_4326
+from osmgt.core.global_values import forward_tag
+from osmgt.core.global_values import topology_fields
+
 from osmgt.compoments.core import OsmGtCore
 from osmgt.compoments.core import EmptyData
 
 from osmgt.geometry.network_topology import NetworkTopology
 from osmgt.geometry.geom_helpers import compute_wg84_line_length
+from osmgt.geometry.geom_helpers import split_linestring_to_points
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
@@ -127,7 +132,7 @@ class OsmGtRoads(OsmGtCore):
         if additional_nodes is not None:
             additional_nodes = self._check_topology_field(additional_nodes)
             # filter nodes from study_area_geom
-            additional_nodes_mask = additional_nodes.intersects(self.study_area_geom)
+            additional_nodes_mask = additional_nodes.intersects(self._study_area_geom)
             additional_nodes_filtered = additional_nodes.loc[additional_nodes_mask]
 
             if additional_nodes_filtered.shape[0] != additional_nodes.shape[0]:
@@ -185,3 +190,31 @@ class OsmGtRoads(OsmGtCore):
     @staticmethod
     def _get_query_from_mode(mode: str) -> str:
         return network_queries[mode]["query"]
+
+    def topology_checker(self) -> Dict[str, gpd.GeoDataFrame]:
+        self.logger.info("Prepare topology data")
+
+        network_gdf = super().get_gdf(verbose=False)
+
+        lines_unchanged = network_gdf.loc[network_gdf["topology"] == "unchanged"]
+        lines_added = network_gdf.loc[network_gdf["topology"] == "added"]
+        if network_queries[self._mode]["directed_graph"]:
+            nodes_added = network_gdf.loc[
+                (network_gdf["topology"] == "added")
+                & (network_gdf[self._TOPO_FIELD].str.contains(forward_tag))
+            ]
+        else:
+            nodes_added = network_gdf.loc[network_gdf["topology"] == "added"]
+        nodes_added = split_linestring_to_points(nodes_added, epsg_4326, [0])
+        lines_split = network_gdf.loc[network_gdf["topology"] == "split"]
+        intersections_added = split_linestring_to_points(
+            network_gdf.loc[network_gdf["topology"] == "split"], epsg_4326, [0, -1]
+        )
+
+        return {
+            "lines_unchanged": lines_unchanged[topology_fields],
+            "lines_added": lines_added[topology_fields],
+            "lines_split": lines_split[topology_fields],
+            "nodes_added": nodes_added[topology_fields],
+            "intersections_added": intersections_added[topology_fields],
+        }
