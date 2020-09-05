@@ -111,12 +111,28 @@ def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
     graph_computed = network_from_web_found.get_graph()
     network_from_web_found_gdf = network_from_web_found.get_gdf()
 
+    network_from_web_found_topology_gdfs = network_from_web_found.topology_checker()
+
     output_data_common_asserts(
         poi_from_web_found_gdf,
         network_from_web_found_gdf,
         default_columns_from_output,
         graph_computed,
     )
+
+    assert {
+        "lines_unchanged",
+        "lines_added",
+        "lines_split",
+        "nodes_added",
+        "intersections_added",
+    } == set(network_from_web_found_topology_gdfs.keys())
+    for title, topology_gdf in network_from_web_found_topology_gdfs.items():
+        if title in ["nodes_added", "lines_added"]:
+            assert topology_gdf.shape[0] == 0
+        else:
+            assert topology_gdf.shape[0] > 0
+        assert topology_gdf.shape[1] == 5
 
 
 def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
