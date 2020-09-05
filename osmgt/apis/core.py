@@ -16,7 +16,7 @@ class ApiCore:
         python_class_name = self.__class__.__name__
         response_code = response.result().status_code
         response_reason = f"{response_code}:{response.result().reason}"
-        response_result_message = f"{python_class_name}: Query {response_reason} in {response.result().elapsed.total_seconds()} sec."
+        response_result_message = f"{python_class_name}: Query {response_reason} in {round(response.result().elapsed.total_seconds(), 2)} sec."
 
         if response_code == self.__WORKED_STATUS_CODE:
             self.logger.info(f"{response_result_message}")

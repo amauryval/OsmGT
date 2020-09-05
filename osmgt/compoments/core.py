@@ -66,7 +66,7 @@ class OsmGtCore(Logger):
     def __init__(self) -> None:
         super().__init__()
 
-        self.study_area_geom: Optional[Polygon] = None
+        self._study_area_geom: Optional[Polygon] = None
 
         self._output_data: Optional[Union[gpd.geodataframe, List[Dict]]] = None
         self._bbox_value: Optional[Tuple[float, float, float, float]] = None
@@ -89,7 +89,7 @@ class OsmGtCore(Logger):
                 f"Multiple locations found for {location_name} ; the first will be used"
             )
         location_id = location_found[0][self._NOMINATIM_OSM_ID_FIELD]
-        self.study_area_geom = Polygon(
+        self._study_area_geom = Polygon(
             location_found[0][self._NOMINATIM_GEOJSON_FIELD]["coordinates"][0]
         )
 
@@ -99,9 +99,19 @@ class OsmGtCore(Logger):
         self._bbox_mode: bool = True
         self.logger.info(f"From bbox: {bbox_value}")
         self.logger.info("Loading data...")
-        self.study_area_geom = box(*bbox_value, ccw=True)
+        self._study_area_geom = box(*bbox_value, ccw=True)
         # reordered because of nominatim
         self._bbox_value = (bbox_value[1], bbox_value[0], bbox_value[3], bbox_value[2])
+
+    @property
+    def study_area(self) -> Polygon:
+        """
+        return the shapely geometry of the study area (data area)
+
+        :return: the shapely geometry of the study area. If None, it means that nothing has been loaded or run
+        :rtype: shapely.geometry.Polygon
+        """
+        return self._study_area_geom
 
     def _query_on_overpass_api(self, request: str) -> List[Dict]:
         return OverpassApi(self.logger).query(request)[self._QUERY_ELEMENTS_FIELD]
@@ -130,6 +140,12 @@ class OsmGtCore(Logger):
         return input_gdf
 
     def get_gdf(self, verbose: bool = True) -> gpd.GeoDataFrame:
+        """
+        Return a GeoDataframe
+
+        :param verbose: to activate log messages
+        :return: geopandas.GeoDataframe
+        """
         if verbose:
             self.logger.info("Prepare GeoDataframe")
 

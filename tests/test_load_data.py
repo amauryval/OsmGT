@@ -2,10 +2,10 @@ import pytest
 
 from osmgt import OsmGt
 
-from osmgt.compoments.roads import AdditionalNodesOutsideWorkingArea
+from osmgt.compoments.core import ErrorOsmGtCore
 
 
-def output_data_common_asserts(
+def shared_asserts(
     poi_from_web_found_gdf,
     network_from_web_found_gdf,
     default_columns_from_output,
@@ -42,24 +42,41 @@ def output_data_common_asserts(
     assert len(graph_computed.vertices_content) > 0
 
 
+def test_get_pois_from_an_unexisting_location():
+    location_name = "dsfsdfsdf"
+
+    with pytest.raises(ErrorOsmGtCore) as excinfo:
+
+        _ = OsmGt.pois_from_location(location_name)
+        assert (
+            "Location not found!" == str(excinfo.value)
+        )
+
 def test_run_from_location_name_with_additional_nodes(default_columns_from_output):
     location_name = "roanne"
-    poi_from_web_found_gdf = OsmGt.pois_from_location(location_name).get_gdf()
+    pois_initialized = OsmGt.pois_from_location(location_name)
 
-    network_from_web_found = OsmGt.roads_from_location(
-        location_name, "pedestrian", poi_from_web_found_gdf
+    pois_study_area = pois_initialized.study_area
+    assert pois_study_area.geom_type == "Polygon"
+
+    pois_gdf = pois_initialized.get_gdf()
+    network_initialized = OsmGt.roads_from_location(
+        location_name, "pedestrian", pois_gdf
     )
-    graph_computed = network_from_web_found.get_graph()
-    network_from_web_found_gdf = network_from_web_found.get_gdf()
+    study_area = network_initialized.study_area
+    assert study_area.geom_type == "Polygon"
 
-    output_data_common_asserts(
-        poi_from_web_found_gdf,
-        network_from_web_found_gdf,
+    graph_computed = network_initialized.get_graph()
+    network_gdf = network_initialized.get_gdf()
+
+    shared_asserts(
+        pois_gdf,
+        network_gdf,
         default_columns_from_output,
         graph_computed,
     )
 
-    network_from_web_found_topology_gdfs = network_from_web_found.topology_checker()
+    network_topology_gdfs = network_initialized.topology_checker()
 
     assert {
         "lines_unchanged",
@@ -67,8 +84,8 @@ def test_run_from_location_name_with_additional_nodes(default_columns_from_outpu
         "lines_split",
         "nodes_added",
         "intersections_added",
-    } == set(network_from_web_found_topology_gdfs.keys())
-    for topology_gdf in network_from_web_found_topology_gdfs.values():
+    } == set(network_topology_gdfs.keys())
+    for topology_gdf in network_topology_gdfs.values():
         assert topology_gdf.shape[0] > 0
         assert topology_gdf.shape[1] == 5
 
@@ -76,15 +93,15 @@ def test_run_from_location_name_with_additional_nodes(default_columns_from_outpu
 def test_run_from_location_name_without_additional_nodes(default_columns_from_output):
     location_name = "roanne"
 
-    network_from_web_found = OsmGt.roads_from_location(location_name, "pedestrian")
-    graph_computed = network_from_web_found.get_graph()
-    network_from_web_found_gdf = network_from_web_found.get_gdf()
+    network_initialized = OsmGt.roads_from_location(location_name, "pedestrian")
+    graph_computed = network_initialized.get_graph()
+    network_gdf = network_initialized.get_gdf()
 
-    output_data_common_asserts(
-        None, network_from_web_found_gdf, default_columns_from_output, graph_computed,
+    shared_asserts(
+        None, network_gdf, default_columns_from_output, graph_computed,
     )
 
-    network_from_web_found_topology_gdfs = network_from_web_found.topology_checker()
+    network_topology_gdfs = network_initialized.topology_checker()
 
     assert {
         "lines_unchanged",
@@ -92,29 +109,37 @@ def test_run_from_location_name_without_additional_nodes(default_columns_from_ou
         "lines_split",
         "nodes_added",
         "intersections_added",
-    } == set(network_from_web_found_topology_gdfs.keys())
-    for title, topology_gdf in network_from_web_found_topology_gdfs.items():
+    } == set(network_topology_gdfs.keys())
+    for title, topology_gdf in network_topology_gdfs.items():
         if title in ["nodes_added", "lines_added"]:
             assert topology_gdf.shape[0] == 0
         else:
             assert topology_gdf.shape[0] > 0
-        assert topology_gdf.shape[1] == 5
+        assert topology_gdf.shape[-1] == 5
 
 
 def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
 
-    poi_from_web_found_gdf = OsmGt.pois_from_bbox(bbox_values_1).get_gdf()
+    pois_initialized = OsmGt.pois_from_bbox(bbox_values_1)
 
-    network_from_web_found = OsmGt.roads_from_bbox(
-        bbox_values_1, "vehicle", poi_from_web_found_gdf
+    pois_study_area = pois_initialized.study_area
+    assert pois_study_area.geom_type == "Polygon"
+
+    pois_gdf = pois_initialized.get_gdf()
+
+    network_initialized = OsmGt.roads_from_bbox(
+        bbox_values_1, "vehicle", pois_gdf
     )
-    graph_computed = network_from_web_found.get_graph()
-    network_from_web_found_gdf = network_from_web_found.get_gdf()
+    study_area = network_initialized.study_area
+    assert study_area.geom_type == "Polygon"
 
-    network_from_web_found_topology_gdfs = network_from_web_found.topology_checker()
+    graph_computed = network_initialized.get_graph()
+    network_from_web_found_gdf = network_initialized.get_gdf()
 
-    output_data_common_asserts(
-        poi_from_web_found_gdf,
+    network_topology_gdfs = network_initialized.topology_checker()
+
+    shared_asserts(
+        pois_gdf,
         network_from_web_found_gdf,
         default_columns_from_output,
         graph_computed,
@@ -126,27 +151,36 @@ def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
         "lines_split",
         "nodes_added",
         "intersections_added",
-    } == set(network_from_web_found_topology_gdfs.keys())
-    for title, topology_gdf in network_from_web_found_topology_gdfs.items():
+    } == set(network_topology_gdfs.keys())
+    for title, topology_gdf in network_topology_gdfs.items():
         if title in ["nodes_added", "lines_added"]:
             assert topology_gdf.shape[0] > 0
         else:
             assert topology_gdf.shape[0] > 0
-        assert topology_gdf.shape[1] == 5
+        assert topology_gdf.shape[-1] == 5
 
 
 def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
-    poi_from_web_found_gdf = OsmGt.pois_from_bbox(bbox_values_2).get_gdf()
+    pois_initialized = OsmGt.pois_from_bbox(bbox_values_2)
 
-    network_from_web_found = OsmGt.roads_from_bbox(
-        bbox_values_2, additional_nodes=poi_from_web_found_gdf
+    pois_study_area = pois_initialized.study_area
+    assert pois_study_area.geom_type == "Polygon"
+
+    pois_gdf = pois_initialized.get_gdf()
+
+    network_initialized = OsmGt.roads_from_bbox(
+        bbox_values_2, additional_nodes=pois_gdf
     )
-    graph_computed = network_from_web_found.get_graph()
-    network_from_web_found_gdf = network_from_web_found.get_gdf()
 
-    output_data_common_asserts(
-        poi_from_web_found_gdf,
-        network_from_web_found_gdf,
+    network_study_area = network_initialized.study_area
+    assert network_study_area.geom_type == "Polygon"
+
+    graph_computed = network_initialized.get_graph()
+    network_gdf = network_initialized.get_gdf()
+
+    shared_asserts(
+        pois_gdf,
+        network_gdf,
         default_columns_from_output,
         graph_computed,
     )

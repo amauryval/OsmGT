@@ -2,14 +2,12 @@ import pytest
 
 from osmgt import OsmGt
 
-from osmgt.compoments.roads import AdditionalNodesOutsideWorkingArea
-
 
 def test_if_orthogonal_isochrones_can_be_computed(location_point, isochrone_values):
-    data = OsmGt.isochrone_from_source_node(
+    output_data = OsmGt.isochrone_from_source_node(
         location_point, isochrone_values, 3, mode="pedestrian"
     )
-    isochrones_polygon_from_location, isochrones_lines_from_location = data
+    isochrones_polygon_from_location, isochrones_lines_from_location = output_data
 
     assert isochrones_polygon_from_location.shape[0] == 3
     assert set(isochrones_polygon_from_location["iso_name"].to_list()) == {

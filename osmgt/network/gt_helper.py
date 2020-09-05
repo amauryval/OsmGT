@@ -249,6 +249,12 @@ class GraphHelpers(Graph):
         return self.find_vertex_from_name(vertex_name) is not None
 
     def plot(self, output_file_with_extension: Optional[str] = None):
+        """
+        To return a graph image
+
+        :param output_file_with_extension: the output file name with extension
+        :return: str
+        """
         self._logger.info("Graph to PNG file")
         pos = sfdp_layout(self)
         graph_draw(

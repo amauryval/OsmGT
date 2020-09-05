@@ -132,7 +132,7 @@ class OsmGtRoads(OsmGtCore):
         if additional_nodes is not None:
             additional_nodes = self._check_topology_field(additional_nodes)
             # filter nodes from study_area_geom
-            additional_nodes_mask = additional_nodes.intersects(self.study_area_geom)
+            additional_nodes_mask = additional_nodes.intersects(self._study_area_geom)
             additional_nodes_filtered = additional_nodes.loc[additional_nodes_mask]
 
             if additional_nodes_filtered.shape[0] != additional_nodes.shape[0]:
