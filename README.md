@@ -14,7 +14,7 @@ OsmGT
 
 
 OpenStreetMap (OSM) network analysis based on [graph-tools](https://graph-tool.skewed.de/) (GT): 
-* Find data (roads and pois)
+* load data from a location name or a bounding box (roads and pois)
 * graph creation (and topology processing)
 * isochrone builder
 * shortest path 
