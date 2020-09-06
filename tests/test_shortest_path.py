@@ -6,7 +6,7 @@ from osmgt.compoments.roads import AdditionalNodesOutsideWorkingArea
 
 
 def test_if_shortest_path_from_location_with_duplicated_nodes_pairs(
-    start_and_end_nodes, shortest_path_default_columns_from_output
+    start_and_end_nodes, shortest_path_output_default_columns
 ):
     shortest_paths = OsmGt.shortest_path_from_location(
         "Roanne",
@@ -16,13 +16,13 @@ def test_if_shortest_path_from_location_with_duplicated_nodes_pairs(
         ],
         mode="pedestrian",
     )
-    assert shortest_paths.columns.to_list() == shortest_path_default_columns_from_output
+    assert set(shortest_paths.columns.to_list()) == shortest_path_output_default_columns
     assert len(shortest_paths["osm_ids"]) > 0
     assert shortest_paths.shape[0] == 1
 
 
 def test_if_shortest_path_from_bbox_with_duplicated_nodes_pairs(
-    bbox_values_3, start_and_end_nodes, shortest_path_default_columns_from_output
+    bbox_values_3, start_and_end_nodes, shortest_path_output_default_columns
 ):
     shortest_paths = OsmGt.shortest_path_from_bbox(
         bbox_values_3,
@@ -32,7 +32,7 @@ def test_if_shortest_path_from_bbox_with_duplicated_nodes_pairs(
         ],
         mode="pedestrian",
     )
-    assert shortest_paths.columns.to_list() == shortest_path_default_columns_from_output
+    assert set(shortest_paths.columns.to_list()) == shortest_path_output_default_columns
     assert len(shortest_paths["osm_ids"]) > 0
     assert len(shortest_paths["osm_urls"]) > 0
     assert shortest_paths.shape[0] == 1

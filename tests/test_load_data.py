@@ -8,7 +8,8 @@ from osmgt.compoments.core import ErrorOsmGtCore
 def shared_asserts(
     poi_from_web_found_gdf,
     network_from_web_found_gdf,
-    default_columns_from_output,
+    default_pois_columns_from_output,
+    default_network_columns_from_output,
     graph_computed,
 ):
     # check POI
@@ -19,9 +20,8 @@ def shared_asserts(
         all_values = list(poi_from_web_found_gdf["topo_uuid"].values)
         assert len(set(all_values)) == len(all_values)
         # check columns output
-        columns_computed = poi_from_web_found_gdf.columns
-        for colunm_expected in default_columns_from_output:
-            assert colunm_expected in columns_computed
+        columns_output = set(list(poi_from_web_found_gdf.columns))
+        default_network_columns_from_output.issubset(columns_output)
 
     # check network
     assert network_from_web_found_gdf.shape[0] > 0
@@ -31,9 +31,8 @@ def shared_asserts(
     assert len(set(all_uuid_values)) == len(all_uuid_values)
 
     # check columns output
-    columns_computed = network_from_web_found_gdf.columns
-    for colunm_expected in default_columns_from_output:
-        assert colunm_expected in columns_computed
+    columns_output = set(list(network_from_web_found_gdf.columns))
+    default_network_columns_from_output.issubset(columns_output)
 
     # check graph
     assert len(list(graph_computed.edges())) > 0
@@ -52,7 +51,7 @@ def test_get_pois_from_an_unexisting_location():
             "Location not found!" == str(excinfo.value)
         )
 
-def test_run_from_location_name_with_additional_nodes(default_columns_from_output):
+def test_run_from_location_name_with_additional_nodes(default_output_pois_columns, default_output_network_columns):
     location_name = "roanne"
     pois_initialized = OsmGt.pois_from_location(location_name)
 
@@ -72,12 +71,12 @@ def test_run_from_location_name_with_additional_nodes(default_columns_from_outpu
     shared_asserts(
         pois_gdf,
         network_gdf,
-        default_columns_from_output,
+        default_output_pois_columns,
+        default_output_network_columns,
         graph_computed,
     )
 
     network_topology_gdfs = network_initialized.topology_checker()
-
     assert {
         "lines_unchanged",
         "lines_added",
@@ -90,7 +89,7 @@ def test_run_from_location_name_with_additional_nodes(default_columns_from_outpu
         assert topology_gdf.shape[1] == 5
 
 
-def test_run_from_location_name_without_additional_nodes(default_columns_from_output):
+def test_run_from_location_name_without_additional_nodes(default_output_pois_columns, default_output_network_columns):
     location_name = "roanne"
 
     network_initialized = OsmGt.roads_from_location(location_name, "pedestrian")
@@ -98,11 +97,14 @@ def test_run_from_location_name_without_additional_nodes(default_columns_from_ou
     network_gdf = network_initialized.get_gdf()
 
     shared_asserts(
-        None, network_gdf, default_columns_from_output, graph_computed,
+        None,
+        network_gdf,
+        default_output_pois_columns,
+        default_output_network_columns,
+        graph_computed,
     )
 
     network_topology_gdfs = network_initialized.topology_checker()
-
     assert {
         "lines_unchanged",
         "lines_added",
@@ -118,7 +120,7 @@ def test_run_from_location_name_without_additional_nodes(default_columns_from_ou
         assert topology_gdf.shape[-1] == 5
 
 
-def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
+def test_run_from_bbox_func(bbox_values_1, default_output_pois_columns, default_output_network_columns):
 
     pois_initialized = OsmGt.pois_from_bbox(bbox_values_1)
 
@@ -134,17 +136,17 @@ def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
     assert study_area.geom_type == "Polygon"
 
     graph_computed = network_initialized.get_graph()
-    network_from_web_found_gdf = network_initialized.get_gdf()
-
-    network_topology_gdfs = network_initialized.topology_checker()
+    network_gdf = network_initialized.get_gdf()
 
     shared_asserts(
-        pois_gdf,
-        network_from_web_found_gdf,
-        default_columns_from_output,
+        None,
+        network_gdf,
+        default_output_pois_columns,
+        default_output_network_columns,
         graph_computed,
     )
 
+    network_topology_gdfs = network_initialized.topology_checker()
     assert {
         "lines_unchanged",
         "lines_added",
@@ -160,7 +162,7 @@ def test_run_from_bbox_func(bbox_values_1, default_columns_from_output):
         assert topology_gdf.shape[-1] == 5
 
 
-def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
+def test_run_from_bbox_func_usa(bbox_values_2, default_output_pois_columns, default_output_network_columns):
     pois_initialized = OsmGt.pois_from_bbox(bbox_values_2)
 
     pois_study_area = pois_initialized.study_area
@@ -179,8 +181,24 @@ def test_run_from_bbox_func_usa(bbox_values_2, default_columns_from_output):
     network_gdf = network_initialized.get_gdf()
 
     shared_asserts(
-        pois_gdf,
+        None,
         network_gdf,
-        default_columns_from_output,
+        default_output_pois_columns,
+        default_output_network_columns,
         graph_computed,
     )
+
+    network_topology_gdfs = network_initialized.topology_checker()
+    assert {
+        "lines_unchanged",
+        "lines_added",
+        "lines_split",
+        "nodes_added",
+        "intersections_added",
+    } == set(network_topology_gdfs.keys())
+    for title, topology_gdf in network_topology_gdfs.items():
+        if title in ["nodes_added", "lines_added"]:
+            assert topology_gdf.shape[0] > 0
+        else:
+            assert topology_gdf.shape[0] > 0
+        assert topology_gdf.shape[-1] == 5
