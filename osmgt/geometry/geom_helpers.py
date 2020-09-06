@@ -27,11 +27,7 @@ def compute_wg84_line_length(input_geom: Union[LineString, MultiLineString]) -> 
     """
     total_length = 0
 
-    if input_geom.geom_type == "MultiLineString":
-        for geom_line in input_geom.geoms:
-            total_length += compute_wg84_line_length(geom_line)
-
-    elif input_geom.geom_type == "LineString":
+    if input_geom.geom_type == "LineString":
         coordinates_pairs = list(zip(input_geom.coords, input_geom.coords[1:]))
         for pair in coordinates_pairs:
 
@@ -45,6 +41,10 @@ def compute_wg84_line_length(input_geom: Union[LineString, MultiLineString]) -> 
             wgs84_geodetic = Geod(ellps="WGS84")
             _, _, length_computed = wgs84_geodetic.inv(*coords)
             total_length += length_computed
+
+    elif input_geom.geom_type == "MultiLineString":
+        for geom_line in input_geom.geoms:
+            total_length += compute_wg84_line_length(geom_line)
 
     return total_length
 

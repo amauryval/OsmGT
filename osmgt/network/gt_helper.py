@@ -255,7 +255,7 @@ class GraphHelpers(Graph):
         :param output_file_with_extension: the output file name with extension
         :return: str
         """
-        self._logger.info("Graph to PNG file")
+        self._logger.info("Graph to image")
         pos = sfdp_layout(self)
         graph_draw(
             self,

@@ -10,6 +10,7 @@ from osmgt.processing.shortest_path import OsmGtShortestPath
 from typing import Tuple
 from typing import List
 from typing import Optional
+from typing import Union
 
 
 class OsmGt:
@@ -88,7 +89,7 @@ class OsmGt:
     @staticmethod
     def isochrone_from_source_node(
         source_node: Point,
-        isochrones_times: List[float],
+        isochrones_times: List[Union[int, float]],
         trip_speed: float,
         mode: str = "pedestrian",
         display_mode: str = "orthogonal",
@@ -117,7 +118,7 @@ class OsmGt:
     @staticmethod
     def isochrone_distance_from_source_node(
         source_node: Point,
-        distances: List,
+        distances: List[Union[int, float]],
         trip_speed: float,
         mode: str = "pedestrian",
         display_mode: str = "orthogonal",

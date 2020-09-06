@@ -114,12 +114,13 @@ class OsmGtRoads(OsmGtCore):
         assert self._TOPO_FIELD in first_feature, f"{self._TOPO_FIELD} key not found!"
 
     def __compute_edges(self, feature: Dict) -> Tuple[str, str, str, float]:
-        coordinates = feature[self._GEOMETRY_FIELD]
+        geometry = feature[self._GEOMETRY_FIELD]
+        first_coords, *_, last_coords = geometry.coords
         return (
-            Point(coordinates.coords[0]).wkt,
-            Point(coordinates.coords[-1]).wkt,
+            Point(first_coords).wkt,
+            Point(last_coords).wkt,
             feature[self._TOPO_FIELD],
-            compute_wg84_line_length(shape(coordinates)),
+            compute_wg84_line_length(geometry),
         )
 
     def __build_network_topology(

@@ -58,6 +58,7 @@ class OsmGtCore(Logger):
     _PROPERTIES_OSM_FIELD: str = "tags"
     _ID_OSM_FIELD: str = "id"
     _OSM_URL_FIELD: str = "osm_url"
+    _ID_DEFAULT_FIELD: str = "id"
 
     _FEATURE_OSM_TYPE: Optional[str] = None
 
@@ -189,6 +190,9 @@ class OsmGtCore(Logger):
         for col_name in input_gdf.columns:
             if col_name in self.__USELESS_COLUMNS:
                 input_gdf.drop(columns=[col_name], inplace=True)
+
+        if self._ID_DEFAULT_FIELD not in input_gdf.columns:
+            input_gdf.loc[:, self._ID_DEFAULT_FIELD] = input_gdf.index.astype(str)
 
         return input_gdf
 

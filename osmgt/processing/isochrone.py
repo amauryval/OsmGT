@@ -59,7 +59,7 @@ class IsochroneGeomError(Exception):
 class OsmGtIsochrone(OsmGtRoads):
     logging.getLogger("geopandas.geodataframe").setLevel(logging.CRITICAL)
 
-    __DISTANCE_TOLERANCE: float = 1.5
+    __DISTANCE_TOLERANCE: float = 1.3
     __ISOCHRONE_NAME_FIELD: str = "iso_name"
     __ISODISTANCE_NAME_FIELD: str = "iso_distance"
     __DISSOLVE_NAME_FIELD: str = "__dissolve__"
@@ -73,11 +73,11 @@ class OsmGtIsochrone(OsmGtRoads):
     __DEFAULT_ISOCHRONE_JOINSTYLE = 1
 
     def __init__(
-        self,
-        trip_speed: float,
-        isochrones_times: Optional[List],
-        distance_to_compute: Optional[List] = None,
-        display_mode: str = "orthogonal",
+            self,
+            trip_speed: float,
+            isochrones_times: Optional[List],
+            distance_to_compute: Optional[List] = None,
+            display_mode: str = "orthogonal",
     ) -> None:
         super().__init__()
         self.logger.info("Isochrone processing...")
@@ -125,7 +125,7 @@ class OsmGtIsochrone(OsmGtRoads):
         return self._compute_isochrones_ingredient(times_dist)
 
     def _prepare_isochrone_values_from_distance(
-        self, distance_to_compute: List
+            self, distance_to_compute: List
     ) -> List:
         distance_to_compute.sort()
 
@@ -146,7 +146,7 @@ class OsmGtIsochrone(OsmGtRoads):
         return times_dist
 
     def from_location_point(
-        self, location_point: Point, mode: str
+            self, location_point: Point, mode: str
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
 
         self._mode = mode
@@ -179,98 +179,109 @@ class OsmGtIsochrone(OsmGtRoads):
 
         self._network_gdf = super().get_gdf()
 
-        self._compute_isochrone()
+        self._graph = self.get_graph()
+        self._source_vertex = self._graph.find_vertex_from_name(self.source_node)
+        # reset output else isochrone will be append
+        self._output_data = []
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(self._compute_isochrone, self._isochrones_times)
+        #         for param in self._isochrones_times:
+        #             self._compute_isochrone(param)
+
+        self.__clean_network()
+        self.__clean_isochrones()
 
         self._OUTPUT_EXPECTED_GEOM_TYPE = "Polygon"  # mandatory
         isochrones_gdf = self.get_gdf(verbose=False)
 
         return isochrones_gdf, self._network_gdf
 
-    def _compute_isochrone(self) -> None:
-        graph = self.get_graph()
-        source_vertex = graph.find_vertex_from_name(self.source_node)
+    def _compute_isochrone(self, params) -> None:
 
-        # reset output else isochrone will be append
-        self._output_data = []
+        iso_time, dist = params
+        self.logger.info(f"Compute isochrone: {iso_time} minutes => {dist} meters")
 
-        for iso_time, dist in self._isochrones_times:
-            isochrone_label = f"{iso_time} {time_unit}"
-            self.logger.info(f"Compute isochrone: {isochrone_label} => {dist} meters")
+        _, pred = shortest_distance(
+            self._graph,
+            source=self._source_vertex,
+            weights=self._graph.edge_weights,
+            max_dist=dist,
+            return_reached=True,
+        )
+        points = [self._graph.vertex_names[vertex] for vertex in pred]
+        #             iso_polygon = MultiPoint(list(map(lambda x: loads(x), points))).convex_hull
 
-            _, pred = shortest_distance(
-                graph,
-                source=source_vertex,
-                weights=graph.edge_weights,
-                max_dist=dist,
-                return_reached=True,
-            )
-
-            points = [graph.vertex_names[vertex] for vertex in pred]
-            iso_polygon = MultiPoint(list(map(lambda x: loads(x), points))).convex_hull
-
-            all_edges_found_topo_uuid = set(
-                list(
-                    itertools.chain(
-                        *[graph.find_edges_from_vertex(pt) for pt in points]
-                    )
+        all_edges_found_topo_uuids = set(
+            list(
+                itertools.chain(
+                    *[self._graph.find_edges_from_vertex(pt) for pt in points]
                 )
             )
-            network_lines_candidates = self._network_gdf.loc[
-                (self._network_gdf["topo_uuid"].isin(all_edges_found_topo_uuid))
-                # | self._network_gdf.within(iso_polygon) # TODO improve isochrone
-                # OR operator sometimes create a very minor error on isochrone results, it avoid some small network holes... cause by the convex hull polygon...
-            ]["topo_uuid"].to_list()
+        )
+        #             network_lines_candidates = self._network_gdf.loc[
+        #                 (self._network_gdf["topo_uuid"].isin(all_edges_found_topo_uuid))
+        #                 # | self._network_gdf.within(iso_polygon) # TODO improve isochrone
+        #                 # OR operator sometimes create a very minor error on isochrone results, it avoid some small network holes... cause by the convex hull polygon...
+        #             ]["topo_uuid"].to_list()
+        network_mask = self._network_gdf["topo_uuid"].isin(all_edges_found_topo_uuids)
 
-            network_mask = self._network_gdf["topo_uuid"].isin(network_lines_candidates)
-            self._network_gdf.loc[
-                network_mask, self.__ISOCHRONE_NAME_FIELD
-            ] = isochrone_label
-            self._network_gdf.loc[network_mask, self.__ISODISTANCE_NAME_FIELD] = dist
-
-            iso_polygon = Polygon(
-                self._network_gdf.loc[network_mask]
+        iso_polygon = Polygon(
+            self._network_gdf.loc[network_mask]
                 .buffer(
-                    self._display_mode_params["path_buffered"],
-                    cap_style=self.__DEFAULT_ISOCHRONE_CAPSTYLE,
-                    join_style=self.__DEFAULT_ISOCHRONE_JOINSTYLE,
-                    resolution=self._display_mode_params["resolution"],
-                )
+                self._display_mode_params["path_buffered"],
+                cap_style=self.__DEFAULT_ISOCHRONE_CAPSTYLE,
+                join_style=self.__DEFAULT_ISOCHRONE_JOINSTYLE,
+                resolution=self._display_mode_params["resolution"],
+            )
                 # .buffer(0.00001, cap_style=2, join_style=3, resolution=8)
                 #  only if buffer join_style = 2 => path needs to be rebuffered to connect them
                 .unary_union.buffer(  # merge them now
-                    self._display_mode_params["dilatation"],
-                    cap_style=self._display_mode_params["cap_style"],
-                    join_style=self._display_mode_params["join_style"],
-                    resolution=self._display_mode_params["resolution"],
-                )
+                self._display_mode_params["dilatation"],
+                cap_style=self._display_mode_params["cap_style"],
+                join_style=self._display_mode_params["join_style"],
+                resolution=self._display_mode_params["resolution"],
+            )
                 .buffer(
-                    self._display_mode_params["erosion"],
-                    cap_style=self._display_mode_params["cap_style"],
-                    join_style=self._display_mode_params["join_style"],
-                    resolution=self._display_mode_params["resolution"],
-                )
-                .exterior.coords
+                self._display_mode_params["erosion"],
+                cap_style=self._display_mode_params["cap_style"],
+                join_style=self._display_mode_params["join_style"],
+                resolution=self._display_mode_params["resolution"],
             )
+                .exterior
+        )
 
-            self._isochrones_data.append(
-                {
-                    self.__ISOCHRONE_NAME_FIELD: isochrone_label,
-                    self.__ISODISTANCE_NAME_FIELD: dist,
-                    "geometry": iso_polygon,
-                }
-            )
-        self.__clean_isochrones()
-        self.__clean_network()
+        self._isochrones_data.append(
+            {
+                self.__ISOCHRONE_NAME_FIELD: iso_time,
+                self.__ISODISTANCE_NAME_FIELD: dist,
+                "topo_uuids_mask": network_mask,
+                "geometry": iso_polygon,
+            }
+        )
 
     def __clean_network(self) -> None:
+        # reverse order for isochrone, because isochrone mask is like russian dolls
+        self._isochrones_data = sorted(self._isochrones_data, key=lambda k: k[self.__ISOCHRONE_NAME_FIELD],
+                                       reverse=True)
+        for isochrone_computed in self._isochrones_data:
+            self._network_gdf.loc[
+                isochrone_computed["topo_uuids_mask"], self.__ISOCHRONE_NAME_FIELD
+            ] = isochrone_computed[self.__ISOCHRONE_NAME_FIELD]
+            self._network_gdf.loc[
+                isochrone_computed["topo_uuids_mask"], self.__ISODISTANCE_NAME_FIELD
+            ] = isochrone_computed[self.__ISODISTANCE_NAME_FIELD]
+            del isochrone_computed["topo_uuids_mask"]
+
         self._network_gdf[self._TOPO_FIELD].replace(
             self.__TOPO_FIELD_REGEX_CLEANER, "", regex=True, inplace=True
         )
 
         self._network_gdf[self.__DISSOLVE_NAME_FIELD] = (
-            self._network_gdf[self._TOPO_FIELD]
-            + "__"
-            + self._network_gdf[self.__ISOCHRONE_NAME_FIELD]
+                self._network_gdf[self._TOPO_FIELD].astype(str)
+                + "__"
+                + self._network_gdf[self.__ISOCHRONE_NAME_FIELD].astype(str)
         )
         self._network_gdf = self._network_gdf.dissolve(
             by=self.__DISSOLVE_NAME_FIELD
@@ -285,22 +296,21 @@ class OsmGtIsochrone(OsmGtRoads):
             self._network_gdf[self.__ISOCHRONE_NAME_FIELD].notnull()
         ]
 
-        gdf_copy = self._network_gdf.copy(deep=True)
-        network_polygon = gdf_copy.buffer(
-            self.__CLEANING_NETWORK_BUFFER_VALUE,
-            cap_style=self.__CLEANING_NETWORK_CAP_STYLE,
-            resolution=self.__CLEANING_NETWORK_RESOLUTION,
-        ).unary_union
-        if network_polygon.geom_type == "MultiPolygon":
-            geom_areas = [(geom.area, geom) for geom in network_polygon.geoms]
-            network_polygon = max(geom_areas)[-1]
+    #         gdf_copy = self._network_gdf.copy(deep=True)
+    #         network_polygon = gdf_copy.buffer(
+    #             self.__CLEANING_NETWORK_BUFFER_VALUE,
+    #             cap_style=self.__CLEANING_NETWORK_CAP_STYLE,
+    #             resolution=self.__CLEANING_NETWORK_RESOLUTION,
+    #         ).unary_union
+    #         if network_polygon.geom_type == "MultiPolygon":
+    #             geom_areas = [(geom.area, geom) for geom in network_polygon.geoms]
+    #             network_polygon = max(geom_areas)[-1]
 
-        network_mask = self._network_gdf.within(network_polygon)
-        self._network_gdf = self._network_gdf.loc[network_mask]
+    #         network_mask = self._network_gdf.within(network_polygon)
+    #         self._network_gdf = self._network_gdf.loc[network_mask]
 
     def __clean_isochrones(self) -> None:
         # find iso index pair in order to create hole geom. isochrones are like russian dolls
-
         iso_values = sorted(
             list(map(lambda x: x[-1], self._isochrones_times)), reverse=True
         )
@@ -320,7 +330,7 @@ class OsmGtIsochrone(OsmGtRoads):
             iso_value_part_to_remove_feature = list(
                 filter(
                     lambda x: x[self.__ISODISTANCE_NAME_FIELD]
-                    == iso_value_part_to_remove,
+                              == iso_value_part_to_remove,
                     self._isochrones_data,
                 )
             )
@@ -336,14 +346,15 @@ class OsmGtIsochrone(OsmGtRoads):
             )
             isochrone_type = isochrone_computed.geom_type
 
-            if isochrone_type == "MultiPolygon":
+            if isochrone_type == "Polygon":
+                iso_value_main_part_feature["geometry"] = isochrone_computed
+                self._output_data.append(iso_value_main_part_feature)
+
+            elif isochrone_type == "MultiPolygon":
                 for iso_polygon_part in isochrone_computed.geoms:
                     iso_value_main_part_feature_copy = dict(iso_value_main_part_feature)
                     iso_value_main_part_feature_copy["geometry"] = iso_polygon_part
                     self._output_data.append(iso_value_main_part_feature_copy)
-            elif isochrone_type == "Polygon":
-                iso_value_main_part_feature["geometry"] = isochrone_computed
-                self._output_data.append(iso_value_main_part_feature)
             else:
                 raise IsochroneGeomError(f"{isochrone_type} geom type not compatible")
 
@@ -362,7 +373,6 @@ class OsmGtIsochrone(OsmGtRoads):
 
     @staticmethod
     def __compute_isochrone_difference(
-        first_geom: base, remove_part_geom: base
+            first_geom: base, remove_part_geom: base
     ) -> base:
-
         return first_geom.difference(remove_part_geom)
