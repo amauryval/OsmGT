@@ -101,21 +101,41 @@ network_queries: dict = {
     },
 }
 
+
 isochrone_display_mode: Dict[str, Dict] = {
     "web": {
-        "path_buffered": 0.00001,
-        "dilatation": 0.001,
-        "erosion": -0.001,
-        "cap_style": 1,
-        "join_style": 1,
+        "path_buffered": 0.0001,
+        "dilatation": 0.0001,
+        "erosion": -0.0001,
+        "cap_style": 2,
+        "join_style": 3,
         "resolution": 8,
     },
     "orthogonal": {
-        "path_buffered": 0.00001,
-        "dilatation": 0.001,
-        "erosion": -0.001,
+        "path_buffered": 0.0001,
+        "dilatation": 0.0001,
+        "erosion": -0.0001,
         "cap_style": 2,
         "join_style": 3,
         "resolution": 8,
     },
 }
+
+# isochrone_display_mode: Dict[str, Dict] = {
+#     "web": {
+#         "path_buffered": 0.00001,
+#         "dilatation": 0.001,
+#         "erosion": -0.001,
+#         "cap_style": 1,
+#         "join_style": 1,
+#         "resolution": 8,
+#     },
+#     "orthogonal": {
+#         "path_buffered": 0.00001,
+#         "dilatation": 0.001,
+#         "erosion": -0.001,
+#         "cap_style": 2,
+#         "join_style": 3,
+#         "resolution": 8,
+#     },
+# }
