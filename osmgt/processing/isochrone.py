@@ -34,7 +34,7 @@ except ModuleNotFoundError:
 from shapely.wkt import loads
 from shapely.geometry import base
 from shapely.geometry import Point
-
+from shapely.geometry import Polygon
 
 from osmgt.geometry.geom_helpers import reprojection
 from osmgt.geometry.geom_helpers import split_multiline_to_lines
@@ -70,18 +70,14 @@ class OsmGtIsochrone(OsmGtRoads):
     __TOPO_FIELD_REGEX_CLEANER = r"_[0-9]+$"
     __NETWORK_MASK_FIELD = "topo_uuids_mask"
 
-    __CLEANING_NETWORK_BUFFER_VALUE: float = 0.000001
-    __CLEANING_NETWORK_CAP_STYLE: int = 3
-    __CLEANING_NETWORK_RESOLUTION: int = 4
-
-    __DEFAULT_BUFFER_VALUE = 0.000001
-    __CONCAVE_ALPHA_VALUE = 900
+    __DEFAULT_BUFFER_VALUE: float = 0.0001
+    __CONCAVE_ALPHA_VALUE: int = 900
 
     def __init__(
-        self,
-        trip_speed: float,
-        isochrones_times: Optional[List],
-        distance_to_compute: Optional[List] = None,
+            self,
+            trip_speed: float,
+            isochrones_times: Optional[List],
+            distance_to_compute: Optional[List] = None,
     ) -> None:
         super().__init__()
         self.logger.info("Isochrone processing...")
@@ -130,7 +126,7 @@ class OsmGtIsochrone(OsmGtRoads):
         return self._compute_isochrones_ingredient(times_dist)
 
     def _prepare_isochrone_values_from_distance(
-        self, distance_to_compute: List
+            self, distance_to_compute: List
     ) -> List:
         distance_to_compute.sort()
 
@@ -151,7 +147,7 @@ class OsmGtIsochrone(OsmGtRoads):
         return times_dist
 
     def from_location_point(
-        self, location_point: Point, mode: str
+            self, location_point: Point, mode: str
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
 
         self._mode = mode
@@ -227,19 +223,19 @@ class OsmGtIsochrone(OsmGtRoads):
 
         all_coord_points = Counter(points)
         unique_points = list(
-            dict(filter(lambda x: x[1] == 1, all_coord_points.items(),)).keys()
+            dict(filter(lambda x: x[1] == 1, all_coord_points.items(), )).keys()
         )
         points_polyg = list(map(lambda x: loads(x), unique_points))
         iso_polygon = (
             ConcaveHull(points_polyg, self.__CONCAVE_ALPHA_VALUE)
-            .polygon()
-            .buffer(self.__DEFAULT_BUFFER_VALUE)
+                .polygon()
+                .buffer(self.__DEFAULT_BUFFER_VALUE)
         )
 
         network_filtered = self._network_gdf.loc[
             self._network_gdf[self._TOPO_FIELD].isin(all_edges_found_topo_uuids)
             & (self._network_gdf.within(iso_polygon))
-        ]
+            ]
         network_mask = self._network_gdf[self._TOPO_FIELD].isin(
             network_filtered[self._TOPO_FIELD]
         )
@@ -249,7 +245,7 @@ class OsmGtIsochrone(OsmGtRoads):
                 self.__ISOCHRONE_NAME_FIELD: iso_time,
                 self.__ISODISTANCE_NAME_FIELD: dist,
                 self.__NETWORK_MASK_FIELD: network_mask,
-                "geometry": iso_polygon,
+                # "geometry": iso_polygon,
             }
         )
 
@@ -274,9 +270,9 @@ class OsmGtIsochrone(OsmGtRoads):
         )
 
         self._network_gdf[self.__DISSOLVE_NAME_FIELD] = (
-            self._network_gdf[self._TOPO_FIELD].astype(str)
-            + "__"
-            + self._network_gdf[self.__ISOCHRONE_NAME_FIELD].astype(str)
+                self._network_gdf[self._TOPO_FIELD].astype(str)
+                + "__"
+                + self._network_gdf[self.__ISOCHRONE_NAME_FIELD].astype(str)
         )
         self._network_gdf = self._network_gdf.dissolve(
             by=self.__DISSOLVE_NAME_FIELD
@@ -292,6 +288,26 @@ class OsmGtIsochrone(OsmGtRoads):
         ]
 
     def __clean_isochrones(self) -> None:
+        # reverse order for isochrone, because isochrone mask is like russian dolls
+        isochrones_data = sorted(
+            self._isochrones_data,
+            key=lambda k: k[self.__ISOCHRONE_NAME_FIELD],
+            reverse=True,
+        )
+
+        isochrone_updated = []
+        for isochrone_computed in isochrones_data:
+            network_data = self._network_gdf.loc[
+                self._network_gdf[self.__ISOCHRONE_NAME_FIELD] == isochrone_computed[self.__ISOCHRONE_NAME_FIELD]
+                ].buffer(self.__DEFAULT_BUFFER_VALUE).unary_union
+
+            polyg_coordinates = []
+            for iso_polygon_part in convert_to_polygon(network_data):
+                polyg_coordinates.extend(list(map(lambda x: Point(x), iso_polygon_part.exterior.coords)))
+
+            geometry = ConcaveHull(polyg_coordinates, self.__CONCAVE_ALPHA_VALUE).polygon()
+            isochrone_computed["geometry"] = geometry
+
         # find iso index pair in order to create hole geom. isochrones are like russian dolls
         iso_values = sorted(
             list(map(lambda x: x[-1], self._isochrones_times)), reverse=True
@@ -305,15 +321,15 @@ class OsmGtIsochrone(OsmGtRoads):
             iso_value_main_part_feature = list(
                 filter(
                     lambda x: x[self.__ISODISTANCE_NAME_FIELD] == iso_value_main_part,
-                    self._isochrones_data,
+                    isochrones_data,
                 )
             )
 
             iso_value_part_to_remove_feature = list(
                 filter(
                     lambda x: x[self.__ISODISTANCE_NAME_FIELD]
-                    == iso_value_part_to_remove,
-                    self._isochrones_data,
+                              == iso_value_part_to_remove,
+                    isochrones_data,
                 )
             )
 
@@ -337,7 +353,7 @@ class OsmGtIsochrone(OsmGtRoads):
         iso_value_left_part_feature = list(
             filter(
                 lambda x: x[self.__ISODISTANCE_NAME_FIELD] == isochrone_left[0],
-                self._isochrones_data,
+                isochrones_data,
             )
         )
 
@@ -349,6 +365,6 @@ class OsmGtIsochrone(OsmGtRoads):
 
     @staticmethod
     def __compute_isochrone_difference(
-        first_geom: base, remove_part_geom: base
+            first_geom: base, remove_part_geom: base
     ) -> base:
         return first_geom.difference(remove_part_geom)

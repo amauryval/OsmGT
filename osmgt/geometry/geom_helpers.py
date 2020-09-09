@@ -19,6 +19,7 @@ from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.geometry import MultiPoint
 from shapely.geometry import MultiLineString
+from shapely.geometry import Polygon
 
 from scipy.spatial import Delaunay
 
@@ -160,7 +161,7 @@ class ConcaveHull:
     __HERON_FORMULA_DIVISOR: int = 4
     __MIN_NUMBER_OF_POINTS: int = 4
 
-    def __init__(self, points: List[Point], alpha=0.5):
+    def __init__(self, points: List[Point], alpha: Union[int, float] =0.5):
         """
         :param points: list of shapely points
         :type: list of shapely point
@@ -241,7 +242,7 @@ class ConcaveHull:
         self._edge_points.append(coords[[i, j]])
 
 
-def convert_to_polygon(polygon_geom):
+def convert_to_polygon(polygon_geom: Polygon):
     output_polygons = []
 
     isochrone_type = polygon_geom.geom_type
