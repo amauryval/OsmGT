@@ -13,7 +13,6 @@ from osmgt.core.global_values import epsg_4326
 from osmgt.core.global_values import epsg_3857
 from osmgt.core.global_values import km_hour_2_m_sec
 from osmgt.core.global_values import min_2_sec
-from osmgt.core.global_values import isochrone_display_mode
 
 import math
 
