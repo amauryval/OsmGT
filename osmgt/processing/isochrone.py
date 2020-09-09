@@ -13,7 +13,6 @@ from osmgt.core.global_values import epsg_4326
 from osmgt.core.global_values import epsg_3857
 from osmgt.core.global_values import km_hour_2_m_sec
 from osmgt.core.global_values import min_2_sec
-from osmgt.core.global_values import time_unit
 from osmgt.core.global_values import isochrone_display_mode
 
 import math
@@ -25,6 +24,8 @@ import pandas as pd
 
 import itertools
 
+from collections import Counter
+
 try:
     from graph_tool.topology import shortest_distance
 except ModuleNotFoundError:
@@ -33,17 +34,20 @@ except ModuleNotFoundError:
 from shapely.wkt import loads
 from shapely.geometry import base
 from shapely.geometry import Point
-from shapely.geometry import MultiPoint
-from shapely.geometry import Polygon
+
 
 from osmgt.geometry.geom_helpers import reprojection
 from osmgt.geometry.geom_helpers import split_multiline_to_lines
+from osmgt.geometry.geom_helpers import ConcaveHull
+from osmgt.geometry.geom_helpers import convert_to_polygon
 
 # to facilitate debugging
 try:
     from osmgt.network.gt_helper import GraphHelpers
 except ModuleNotFoundError:
     pass
+
+import concurrent.futures
 
 warnings.simplefilter(action="ignore", category=UserWarning)
 
@@ -70,8 +74,8 @@ class OsmGtIsochrone(OsmGtRoads):
     __CLEANING_NETWORK_CAP_STYLE: int = 3
     __CLEANING_NETWORK_RESOLUTION: int = 4
 
-    __DEFAULT_ISOCHRONE_CAPSTYLE = 1
-    __DEFAULT_ISOCHRONE_JOINSTYLE = 1
+    __DEFAULT_BUFFER_VALUE = 0.000001
+    __CONCAVE_ALPHA_VALUE = 900
 
     def __init__(
         self,
@@ -184,13 +188,12 @@ class OsmGtIsochrone(OsmGtRoads):
         self._source_vertex = self._graph.find_vertex_from_name(self.source_node)
         # reset output else isochrone will be append
         self._output_data = []
-        import concurrent.futures
 
         self._web_iso_item_id = self._isochrones_times[0][0]
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self._compute_isochrone, self._isochrones_times)
-        #         for param in self._isochrones_times:
-        #             self._compute_isochrone(param)
+        # for param in self._isochrones_times:
+        #     self._compute_isochrone(param)
 
         self.__clean_network()
         self.__clean_isochrones()
@@ -222,41 +225,23 @@ class OsmGtIsochrone(OsmGtRoads):
             )
         )
 
-        network_mask = self._network_gdf[self._TOPO_FIELD].isin(all_edges_found_topo_uuids)
+        all_coord_points = Counter(points)
+        unique_points = list(
+            dict(filter(lambda x: x[1] == 1, all_coord_points.items(),)).keys()
+        )
+        points_polyg = list(map(lambda x: loads(x), unique_points))
+        iso_polygon = (
+            ConcaveHull(points_polyg, self.__CONCAVE_ALPHA_VALUE)
+            .polygon()
+            .buffer(self.__DEFAULT_BUFFER_VALUE)
+        )
 
-        if iso_time == self._web_iso_item_id:
-            display_mode_params = self._display_mode_params_web
-        else:
-            display_mode_params = self._display_mode_params_ortho
-
-        network_gdf = self._network_gdf.loc[network_mask].dissolve(
-            by=self._ID_OSM_FIELD
-        )[[self._GEOMETRY_FIELD]].reset_index(drop=True)
-
-        iso_polygon = Polygon(
-            network_gdf
-            .buffer(
-                display_mode_params["path_buffered"],
-                cap_style=self.__DEFAULT_ISOCHRONE_CAPSTYLE,
-                join_style=self.__DEFAULT_ISOCHRONE_JOINSTYLE,
-                resolution=display_mode_params["resolution"],
-            )
-            # .buffer(0.00001, cap_style=2, join_style=3, resolution=8)
-            #  only if buffer join_style = 2 => path needs to be rebuffered to connect them
-            .unary_union # merge them now
-            .buffer(
-                display_mode_params["dilatation"],
-                cap_style=display_mode_params["cap_style"],
-                join_style=display_mode_params["join_style"],
-                resolution=display_mode_params["resolution"],
-            )
-            .buffer(
-                display_mode_params["erosion"],
-                cap_style=display_mode_params["cap_style"],
-                join_style=display_mode_params["join_style"],
-                resolution=display_mode_params["resolution"],
-            )
-            .exterior
+        network_filtered = self._network_gdf.loc[
+            self._network_gdf[self._TOPO_FIELD].isin(all_edges_found_topo_uuids)
+            & (self._network_gdf.within(iso_polygon))
+        ]
+        network_mask = self._network_gdf[self._TOPO_FIELD].isin(
+            network_filtered[self._TOPO_FIELD]
         )
 
         self._isochrones_data.append(
@@ -341,19 +326,10 @@ class OsmGtIsochrone(OsmGtRoads):
                 iso_value_main_part_feature["geometry"],
                 iso_value_part_to_remove_feature["geometry"],
             )
-            isochrone_type = isochrone_computed.geom_type
-
-            if isochrone_type == "Polygon":
-                iso_value_main_part_feature["geometry"] = isochrone_computed
-                self._output_data.append(iso_value_main_part_feature)
-
-            elif isochrone_type == "MultiPolygon":
-                for iso_polygon_part in isochrone_computed.geoms:
-                    iso_value_main_part_feature_copy = dict(iso_value_main_part_feature)
-                    iso_value_main_part_feature_copy["geometry"] = iso_polygon_part
-                    self._output_data.append(iso_value_main_part_feature_copy)
-            else:
-                raise IsochroneGeomError(f"{isochrone_type} geom type not compatible")
+            for iso_polygon_part in convert_to_polygon(isochrone_computed):
+                iso_value_main_part_feature_copy = dict(iso_value_main_part_feature)
+                iso_value_main_part_feature_copy["geometry"] = iso_polygon_part
+                self._output_data.append(iso_value_main_part_feature_copy)
 
         # should be the lowest, only 1
         isochrone_left = list(set(iso_values) - set(list(iso_values_map.keys())))
@@ -364,9 +340,12 @@ class OsmGtIsochrone(OsmGtRoads):
                 self._isochrones_data,
             )
         )
+
         for isochrone in iso_value_left_part_feature:
-            isochrone["geometry"] = Polygon(isochrone["geometry"].exterior.coords)
-            self._output_data.append(isochrone)
+            for isochrone_geom in convert_to_polygon(isochrone["geometry"]):
+                isochrone_copy = dict(isochrone)
+                isochrone_copy["geometry"] = isochrone_geom
+                self._output_data.append(isochrone_copy)
 
     @staticmethod
     def __compute_isochrone_difference(
