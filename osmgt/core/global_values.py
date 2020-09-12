@@ -9,6 +9,7 @@ epsg_3857: str = "3857"
 km_hour_2_m_sec: float = 3.6
 min_2_sec: float = 60
 time_unit: str = "minutes"
+distance_unit: str = "meters"
 
 # transport modes
 transport_modes: List[str] = ["vehicle", "pedestrian"]

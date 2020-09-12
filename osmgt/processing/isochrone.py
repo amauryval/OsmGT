@@ -13,6 +13,8 @@ from osmgt.core.global_values import epsg_4326
 from osmgt.core.global_values import epsg_3857
 from osmgt.core.global_values import km_hour_2_m_sec
 from osmgt.core.global_values import min_2_sec
+from osmgt.core.global_values import distance_unit
+from osmgt.core.global_values import time_unit
 
 import math
 
@@ -72,6 +74,9 @@ class OsmGtIsochrone(OsmGtRoads):
     __DEFAULT_BUFFER_VALUE: float = 0.0001
     __CONCAVE_ALPHA_VALUE: int = 900
 
+    __DISTANCE_UNIT_FIELD = "distance_unit"
+    __TIME_UNIT_FIELD = "time_unit"
+
     def __init__(
             self,
             trip_speed: float,
@@ -84,9 +89,6 @@ class OsmGtIsochrone(OsmGtRoads):
         self.__topo_uuids: List[str] = []
         self.source_node: Optional[str] = None
         self._isochrones_data: List[Dict] = []
-
-        self._display_mode_params_ortho = isochrone_display_mode["orthogonal"]
-        self._display_mode_params_web = isochrone_display_mode["web"]
 
         # trip_speed in km/h
         self._speed_to_m_s: float = trip_speed / km_hour_2_m_sec
@@ -242,7 +244,9 @@ class OsmGtIsochrone(OsmGtRoads):
         self._isochrones_data.append(
             {
                 self.__ISOCHRONE_NAME_FIELD: iso_time,
+                self.__TIME_UNIT_FIELD: time_unit,
                 self.__ISODISTANCE_NAME_FIELD: dist,
+                self.__DISTANCE_UNIT_FIELD: distance_unit,
                 self.__NETWORK_MASK_FIELD: network_mask,
                 # "geometry": iso_polygon,
             }
@@ -285,6 +289,9 @@ class OsmGtIsochrone(OsmGtRoads):
         self._network_gdf = self._network_gdf[
             self._network_gdf[self.__ISOCHRONE_NAME_FIELD].notnull()
         ]
+
+        self._network_gdf.loc[:, self.__DISTANCE_UNIT_FIELD] = distance_unit
+        self._network_gdf.loc[:, self.__TIME_UNIT_FIELD] = time_unit
 
     def __clean_isochrones(self) -> None:
         # reverse order for isochrone, because isochrone mask is like russian dolls

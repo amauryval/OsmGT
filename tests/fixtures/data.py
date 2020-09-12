@@ -169,7 +169,7 @@ def shortest_path_output_default_columns():
 
 @pytest.fixture()
 def isochrones_polygons_output_default_columns():
-    return {"id", "iso_name", "iso_distance", "geometry"}
+    return {"id", "iso_name", "iso_distance", "distance_unit", "time_unit", "geometry"}
 
 
 @pytest.fixture()
@@ -182,6 +182,8 @@ def isochrones_lines_output_default_columns():
         "topology",
         "osm_url",
         "geometry",
+        "distance_unit",
+        "time_unit",
     }
 
 
