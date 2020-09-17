@@ -101,3 +101,12 @@ network_queries: dict = {
         "directed_graph": False,
     },
 }
+
+isochrone_display_mode: Dict = {
+    "path_buffered": 0.00001,
+    "dilatation": 0.001,
+    "erosion": -0.001,
+    "cap_style": 2,
+    "join_style": 3,
+    "resolution": 8,
+}

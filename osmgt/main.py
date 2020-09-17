@@ -128,8 +128,6 @@ class OsmGt:
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
-        :param display_mode: the isochrone display mode, one of : web, orthogonal
-        :type display_mode: str, default 'orthogonal'
         :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
