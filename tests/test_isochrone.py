@@ -15,7 +15,7 @@ def test_isochrones_from_times(
     isochrones_polygons, isochrones_lines = output_data
 
     # polygons
-    assert isochrones_polygons.shape[0] == 3
+    assert isochrones_polygons.shape[0] == 4
     assert set(isochrones_polygons["iso_name"].to_list()) == isochrone_values
     assert isochrones_polygons_output_default_columns.issubset(
         set(isochrones_polygons.columns.to_list())

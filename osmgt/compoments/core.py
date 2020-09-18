@@ -12,16 +12,16 @@ from osmgt.helpers.logger import Logger
 from osmgt.apis.nominatim import NominatimApi
 from osmgt.apis.overpass import OverpassApi
 
-from osmgt.core.global_values import network_queries
-from osmgt.core.global_values import epsg_4326
-from osmgt.core.global_values import out_geom_query
+from osmgt.helpers.global_values import network_queries
+from osmgt.helpers.global_values import epsg_4326
+from osmgt.helpers.global_values import out_geom_query
 
 from shapely.geometry import Point
 from shapely.geometry import LineString
 from shapely.geometry import Polygon
 from shapely.geometry import box
 
-from osmgt.core.global_values import osm_url
+from osmgt.helpers.global_values import osm_url
 
 
 class ErrorOsmGtCore(Exception):

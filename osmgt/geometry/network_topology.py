@@ -23,8 +23,8 @@ from numba import types as nb_types
 
 import concurrent.futures
 
-from osmgt.core.global_values import forward_tag
-from osmgt.core.global_values import backward_tag
+from osmgt.helpers.global_values import forward_tag
+from osmgt.helpers.global_values import backward_tag
 
 
 class NetworkTopologyError(Exception):

@@ -4,9 +4,9 @@ from typing import List
 from typing import Optional
 from typing import Dict
 
-from osmgt.core.global_values import epsg_4326
-from osmgt.core.global_values import forward_tag
-from osmgt.core.global_values import topology_fields
+from osmgt.helpers.global_values import epsg_4326
+from osmgt.helpers.global_values import forward_tag
+from osmgt.helpers.global_values import topology_fields
 
 from osmgt.compoments.core import OsmGtCore
 from osmgt.compoments.core import EmptyData
@@ -17,7 +17,6 @@ from osmgt.geometry.geom_helpers import split_linestring_to_points
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
-from shapely.geometry import shape
 
 # to facilitate debugging
 try:
@@ -26,7 +25,7 @@ except ModuleNotFoundError:
     pass
 
 
-from osmgt.core.global_values import network_queries
+from osmgt.helpers.global_values import network_queries
 
 
 class NetWorkGeomIncompatible(Exception):
