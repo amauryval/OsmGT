@@ -380,7 +380,6 @@ class OsmGtIsochrone(OsmGtRoads):
             # finalize
             for iso_polygon_part in convert_to_polygon(isochrone_computed):
                 iso_value_main_part_feature_copy = dict(iso_value_main_part_feature)
-
                 iso_value_main_part_feature_copy["geometry"] = iso_polygon_part
                 self._isochrones_built.append(iso_polygon_part)
                 self._output_data.append(iso_value_main_part_feature_copy)
