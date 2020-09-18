@@ -102,6 +102,9 @@ network_queries: dict = {
     },
 }
 
+water_area_query = 'way["water"="river"]["area"!~"."]({geo_filter});way["waterway"="riverbank"]["area"!~"."]({geo_filter});relation["natural"="water"]["area"!~"."]({geo_filter});'
+
+
 isochrone_display_mode: Dict = {
     "path_buffered": 0.0001,
     "dilatation": 0.001,

@@ -16,6 +16,7 @@ from osmgt.helpers.global_values import min_2_sec
 from osmgt.helpers.global_values import distance_unit
 from osmgt.helpers.global_values import time_unit
 from osmgt.helpers.global_values import isochrone_display_mode
+from osmgt.helpers.global_values import water_area_query
 
 from osmgt.helpers.misc import find_index
 
@@ -187,8 +188,23 @@ class OsmGtIsochrone(OsmGtRoads):
             interpolate_lines=True,
         )
 
-        self._network_gdf = super().get_gdf()
+        # get water area
+        bbox_value = (
+            self._location_point_reprojected_buffered_bounds[1], self._location_point_reprojected_buffered_bounds[0],
+            self._location_point_reprojected_buffered_bounds[3], self._location_point_reprojected_buffered_bounds[2])
+        request = self._from_bbox_query_builder(bbox_value, water_area_query)
+        raw_data = self._query_on_overpass_api(request)
+        water_area = []
+        for feature in raw_data:
+            if feature["type"] == "relation":
+                for member in feature["members"]:
+                    water_area.append(Polygon([(geom["lon"], geom["lat"]) for geom in member["geometry"]]))
+            else:
+                if "geometry" in feature:
+                    water_area.append(Polygon([(geom["lon"], geom["lat"]) for geom in feature["geometry"]]))
+        self._water_area = unary_union(water_area)
 
+        self._network_gdf = super().get_gdf()
         self._graph = self.get_graph()
         self._source_vertex = self._graph.find_vertex_from_name(self.source_node)
         # reset output else isochrone will be append
@@ -221,7 +237,6 @@ class OsmGtIsochrone(OsmGtRoads):
             return_reached=True,
         )
         points = [self._graph.vertex_names[vertex] for vertex in pred]
-        #             iso_polygon = MultiPoint(list(map(lambda x: loads(x), points))).convex_hull
 
         all_edges_found_topo_uuids = set(
             list(
@@ -240,7 +255,7 @@ class OsmGtIsochrone(OsmGtRoads):
                 join_style=self.__DEFAULT_ISOCHRONE_JOINSTYLE,
                 resolution=self._display_mode_params["resolution"],
             )
-            .unary_union.buffer(  # merge them now
+                .unary_union.buffer(  # merge them now
                 self._display_mode_params["dilatation"],
                 cap_style=self._display_mode_params["cap_style"],
                 join_style=self._display_mode_params["join_style"],
@@ -347,6 +362,10 @@ class OsmGtIsochrone(OsmGtRoads):
                 iso_polygon_part
                 for iso_polygon_part in convert_to_polygon(iso_value_main_part_roads_buffered)
             ])
+
+            # remove water area
+            isochrone_computed = isochrone_computed.difference(self._water_area)
+
             isochrone_computed = unary_union([isochrone_computed, iso_value_main_part_roads_buffered])
 
             # last_isochrone will be used to the next iteration to remove roads outside of the proceed isochrone
@@ -361,6 +380,7 @@ class OsmGtIsochrone(OsmGtRoads):
             # finalize
             for iso_polygon_part in convert_to_polygon(isochrone_computed):
                 iso_value_main_part_feature_copy = dict(iso_value_main_part_feature)
+
                 iso_value_main_part_feature_copy["geometry"] = iso_polygon_part
                 self._isochrones_built.append(iso_polygon_part)
                 self._output_data.append(iso_value_main_part_feature_copy)
