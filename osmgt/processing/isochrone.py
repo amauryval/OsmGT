@@ -402,6 +402,7 @@ class OsmGtIsochrone(OsmGtRoads):
                 iso_value_main_part_feature_copy["geometry"] = iso_polygon_part
                 self._output_data.append(iso_value_main_part_feature_copy)
 
+        # go here if there only 1 isochrone
         # should be the lowest, only 1
         isochrone_left = list(set(iso_values) - set(list(iso_values_map.keys())))
         assert len(isochrone_left) == 1
@@ -416,6 +417,28 @@ class OsmGtIsochrone(OsmGtRoads):
         isochrones_to_remove = unary_union(self._isochrones_built)
         # compute the last isochrone
         isochrone_computed = last_iso_to_proceed_feature["geometry"].difference(isochrones_to_remove)
+
+        if len(iso_values) == 1:
+            # add roads on the raw isochrone to respect isochrone area
+            iso_value_main_part_roads_buffered = (
+                self._network_gdf.buffer(
+                    self._display_mode_params["path_buffered"],
+                    resolution=self._display_mode_params["resolution"],
+                    cap_style=2
+                ).unary_union.buffer(
+                    self._display_mode_params["path_buffered"] / 10,
+                    resolution=self._display_mode_params["resolution"],
+                )
+            )
+            iso_value_main_part_roads_buffered = MultiPolygon([
+                iso_polygon_part
+                for iso_polygon_part in convert_to_polygon(iso_value_main_part_roads_buffered)
+            ])
+            print("aaaaaaaaaaaa")
+            # remove water area
+            isochrone_computed = isochrone_computed.difference(self._water_area)
+
+            isochrone_computed = unary_union([isochrone_computed, iso_value_main_part_roads_buffered])
 
         for isochrone_geom in convert_to_polygon(isochrone_computed):
             last_iso_to_proceed_feature_copy = dict(last_iso_to_proceed_feature)

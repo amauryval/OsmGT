@@ -40,6 +40,11 @@ def isochrone_values():
 
 
 @pytest.fixture
+def isochrone_distance_values():
+    return [250, 500, 1000]
+
+
+@pytest.fixture
 def point_a():
     return loads(wkt_point_a)
 
