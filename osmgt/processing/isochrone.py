@@ -62,6 +62,10 @@ class IsochroneGeomError(Exception):
     pass
 
 
+class IsochroneError(Exception):
+    pass
+
+
 class OsmGtIsochrone(OsmGtRoads):
     logging.getLogger("geopandas.geodataframe").setLevel(logging.CRITICAL)
 
@@ -205,7 +209,10 @@ class OsmGtIsochrone(OsmGtRoads):
         self._water_area = unary_union(water_area)
 
         self._network_gdf = super().get_gdf()
+        if self._network_gdf.shape[0] == 0:
+            raise IsochroneError("None network found!")
         self._graph = self.get_graph()
+
         self._source_vertex = self._graph.find_vertex_from_name(self.source_node)
         # reset output else isochrone will be append
         self._output_data = []
