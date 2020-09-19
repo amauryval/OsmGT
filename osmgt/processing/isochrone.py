@@ -373,30 +373,8 @@ class OsmGtIsochrone(OsmGtRoads):
             isochrone_computed = iso_value_main_part_feature["geometry"].difference(
                 iso_value_part_to_remove_feature["geometry"]
             )
-            # add roads on the raw isochrone to respect isochrone area
-            iso_value_main_part_roads_buffered = (
-                self._network_gdf.loc[
-                    self._network_gdf[self.__ISOCHRONE_NAME_FIELD] == iso_value_main_part_feature[
-                        self.__ISOCHRONE_NAME_FIELD]
-                    ].buffer(
-                    self._display_mode_params["path_buffered"],
-                    resolution=self._display_mode_params["resolution"],
-                    cap_style=2
-                ).unary_union.buffer(
-                    self._display_mode_params["path_buffered"] / 10,
-                    resolution=self._display_mode_params["resolution"],
-                )
-            )
+            isochrone_computed = self.__improve_isochrone(isochrone_computed, iso_value_main_part_feature)
 
-            iso_value_main_part_roads_buffered = MultiPolygon([
-                iso_polygon_part
-                for iso_polygon_part in convert_to_polygon(iso_value_main_part_roads_buffered)
-            ])
-
-            # remove water area
-            isochrone_computed = isochrone_computed.difference(self._water_area)
-
-            isochrone_computed = unary_union([isochrone_computed, iso_value_main_part_roads_buffered])
 
             # _isochrones_built will be used to remove roads outside of the proceed isochrone and force last isochrones to be part of the current isochrone
             if len(self._isochrones_built) != 0:
@@ -426,28 +404,36 @@ class OsmGtIsochrone(OsmGtRoads):
         isochrone_computed = last_iso_to_proceed_feature["geometry"].difference(isochrones_to_remove)
 
         if len(iso_values) == 1:
-            # add roads on the raw isochrone to respect isochrone area
-            iso_value_main_part_roads_buffered = (
-                self._network_gdf.buffer(
-                    self._display_mode_params["path_buffered"],
-                    resolution=self._display_mode_params["resolution"],
-                    cap_style=2
-                ).unary_union.buffer(
-                    self._display_mode_params["path_buffered"] / 10,
-                    resolution=self._display_mode_params["resolution"],
-                )
-            )
-            iso_value_main_part_roads_buffered = MultiPolygon([
-                iso_polygon_part
-                for iso_polygon_part in convert_to_polygon(iso_value_main_part_roads_buffered)
-            ])
-            print("aaaaaaaaaaaa")
-            # remove water area
-            isochrone_computed = isochrone_computed.difference(self._water_area)
-
-            isochrone_computed = unary_union([isochrone_computed, iso_value_main_part_roads_buffered])
+            isochrone_computed = self.__improve_isochrone(isochrone_computed, last_iso_to_proceed_feature)
 
         for isochrone_geom in convert_to_polygon(isochrone_computed):
             last_iso_to_proceed_feature_copy = dict(last_iso_to_proceed_feature)
             last_iso_to_proceed_feature_copy["geometry"] = isochrone_geom
             self._output_data.append(last_iso_to_proceed_feature_copy)
+
+    def __improve_isochrone(self, isochrone_computed, current_main_isochrone):
+        # add roads on the raw isochrone to respect isochrone area
+        iso_value_main_part_roads_buffered = (
+            self._network_gdf.loc[
+                self._network_gdf[self.__ISOCHRONE_NAME_FIELD] == current_main_isochrone[
+                    self.__ISOCHRONE_NAME_FIELD]
+                ].buffer(
+                self._display_mode_params["path_buffered"],
+                resolution=self._display_mode_params["resolution"],
+                cap_style=self._display_mode_params["cap_style"]
+            ).unary_union.buffer(
+                self._display_mode_params["path_buffered"] / 10,
+                resolution=self._display_mode_params["resolution"],
+            )
+        )
+        iso_value_main_part_roads_buffered = MultiPolygon([
+            iso_polygon_part
+            for iso_polygon_part in convert_to_polygon(iso_value_main_part_roads_buffered)
+        ])
+        # remove water area
+        isochrone_computed_without_water_area = isochrone_computed.difference(self._water_area)
+
+        # finalize
+        isochrone_computed = unary_union([isochrone_computed_without_water_area, iso_value_main_part_roads_buffered])
+
+        return isochrone_computed
