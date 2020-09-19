@@ -74,7 +74,7 @@ class OsmGtIsochrone(OsmGtRoads):
     __ISODISTANCE_NAME_FIELD: str = "iso_distance"
     __DISSOLVE_NAME_FIELD: str = "__dissolve__"
     __TOPO_FIELD_REGEX_CLEANER = r"_[0-9]+$"
-    __TOPO_UIIDS_FIELD = "topo_uuids"
+    __NETWORK_MASK = "topo_uuids"
 
     __CLEANING_NETWORK_BUFFER_VALUE: float = 0.000001
     __CLEANING_NETWORK_CAP_STYLE: int = 3
@@ -214,14 +214,15 @@ class OsmGtIsochrone(OsmGtRoads):
         self._graph = self.get_graph()
 
         self._source_vertex = self._graph.find_vertex_from_name(self.source_node)
+
         # reset output else isochrone will be append
         self._output_data = []
-        import concurrent.futures
 
-        #         with concurrent.futures.ThreadPoolExecutor() as executor:
-        #             executor.map(self._compute_isochrone, self._isochrones_times)
-        for param in self._isochrones_times:
-            self._compute_isochrone(param)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(self._compute_isochrone, self._isochrones_times)
+        # for param in self._isochrones_times:
+        #     self._compute_isochrone(param)
 
         self.__clean_network()
         self.__clean_isochrones()
@@ -299,7 +300,7 @@ class OsmGtIsochrone(OsmGtRoads):
                 self.__TIME_UNIT_FIELD: time_unit,
                 self.__ISODISTANCE_NAME_FIELD: dist,
                 self.__DISTANCE_UNIT_FIELD: distance_unit,
-                self.__TOPO_UIIDS_FIELD: network_mask,
+                self.__NETWORK_MASK: network_mask,
                 "geometry": iso_polygon,
             }
         )
@@ -313,12 +314,12 @@ class OsmGtIsochrone(OsmGtRoads):
         )
         for isochrone_computed in self._isochrones_data:
             self._network_gdf.loc[
-                isochrone_computed[self.__TOPO_UIIDS_FIELD], self.__ISOCHRONE_NAME_FIELD
+                isochrone_computed[self.__NETWORK_MASK], self.__ISOCHRONE_NAME_FIELD
             ] = isochrone_computed[self.__ISOCHRONE_NAME_FIELD]
             self._network_gdf.loc[
-                isochrone_computed[self.__TOPO_UIIDS_FIELD], self.__ISODISTANCE_NAME_FIELD
+                isochrone_computed[self.__NETWORK_MASK], self.__ISODISTANCE_NAME_FIELD
             ] = isochrone_computed[self.__ISODISTANCE_NAME_FIELD]
-            del isochrone_computed[self.__TOPO_UIIDS_FIELD]
+            del isochrone_computed[self.__NETWORK_MASK]
 
         self._network_gdf[self._TOPO_FIELD].replace(
             self.__TOPO_FIELD_REGEX_CLEANER, "", regex=True, inplace=True
@@ -352,7 +353,6 @@ class OsmGtIsochrone(OsmGtRoads):
         }
 
         self._isochrones_built = []
-        last_isochrone = None
         for iso_value_main_part, iso_value_part_to_remove in iso_values_map.items():
             # get main and part_to_remove isochrones
             iso_value_main_part_feature_idx = find_index(
