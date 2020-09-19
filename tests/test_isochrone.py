@@ -42,7 +42,9 @@ def test_isochrones_from_times(
         set(isochrones_lines.columns.to_list())
     )
     assert "__dissolve__" not in isochrones_lines.columns.to_list()
-
+    assert isochrones_lines["geometry"].unary_union.within(
+        isochrones_polygons["geometry"].unary_union
+    )
 
 def test_isochrone_from_distance(
     location_point,

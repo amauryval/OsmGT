@@ -211,10 +211,10 @@ class OsmGtIsochrone(OsmGtRoads):
         self._output_data = []
         import concurrent.futures
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(self._compute_isochrone, self._isochrones_times)
-        #         for param in self._isochrones_times:
-        #             self._compute_isochrone(param)
+        #         with concurrent.futures.ThreadPoolExecutor() as executor:
+        #             executor.map(self._compute_isochrone, self._isochrones_times)
+        for param in self._isochrones_times:
+            self._compute_isochrone(param)
 
         self.__clean_network()
         self.__clean_isochrones()
@@ -238,16 +238,28 @@ class OsmGtIsochrone(OsmGtRoads):
         )
         points = [self._graph.vertex_names[vertex] for vertex in pred]
 
-        all_edges_found_topo_uuids = set(
+        from collections import Counter
+        all_edges_found_topo_uuids_count = Counter(
             list(
                 itertools.chain(
-                    *[self._graph.find_edges_from_vertex(pt) for pt in points]
+                    *[
+                        self._graph.find_edges_from_vertex(pt)
+                        for pt in points
+
+                    ]
                 )
             )
         )
+        all_edges_found_topo_uuids = set(list(dict(
+            filter(
+                lambda x: x[1] > 1,
+                all_edges_found_topo_uuids_count.items(),
+            )
+        ).keys()))
+
         network_mask = self._network_gdf["topo_uuid"].isin(all_edges_found_topo_uuids)
 
-        iso_polygon = Polygon(
+        iso_polygon = (
             self._network_gdf.loc[network_mask]
                 .buffer(
                 self._display_mode_params["path_buffered"],
@@ -267,8 +279,13 @@ class OsmGtIsochrone(OsmGtRoads):
                 join_style=self._display_mode_params["join_style"],
                 resolution=self._display_mode_params["resolution"],
             )
-                .exterior
         )
+        # compute exterior
+        iso_polygon = MultiPolygon([
+            Polygon(iso_polygon_part.exterior)
+            for iso_polygon_part in convert_to_polygon(iso_polygon)
+        ])
+
         self._isochrones_data.append(
             {
                 self.__ISOCHRONE_NAME_FIELD: iso_time,
@@ -350,14 +367,20 @@ class OsmGtIsochrone(OsmGtRoads):
                 iso_value_part_to_remove_feature["geometry"]
             )
             # add roads on the raw isochrone to respect isochrone area
-            iso_value_main_part_roads_buffered = self._network_gdf.loc[
-                self._network_gdf[self.__ISOCHRONE_NAME_FIELD] == iso_value_main_part_feature[
-                    self.__ISOCHRONE_NAME_FIELD]
-                ].buffer(
-                self._display_mode_params["path_buffered"],
-                resolution=self._display_mode_params["resolution"],
-                cap_style=2
-            ).unary_union
+            iso_value_main_part_roads_buffered = (
+                self._network_gdf.loc[
+                    self._network_gdf[self.__ISOCHRONE_NAME_FIELD] == iso_value_main_part_feature[
+                        self.__ISOCHRONE_NAME_FIELD]
+                    ].buffer(
+                    self._display_mode_params["path_buffered"],
+                    resolution=self._display_mode_params["resolution"],
+                    cap_style=2
+                ).unary_union.buffer(
+                    self._display_mode_params["path_buffered"] / 10,
+                    resolution=self._display_mode_params["resolution"],
+                )
+            )
+
             iso_value_main_part_roads_buffered = MultiPolygon([
                 iso_polygon_part
                 for iso_polygon_part in convert_to_polygon(iso_value_main_part_roads_buffered)
@@ -368,20 +391,15 @@ class OsmGtIsochrone(OsmGtRoads):
 
             isochrone_computed = unary_union([isochrone_computed, iso_value_main_part_roads_buffered])
 
-            # last_isochrone will be used to the next iteration to remove roads outside of the proceed isochrone
-            if last_isochrone is not None:
-                isochrone_computed = isochrone_computed.difference(last_isochrone)
-            last_isochrone = isochrone_computed
-
-            # we prepare the next isochrone, to be sure that it won't intersect the current isochrone
-            next_iso_geom_udapted = iso_value_part_to_remove_feature["geometry"].difference(isochrone_computed)
-            self._isochrones_data[iso_value_part_to_remove_feature_idx]["geometry"] = next_iso_geom_udapted
+            # _isochrones_built will be used to remove roads outside of the proceed isochrone and force last isochrones to be part of the current isochrone
+            if len(self._isochrones_built) != 0:
+                isochrone_computed = isochrone_computed.difference(unary_union(self._isochrones_built))
+            self._isochrones_built.append(isochrone_computed)
 
             # finalize
             for iso_polygon_part in convert_to_polygon(isochrone_computed):
                 iso_value_main_part_feature_copy = dict(iso_value_main_part_feature)
                 iso_value_main_part_feature_copy["geometry"] = iso_polygon_part
-                self._isochrones_built.append(iso_polygon_part)
                 self._output_data.append(iso_value_main_part_feature_copy)
 
         # should be the lowest, only 1

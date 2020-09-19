@@ -106,7 +106,7 @@ water_area_query = 'way["water"="river"]["area"!~"."]({geo_filter});way["waterwa
 
 
 isochrone_display_mode: Dict = {
-    "path_buffered": 0.0001,
+    "path_buffered": 0.00005,
     "dilatation": 0.001,
     "erosion": -0.001,
     "cap_style": 2,
