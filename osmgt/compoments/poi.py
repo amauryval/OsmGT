@@ -6,7 +6,7 @@ from osmgt.compoments.core import OsmGtCore
 
 from shapely.geometry import Point
 
-from osmgt.core.global_values import poi_query
+from osmgt.helpers.global_values import poi_query
 
 
 class OsmGtPoi(OsmGtCore):

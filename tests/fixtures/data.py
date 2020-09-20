@@ -36,7 +36,12 @@ def location_point():
 
 @pytest.fixture
 def isochrone_values():
-    return [2, 5, 10]
+    return {2, 5, 10}
+
+
+@pytest.fixture
+def isochrone_distance_values():
+    return [250, 500, 1000]
 
 
 @pytest.fixture
@@ -164,17 +169,17 @@ def default_output_network_columns():
 
 @pytest.fixture
 def shortest_path_output_default_columns():
-    return {"source_node", "target_node", "osm_ids", "osm_urls", "geometry"}
+    return {"id", "source_node", "target_node", "osm_ids", "osm_urls", "geometry"}
 
 
 @pytest.fixture()
 def isochrones_polygons_output_default_columns():
-    return {"iso_name", "iso_distance", "geometry"}
+    return {"id", "iso_name", "iso_distance", "geometry"}
 
 
 @pytest.fixture()
-def isochrones_output_lines_default_columns():
-    return set(list(default_output_network_columns) + list(isochrones_polygons_output_default_columns))
+def isochrones_lines_output_default_columns():
+    return {"id", "iso_name", "iso_distance", "topo_uuid", "topology", "osm_url", "geometry"}
 
 
 @pytest.fixture

@@ -23,8 +23,8 @@ from numba import types as nb_types
 
 import concurrent.futures
 
-from osmgt.core.global_values import forward_tag
-from osmgt.core.global_values import backward_tag
+from osmgt.helpers.global_values import forward_tag
+from osmgt.helpers.global_values import backward_tag
 
 
 class NetworkTopologyError(Exception):
@@ -32,8 +32,6 @@ class NetworkTopologyError(Exception):
 
 
 class NetworkTopology:
-    # TODO return topology stats
-    # TODO oneway field to arg
 
     __INTERPOLATION_LEVEL: int = 7
     __INTERPOLATION_LINE_LEVEL: int = 4
@@ -45,7 +43,12 @@ class NetworkTopology:
     __CLEANING_FILED_STATUS: str = "topology"
     __GEOMETRY_FIELD: str = "geometry"
     __COORDINATES_FIELD: str = "coordinates"
+
+    # OSM fields
     __ONEWAY_FIELD: str = "oneway"
+    __ONEWAY_VALUE: str = "yes"
+    __JUNCTION_FIELD: str = "junction"
+    __JUNCTION_VALUES: List[str] = ["roundabout", "jughandle"]
 
     __TOPOLOGY_TAG_SPLIT: str = "split"
     __TOPOLOGY_TAG_ADDED: str = "added"
@@ -104,6 +107,7 @@ class NetworkTopology:
     def run(self) -> List[Dict]:
         self._prepare_data()
 
+        # ugly footway processing...
         # if self._force_footway_connection:
         #     self.prepare_footway_nodes()
 
@@ -220,10 +224,10 @@ class NetworkTopology:
             # by default
             new_forward_feature = self._direction_processing(input_feature, forward_tag)
             new_elements.extend(new_forward_feature)
-            if input_feature.get("junction", None) in ["roundabout", "jughandle"]:
+            if input_feature.get(self.__JUNCTION_FIELD, None) in self.__JUNCTION_VALUES:
                 return new_elements
 
-            if input_feature.get(self.__ONEWAY_FIELD, None) != "yes":
+            if input_feature.get(self.__ONEWAY_FIELD, None) != self.__ONEWAY_VALUE:
 
                 new_backward_feature = self._direction_processing(
                     input_feature, backward_tag
@@ -527,7 +531,6 @@ class NetworkTopology:
 
     @staticmethod
     def _check_inputs(inputs: List[Dict]) -> List[Dict]:
-        # TODO add assert
         assert len(inputs) > 0
         return inputs
 

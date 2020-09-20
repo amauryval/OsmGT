@@ -10,6 +10,7 @@ from osmgt.processing.shortest_path import OsmGtShortestPath
 from typing import Tuple
 from typing import List
 from typing import Optional
+from typing import Union
 
 
 class OsmGt:
@@ -88,10 +89,9 @@ class OsmGt:
     @staticmethod
     def isochrone_from_source_node(
         source_node: Point,
-        isochrones_times: List[float],
+        isochrones_times: List[Union[int, float]],
         trip_speed: float,
         mode: str = "pedestrian",
-        display_mode: str = "orthogonal",
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
         :param source_node: location points
@@ -102,14 +102,12 @@ class OsmGt:
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
-        :param display_mode: the isochrone display mode, one of : web, orthogonal
-        :type display_mode: str, default 'orthogonal'
         :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
-            trip_speed, isochrones_times, display_mode=display_mode
+            trip_speed, isochrones_times
         ).from_location_point(source_node, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf
@@ -117,10 +115,9 @@ class OsmGt:
     @staticmethod
     def isochrone_distance_from_source_node(
         source_node: Point,
-        distances: List,
+        distances: List[Union[int, float]],
         trip_speed: float,
         mode: str = "pedestrian",
-        display_mode: str = "orthogonal",
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         """
         :param source_node: location points
@@ -131,14 +128,12 @@ class OsmGt:
         :type trip_speed: int
         :param mode: the transport mode
         :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
-        :param display_mode: the isochrone display mode, one of : web, orthogonal
-        :type display_mode: str, default 'orthogonal'
         :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
-            trip_speed, None, distances, display_mode=display_mode
+            trip_speed, None, distances
         ).from_location_point(source_node, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf

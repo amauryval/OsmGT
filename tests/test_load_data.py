@@ -47,11 +47,12 @@ def test_get_pois_from_an_unexisting_location():
     with pytest.raises(ErrorOsmGtCore) as excinfo:
 
         _ = OsmGt.pois_from_location(location_name)
-        assert (
-            "Location not found!" == str(excinfo.value)
-        )
+        assert "Location not found!" == str(excinfo.value)
 
-def test_run_from_location_name_with_additional_nodes(default_output_pois_columns, default_output_network_columns):
+
+def test_run_from_location_name_with_additional_nodes(
+    default_output_pois_columns, default_output_network_columns
+):
     location_name = "roanne"
     pois_initialized = OsmGt.pois_from_location(location_name)
 
@@ -89,7 +90,9 @@ def test_run_from_location_name_with_additional_nodes(default_output_pois_column
         assert topology_gdf.shape[1] == 5
 
 
-def test_run_from_location_name_without_additional_nodes(default_output_pois_columns, default_output_network_columns):
+def test_run_from_location_name_without_additional_nodes(
+    default_output_pois_columns, default_output_network_columns
+):
     location_name = "roanne"
 
     network_initialized = OsmGt.roads_from_location(location_name, "pedestrian")
@@ -120,7 +123,9 @@ def test_run_from_location_name_without_additional_nodes(default_output_pois_col
         assert topology_gdf.shape[-1] == 5
 
 
-def test_run_from_bbox_func(bbox_values_1, default_output_pois_columns, default_output_network_columns):
+def test_run_from_bbox_func(
+    bbox_values_1, default_output_pois_columns, default_output_network_columns
+):
 
     pois_initialized = OsmGt.pois_from_bbox(bbox_values_1)
 
@@ -129,9 +134,7 @@ def test_run_from_bbox_func(bbox_values_1, default_output_pois_columns, default_
 
     pois_gdf = pois_initialized.get_gdf()
 
-    network_initialized = OsmGt.roads_from_bbox(
-        bbox_values_1, "vehicle", pois_gdf
-    )
+    network_initialized = OsmGt.roads_from_bbox(bbox_values_1, "vehicle", pois_gdf)
     study_area = network_initialized.study_area
     assert study_area.geom_type == "Polygon"
 
@@ -162,7 +165,9 @@ def test_run_from_bbox_func(bbox_values_1, default_output_pois_columns, default_
         assert topology_gdf.shape[-1] == 5
 
 
-def test_run_from_bbox_func_usa(bbox_values_2, default_output_pois_columns, default_output_network_columns):
+def test_run_from_bbox_func_usa(
+    bbox_values_2, default_output_pois_columns, default_output_network_columns
+):
     pois_initialized = OsmGt.pois_from_bbox(bbox_values_2)
 
     pois_study_area = pois_initialized.study_area

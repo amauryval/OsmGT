@@ -12,16 +12,16 @@ from osmgt.helpers.logger import Logger
 from osmgt.apis.nominatim import NominatimApi
 from osmgt.apis.overpass import OverpassApi
 
-from osmgt.core.global_values import network_queries
-from osmgt.core.global_values import epsg_4326
-from osmgt.core.global_values import out_geom_query
+from osmgt.helpers.global_values import network_queries
+from osmgt.helpers.global_values import epsg_4326
+from osmgt.helpers.global_values import out_geom_query
 
 from shapely.geometry import Point
 from shapely.geometry import LineString
 from shapely.geometry import Polygon
 from shapely.geometry import box
 
-from osmgt.core.global_values import osm_url
+from osmgt.helpers.global_values import osm_url
 
 
 class ErrorOsmGtCore(Exception):
@@ -58,6 +58,7 @@ class OsmGtCore(Logger):
     _PROPERTIES_OSM_FIELD: str = "tags"
     _ID_OSM_FIELD: str = "id"
     _OSM_URL_FIELD: str = "osm_url"
+    _ID_DEFAULT_FIELD: str = "id"
 
     _FEATURE_OSM_TYPE: Optional[str] = None
 
@@ -157,7 +158,7 @@ class OsmGtCore(Logger):
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             # more performance comparing .from_features() method
             df: pd.DataFrame = pd.DataFrame(self._output_data)
-            geometry = df[self._GEOMETRY_FIELD]  # TODO check type
+            geometry = df[self._GEOMETRY_FIELD]
             output_gdf: gpd.GeoDataFrame = gpd.GeoDataFrame(
                 df.drop([self._GEOMETRY_FIELD], axis=1),
                 crs=f"EPSG:{epsg_4326}",
@@ -182,13 +183,16 @@ class OsmGtCore(Logger):
         geom_types_found = set(output_gdf[self._GEOMETRY_FIELD].geom_type.to_list())
         if geom_types_found != {self._OUTPUT_EXPECTED_GEOM_TYPE}:
             raise ErrorOsmGtCore(
-                f"Output geom type not supported! Only {self._OUTPUT_EXPECTED_GEOM_TYPE} supported ; {geom_types_found} found"
+                f"Geom type not supported! Only {self._OUTPUT_EXPECTED_GEOM_TYPE} supported ; {geom_types_found} found"
             )
 
     def _clean_attributes(self, input_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         for col_name in input_gdf.columns:
             if col_name in self.__USELESS_COLUMNS:
                 input_gdf.drop(columns=[col_name], inplace=True)
+
+        if self._ID_DEFAULT_FIELD not in input_gdf.columns:
+            input_gdf.loc[:, self._ID_DEFAULT_FIELD] = input_gdf.index.astype(str)
 
         return input_gdf
 

@@ -2,6 +2,7 @@ from typing import List
 from typing import Union
 
 import geopandas as gpd
+
 from pyproj import Geod
 from pyproj import Transformer
 
@@ -9,10 +10,11 @@ from shapely.ops import transform
 from shapely.ops import linemerge
 
 from shapely.geometry import base
-from shapely.geometry import MultiLineString
-from shapely.geometry import Point
-
 from shapely.geometry import LineString
+from shapely.geometry import Point
+from shapely.geometry import MultiLineString
+from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon
 
 
 def compute_wg84_line_length(input_geom: Union[LineString, MultiLineString]) -> float:
@@ -25,28 +27,10 @@ def compute_wg84_line_length(input_geom: Union[LineString, MultiLineString]) -> 
     :rtype: float
 
     """
-    total_length = 0
 
-    if input_geom.geom_type == "MultiLineString":
-        for geom_line in input_geom.geoms:
-            total_length += compute_wg84_line_length(geom_line)
+    line_length = Geod(ellps="WGS84").geometry_length(input_geom)
 
-    elif input_geom.geom_type == "LineString":
-        coordinates_pairs = list(zip(input_geom.coords, input_geom.coords[1:]))
-        for pair in coordinates_pairs:
-
-            if len(pair[0]) == 3 or len(pair[1]) == 3:
-                coords = (
-                    pair[0][:-1] + pair[1][:-1]
-                )  # avoid to catch the elevation coord
-            else:
-                coords = pair[0] + pair[1]
-
-            wgs84_geodetic = Geod(ellps="WGS84")
-            _, _, length_computed = wgs84_geodetic.inv(*coords)
-            total_length += length_computed
-
-    return total_length
+    return line_length
 
 
 def reprojection(geometry: base, from_epsg: str, to_epsg: str) -> base:
@@ -121,7 +105,7 @@ def split_multiline_to_lines(
     return output
 
 
-def split_linestring_to_points(
+def linestring_points_fom_positions(
     input_gdf: gpd.GeoDataFrame, epsg_data: str, positions: list = [0, -1]
 ) -> gpd.GeoDataFrame:
     """
@@ -155,3 +139,19 @@ def split_linestring_to_points(
     )
 
     return output
+
+
+def convert_to_polygon(polygon_geom: Union[Polygon, MultiPolygon]) -> List[Polygon]:
+    output_polygons = []
+
+    isochrone_type = polygon_geom.geom_type
+    if isochrone_type == "Polygon":
+        output_polygons.append(polygon_geom)
+
+    elif isochrone_type == "MultiPolygon":
+        output_polygons.extend([polygon_part for polygon_part in polygon_geom.geoms])
+
+    else:
+        raise TypeError(f"{isochrone_type} geom type not compatible")
+
+    return output_polygons
