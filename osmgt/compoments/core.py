@@ -158,7 +158,7 @@ class OsmGtCore(Logger):
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             # more performance comparing .from_features() method
             df: pd.DataFrame = pd.DataFrame(self._output_data)
-            geometry = df[self._GEOMETRY_FIELD]  # TODO check type
+            geometry = df[self._GEOMETRY_FIELD]
             output_gdf: gpd.GeoDataFrame = gpd.GeoDataFrame(
                 df.drop([self._GEOMETRY_FIELD], axis=1),
                 crs=f"EPSG:{epsg_4326}",
@@ -183,7 +183,7 @@ class OsmGtCore(Logger):
         geom_types_found = set(output_gdf[self._GEOMETRY_FIELD].geom_type.to_list())
         if geom_types_found != {self._OUTPUT_EXPECTED_GEOM_TYPE}:
             raise ErrorOsmGtCore(
-                f"Output geom type not supported! Only {self._OUTPUT_EXPECTED_GEOM_TYPE} supported ; {geom_types_found} found"
+                f"Geom type not supported! Only {self._OUTPUT_EXPECTED_GEOM_TYPE} supported ; {geom_types_found} found"
             )
 
     def _clean_attributes(self, input_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:

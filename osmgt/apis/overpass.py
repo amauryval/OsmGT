@@ -16,7 +16,7 @@ class OverpassApi(ApiCore):
 
     def __init__(self, logger):
         super().__init__()
-        self.logger = logger  # TODO check type
+        self.logger = logger
 
     def _build_parameters(self, query: str) -> Dict:
         return {

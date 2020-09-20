@@ -13,7 +13,7 @@ from osmgt.compoments.core import EmptyData
 
 from osmgt.geometry.network_topology import NetworkTopology
 from osmgt.geometry.geom_helpers import compute_wg84_line_length
-from osmgt.geometry.geom_helpers import split_linestring_to_points
+from osmgt.geometry.geom_helpers import linestring_points_fom_positions
 
 from shapely.geometry import LineString
 from shapely.geometry import Point
@@ -205,9 +205,9 @@ class OsmGtRoads(OsmGtCore):
             ]
         else:
             nodes_added = network_gdf.loc[network_gdf["topology"] == "added"]
-        nodes_added = split_linestring_to_points(nodes_added, epsg_4326, [0])
+        nodes_added = linestring_points_fom_positions(nodes_added, epsg_4326, [0])
         lines_split = network_gdf.loc[network_gdf["topology"] == "split"]
-        intersections_added = split_linestring_to_points(
+        intersections_added = linestring_points_fom_positions(
             network_gdf.loc[network_gdf["topology"] == "split"], epsg_4326, [0, -1]
         )
 

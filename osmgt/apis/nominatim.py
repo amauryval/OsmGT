@@ -28,7 +28,7 @@ class NominatimApi(ApiCore):
 
     def __init__(self, logger, **params) -> None:
         super().__init__()
-        self.logger = logger  # TODO check type
+        self.logger = logger
 
         parameters: Dict = self.__check_parameters(params)
         self.__RESULT_QUERY = self.request_query(self.nominatim_url, parameters)

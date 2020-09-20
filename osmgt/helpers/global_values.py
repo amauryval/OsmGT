@@ -46,64 +46,67 @@ out_geom_query: str = "out geom;(._;>;)"
 network_queries: dict = {
     "vehicle": {
         "query": 'way["highway"~"^('
-                 "motorway|"
-                 "trunk|"
-                 "primary|"
-                 "secondary|"
-                 "tertiary|"
-                 "unclassified|"
-                 "residential|"
-                 "pedestrian|"
-                 "motorway_link|"
-                 "trunk_link|"
-                 "primary_link|"
-                 "secondary_link|"
-                 "tertiary_link|"
-                 "living_street|"
-                 "service|"
-                 "track|"
-                 "bus_guideway|"
-                 "escape|"
-                 "raceway|"
-                 "road|"
-                 "bridleway|"
-                 "corridor|"
-                 "path"
-                 ')$"]["area"!~"."]({geo_filter});',
+        "motorway|"
+        "trunk|"
+        "primary|"
+        "secondary|"
+        "tertiary|"
+        "unclassified|"
+        "residential|"
+        "pedestrian|"
+        "motorway_link|"
+        "trunk_link|"
+        "primary_link|"
+        "secondary_link|"
+        "tertiary_link|"
+        "living_street|"
+        "service|"
+        "track|"
+        "bus_guideway|"
+        "escape|"
+        "raceway|"
+        "road|"
+        "bridleway|"
+        "corridor|"
+        "path"
+        ')$"]["area"!~"."]({geo_filter});',
         "directed_graph": True,
     },
     "pedestrian": {
         "query": 'way["highway"~"^('
-                 "motorway|"
-                 "cycleway|"
-                 "primary|"
-                 "secondary|"
-                 "tertiary|"
-                 "unclassified|"
-                 "residential|"
-                 "pedestrian|"
-                 "motorway_link|"
-                 "primary_link|"
-                 "secondary_link|"
-                 "tertiary_link|"
-                 "living_street|"
-                 "service|"
-                 "track|"
-                 "bus_guideway|"
-                 "escape|"
-                 "road|"
-                 "footway|"
-                 "bridleway|"
-                 "steps|"
-                 "corridor|"
-                 "path"
-                 ')$"]["area"!~"."]({geo_filter});',
+        "motorway|"
+        "cycleway|"
+        "primary|"
+        "secondary|"
+        "tertiary|"
+        "unclassified|"
+        "residential|"
+        "pedestrian|"
+        "motorway_link|"
+        "primary_link|"
+        "secondary_link|"
+        "tertiary_link|"
+        "living_street|"
+        "service|"
+        "track|"
+        "bus_guideway|"
+        "escape|"
+        "road|"
+        "footway|"
+        "bridleway|"
+        "steps|"
+        "corridor|"
+        "path"
+        ')$"]["area"!~"."]({geo_filter});',
         "directed_graph": False,
     },
 }
 
-water_area_query = 'way["water"="river"]["area"!~"."]({geo_filter});way["waterway"="riverbank"]["area"!~"."]({geo_filter});relation["natural"="water"]["area"!~"."]({geo_filter});'
-
+water_area_query = (
+    'way["water"="river"]["area"!~"."]({geo_filter});'
+    'way["waterway"="riverbank"]["area"!~"."]({geo_filter});'
+    'relation["natural"="water"]["area"!~"."]({geo_filter});'
+)
 
 isochrone_display_mode: Dict = {
     "path_buffered": 0.00005,
