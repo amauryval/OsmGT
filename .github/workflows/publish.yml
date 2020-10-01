@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  Unitary_tests_and_coverity:
+  Test_and_publish_on_conda:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
