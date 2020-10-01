@@ -53,6 +53,19 @@ jobs:
         conda activate osmgt
         python -m pytest --cov=osmgt --cov-report=xml tests/
 
+    - name: Build the notebook index.html
+      run: |
+        source ~/miniconda3/etc/profile.d/conda.sh
+        conda activate osmgt
+        jupyter nbconvert --to html example.ipynb --ExecutePreprocessor.kernel_name=python --ExecutePreprocessor.enabled=True --output=index.html
+
+    # Deploy the book's HTML to gh-pages branch
+    - name: GitHub Pages action
+      uses: peaceiris/actions-gh-pages@v3.6.1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
+
     - name: publish-to-conda
       uses: amauryval/publish_conda_package_action@main
       with:
