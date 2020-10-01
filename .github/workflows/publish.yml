@@ -25,6 +25,7 @@ jobs:
         fi
         curl -L -o $MINICONDA_FILENAME "https://repo.anaconda.com/miniconda/$MINICONDA_FILENAME"
         bash ${MINICONDA_FILENAME} -b -f -p $HOME/miniconda3
+        rm ${MINICONDA_FILENAME}
 
     - name: Setup paths
       shell: bash
