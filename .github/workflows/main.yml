@@ -40,7 +40,8 @@ jobs:
       run: |
         conda config --set auto_update_conda off
         conda install --yes --quiet $CONDA_REQS
-        conda env create --file environment.yml
+        conda install --yes --quiet mamba -c conda-forge
+        mamba env create --file environment.yml
 
     - name: Run tests
       shell: bash
@@ -53,3 +54,16 @@ jobs:
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Build the notebook index.html
+      run: |
+        source ~/miniconda3/etc/profile.d/conda.sh
+        conda activate osmgt
+        jupyter nbconvert --to html example.ipynb --ExecutePreprocessor.kernel_name=python --ExecutePreprocessor.enabled=True --output=index.html
+
+    # Deploy the book's HTML to gh-pages branch
+    - name: GitHub Pages action
+      uses: peaceiris/actions-gh-pages@v3.6.1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
