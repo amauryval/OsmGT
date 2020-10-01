@@ -29,7 +29,6 @@ share/python-wheels/
 MANIFEST
 conda_build/
 temp_build/
-conda_recipe/
 pkg.Dockerfile
 makefile
 notebook2html.run
@@ -144,3 +143,4 @@ dmypy.json
 *.dbf
 *.prj
 *.cpg
+!/conda_recipe/
