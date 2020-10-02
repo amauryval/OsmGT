@@ -2,6 +2,8 @@ from typing import Dict
 
 from requests_futures import sessions
 
+from osmgt.helpers.misc import retry
+
 
 class ErrorRequest(ValueError):
     pass
@@ -20,14 +22,14 @@ class ApiCore:
             f"{python_class_name}: Query {response_reason} "
             f"in {round(response.result().elapsed.total_seconds(), 2)} sec."
         )
+        self.logger.info(f"{response_result_message}")
 
-        if response_code == self.__WORKED_STATUS_CODE:
-            self.logger.info(f"{response_result_message}")
-        else:
+        if response_code != self.__WORKED_STATUS_CODE:
             raise ErrorRequest(
                 f"{response_result_message} ; url={response.result().url}"
             )
 
+    @retry(ErrorRequest, tries=4, delay=3, backoff=2, logger=None)
     def request_query(self, url: str, parameters: Dict) -> Dict:
 
         session = sessions.FuturesSession(max_workers=self.__NB_WORKER)
