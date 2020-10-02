@@ -9,7 +9,8 @@ COPY environment.yml /home/app/
 WORKDIR /home/app/
 
 # conda env creation
-RUN conda env create -f environment.yml
+RUN conda install -c conda-forge mamba
+RUN mamba env create -f environment.yml
 RUN echo "source activate osmgt" > ~/.bashrc
 ENV PATH /opt/conda/envs/osmgt/bin:$PATH
 #RUN echo "source activate $(head -1 $conda_dir_env | cut -d' ' -f2)" > ~/.bashrc
