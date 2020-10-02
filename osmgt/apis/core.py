@@ -26,7 +26,7 @@ class ApiCore:
 
         if response_code != self.__WORKED_STATUS_CODE:
             raise ErrorRequest(
-                f"{response_result_message} ; url={response.result().url}"
+                f"{response_result_message}"
             )
 
     @retry(ErrorRequest, tries=4, delay=3, backoff=2, logger=None)
