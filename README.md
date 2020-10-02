@@ -20,11 +20,16 @@ OpenStreetMap (OSM) network analysis based on [graph-tools](https://graph-tool.s
 * shortest path 
 
 
+## Demo
+
+To play with the notebook on binder: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/amauryval/osmgt/master?filepath=example.ipynb)
+
+If you do not want to wait (OsmGt docker building takes time here on myBinder), you can find the html version of the jupyter notebook : click [here](https://amauryval.github.io/osmgt/) to get the result
+
+
 # Documentation
 
 [Open the wiki](https://github.com/amauryval/osmgt/wiki/OsmGT-Wiki)
-
-[Open the example](https://amauryval.github.io/osmgt/)
 
 
 # How to install it 
