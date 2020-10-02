@@ -4,7 +4,6 @@ from typing import Optional
 from typing import Tuple
 
 from graph_tool import Graph
-
 from graph_tool.all import graph_draw
 from graph_tool.draw import sfdp_layout
 
