@@ -57,19 +57,20 @@ jobs:
       run: |
         source ~/miniconda3/etc/profile.d/conda.sh
         conda activate osmgt
-        jupyter nbconvert --to html example.ipynb --ExecutePreprocessor.kernel_name=python --ExecutePreprocessor.enabled=True --output=index.html
+        mkdir _build
+        jupyter nbconvert --to html example.ipynb --ExecutePreprocessor.kernel_name=python --ExecutePreprocessor.enabled=True --output=_build/index.html
 
     # Deploy the book's HTML to gh-pages branch
     - name: GitHub Pages action
       uses: peaceiris/actions-gh-pages@v3.6.1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./
+        publish_dir: _build/
 
     - name: publish-to-conda
-      uses: amauryval/publish_conda_package_action@main
+      uses: amauryval/publish_conda_package_action@1.0.0
       with:
         CondaDir: 'conda_recipe'
-        Platforms: 'osx-64 linux-64 win-64'
+        Platforms: 'linux-64'
         CondaUsername: ${{ secrets.CONDA_USERNAME }}
         CondaPassword: ${{ secrets.CONDA_PASSWORD }}
