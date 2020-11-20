@@ -167,8 +167,8 @@ class OsmGtIsochrones(OsmGtRoads):
         self.from_location(area_name, points_gdf, mode, interpolate_lines=True)
         self._final_network_gdf = super().get_gdf()
         # default value
-        self._final_network_gdf.loc[":", self.__ISOCHRONE_NAME_FIELD] = 9999
-        self._final_network_gdf.loc[":", self.__ISODISTANCE_NAME_FIELD] = 9999
+        self._final_network_gdf.loc[:, self.__ISOCHRONE_NAME_FIELD] = 9999
+        self._final_network_gdf.loc[:, self.__ISODISTANCE_NAME_FIELD] = 9999
 
         self._graph = self.get_graph()
 
