@@ -5,6 +5,7 @@ from osmgt.compoments.roads import OsmGtRoads
 from osmgt.compoments.poi import OsmGtPoi
 
 from osmgt.processing.isochrone import OsmGtIsochrone
+from osmgt.processing.isochrones import OsmGtIsochrones
 from osmgt.processing.shortest_path import OsmGtShortestPath
 
 from typing import Tuple
@@ -137,6 +138,34 @@ class OsmGt:
         ).from_location_point(source_node, mode)
 
         return isochrone_polygons_gdf, isochrone_lines_gdf
+
+    @staticmethod
+    def isochrones_from_multiple_locations_on_area(
+        points_gdf: gpd.GeoDataFrame,
+        area_name: str,
+        distances: List[Union[int, float]],
+        trip_speed: float,
+        mode: str = "pedestrian",
+    ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+        """
+        :param points_gdf:
+        :type points_gdf:
+        :param area_name:
+        :type area_name:
+        :param distances: distances (meters)
+        :type distances: list of int
+        :param trip_speed: trip speed in km/h
+        :type trip_speed: int
+        :param mode: the transport mode
+        :type mode: str, default 'pedestrian', one of : pedestrian, vehicle
+        :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
+        :rtype: tuple(geopandas.GeoDataFrame)
+        """
+        output = OsmGtIsochrones(
+            trip_speed, None, distances
+        ).from_locations_based_on_area_name(points_gdf, area_name, mode)
+
+        return output
 
     @staticmethod
     def shortest_path_from_location(
