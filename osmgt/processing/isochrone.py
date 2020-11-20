@@ -52,6 +52,9 @@ try:
 except ModuleNotFoundError:
     pass
 
+import concurrent.futures
+from collections import Counter
+
 warnings.simplefilter(action="ignore", category=UserWarning)
 
 
@@ -211,8 +214,6 @@ class OsmGtIsochrone(OsmGtRoads):
         # reset output else isochrone will be append
         self._output_data = []
 
-        import concurrent.futures
-
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self._compute_isochrone, self._isochrones_times)
         # for param in self._isochrones_times:
@@ -239,8 +240,6 @@ class OsmGtIsochrone(OsmGtRoads):
             return_reached=True,
         )
         points = [self._graph.vertex_names[vertex] for vertex in pred]
-
-        from collections import Counter
 
         all_edges_found_topo_uuids_count = Counter(
             list(

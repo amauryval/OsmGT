@@ -32,12 +32,12 @@ jobs:
     - name: Setup paths
       shell: bash
       run: |
-        echo "::add-path::$HOME/miniconda3/bin"
-        echo "::add-path::$HOME/miniconda3/Scripts"
+        echo "$HOME/miniconda3/bin" >> $GITHUB_PATH
+        echo "$HOME/miniconda3/Scripts" >> $GITHUB_PATH
         if [ "${{ matrix.os }}" != "windows-latest" ]; then
-          echo '::set-env name=CONDA_EXEC::${CONDA}/bin/conda'
+          echo "CONDA_EXEC=${CONDA}/bin/conda"
         else
-          echo '::set-env name=CONDA_EXEC::C:\Miniconda\condabin\conda.bat'
+          echo "CONDA_EXEC=C:\Miniconda\condabin\conda.bat"
         fi
 
     - name: Configure conda
