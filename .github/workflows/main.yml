@@ -31,8 +31,6 @@ jobs:
 
     - name: Setup paths
       shell: bash
-      env:
-        CONDA_REQS: "conda conda-verify"
       run: |
         echo "$HOME/miniconda3/bin" >> $GITHUB_PATH
         echo "$HOME/miniconda3/Scripts" >> $GITHUB_PATH
