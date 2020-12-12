@@ -61,3 +61,8 @@ def retry(Exceptions_to_check, tries: int = 4, delay: int = 3, backoff: int = 2,
         return f_retry  # true decorator
 
     return deco_retry
+
+
+def chunker(seq, size):
+    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
+

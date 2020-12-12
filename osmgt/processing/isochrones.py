@@ -207,10 +207,10 @@ class OsmGtIsochrones(OsmGtRoads):
 
         # reset output else isochrone will be append
         self._isochrones_data: List[Dict] = []
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(self._compute_isochrone, self._isochrones_times)
-        # for param in self._isochrones_times:
-        #     self._compute_isochrone(param)
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     executor.map(self._compute_isochrone, self._isochrones_times)
+        for param in self._isochrones_times:
+            self._compute_isochrone(param)
 
         network_gdf = self.__clean_network(self._network_gdf)
 

@@ -19,5 +19,6 @@ ENV PATH /opt/conda/envs/osmgt/bin:$PATH
 COPY . /home/app/
 
 EXPOSE 8888
-RUN jupyter notebook --generate-config --allow-root
-CMD ["conda", "run", "-n", "osmgt", "jupyter", "notebook", "--allow-root", "--notebook-dir=.", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''"]
+#RUN jupyter notebook --generate-config --allow-root
+#CMD ["conda", "run", "-n", "osmgt", "jupyter", "notebook", "--allow-root", "--notebook-dir=.", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''"]
+CMD ["conda", "run", "-n", "osmgt", "jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--LabApp.token=''"]
