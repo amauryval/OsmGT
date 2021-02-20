@@ -24,7 +24,7 @@ setup(
     author="amauryval",
     author_email='amauryval@gmail.com',
     url="https://github.com/amauryval/osmgt",
-    version='0.7.4',
+    version='0.7.10',
     description="A library to play with OSM roads (and POIs) data using graph tool network library",
     entry_points={},
     install_requires=requirements,
