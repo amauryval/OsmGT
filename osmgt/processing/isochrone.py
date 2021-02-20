@@ -29,6 +29,7 @@ import geopandas as gpd
 import pandas as pd
 
 import itertools
+from collections import Counter
 
 try:
     from graph_tool.topology import shortest_distance
