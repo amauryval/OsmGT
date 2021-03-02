@@ -161,7 +161,7 @@ class OsmGt:
         :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
-        output = OsmGtIsochrones(
+        output = OsmGtIsochrone(
             trip_speed, None, distances
         ).from_locations_based_on_area_name(points_gdf, area_name, mode)
 
