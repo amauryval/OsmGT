@@ -12,7 +12,7 @@ def test_isochrones_from_times(
     isochrones_lines_output_default_columns,
 ):
     output_data = OsmGt.isochrone_from_source_node(
-        location_point, list(isochrone_values), 3, mode="pedestrian"
+        [location_point], list(isochrone_values), 3, mode="pedestrian"
     )
     isochrones_polygons, isochrones_lines = output_data
 
@@ -64,7 +64,7 @@ def test_isochrone_from_distance(
         isochrones_polygons,
         isochrones_lines,
     ) = OsmGt.isochrone_distance_from_source_node(
-        location_point, [isochrone_distance_values[-1]], 3, mode="pedestrian"
+        [location_point], [isochrone_distance_values[-1]], 3, mode="pedestrian"
     )
 
     # polygons
@@ -101,7 +101,7 @@ def test_isochrone_from_distances(
         isochrones_polygons,
         isochrones_lines,
     ) = OsmGt.isochrone_distance_from_source_node(
-        location_point, isochrone_distance_values, 3, mode="vehicle"
+        [location_point], isochrone_distance_values, 3, mode="vehicle"
     )
 
     # polygons

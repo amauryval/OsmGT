@@ -100,18 +100,19 @@ class OsmGtIsochrone(OsmGtRoads):
         trip_speed: float,
         isochrones_times: Optional[List],
         distance_to_compute: Optional[List] = None,
+        build_polygon: bool = True
     ) -> None:
         super().__init__()
         self.logger.info("Isochrone processing...")
 
         self.__topo_uuids: List[str] = []
-        self._source_node: Optional[str] = None
         self._isochrones_data: List[Dict] = []
         self._source_vertex: Optional[str] = None
         self._location_point_reprojected_buffered_bounds: Optional[Tuple[float]] = None
         self._network_gdf: Optional[gpd.GeoDataFrame] = None
         self._graph: Optional[GraphHelpers] = None
 
+        self._build_polygon = build_polygon
         self._display_mode_params = isochrone_display_mode
 
         # trip_speed in km/h
@@ -171,16 +172,17 @@ class OsmGtIsochrone(OsmGtRoads):
         )
         return times_dist
 
-    def from_location_point(
-        self, location_point: Point, mode: str
+    def from_location_points(
+        self, location_points: List[Point], mode: str
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
 
         self._mode = mode
 
-        self._source_node = location_point.wkt
-        # compute bbox
+        from shapely.geometry import MultiPoint
+        points_bbox = MultiPoint(location_points)
         max_distance = max(self._isochrones_times, key=itemgetter(1))[-1]
-        location_point_reproj = reprojection(location_point, epsg_4326, epsg_3857)
+        # compute bbox
+        location_point_reproj = reprojection(points_bbox, epsg_4326, epsg_3857)
         location_point_reproj_buffered = location_point_reproj.buffer(
             max_distance * self.__DISTANCE_TOLERANCE
         )
@@ -188,8 +190,12 @@ class OsmGtIsochrone(OsmGtRoads):
             location_point_reproj_buffered, epsg_3857, epsg_4326
         ).bounds
 
-        additional_nodes = [{self._TOPO_FIELD: 0, "geometry": location_point}]
+        additional_nodes = [
+            {self._TOPO_FIELD: idx, "geometry": location_point}
+            for idx, location_point in enumerate(location_points)
+        ]
         df = pd.DataFrame(additional_nodes)
+
         geometry = df["geometry"]
         additional_nodes_gdf = gpd.GeoDataFrame(
             df.drop(["geometry"], axis=1),
@@ -210,7 +216,9 @@ class OsmGtIsochrone(OsmGtRoads):
             raise IsochroneError("None network found!")
         self._graph = self.get_graph()
 
-        self._source_vertex = self._graph.find_vertex_from_name(self._source_node)
+        self._source_vertices = []
+        for idx, location_point in enumerate(location_points):
+            self._source_vertices.append(self._graph.find_vertex_from_name(location_point.wkt))
 
         # reset output else isochrone will be append
         self._output_data = []
@@ -221,10 +229,14 @@ class OsmGtIsochrone(OsmGtRoads):
         #     self._compute_isochrone(param)
 
         self.__clean_network()
-        self.__clean_isochrones()
+        if self._build_polygon:
+            self.__clean_isochrones()
 
         self._OUTPUT_EXPECTED_GEOM_TYPE = "Polygon"  # mandatory
-        isochrones_gdf = self.get_gdf(verbose=False)
+
+        isochrones_gdf = None
+        if self._build_polygon:
+            isochrones_gdf = self.get_gdf(verbose=False)
 
         return isochrones_gdf, self._network_gdf
 
@@ -233,19 +245,21 @@ class OsmGtIsochrone(OsmGtRoads):
         iso_time, dist = params
         self.logger.info(f"Compute isochrone: {iso_time} minutes => {dist} meters")
 
-        _, pred = shortest_distance(
-            self._graph,
-            source=self._source_vertex,
-            weights=self._graph.edge_weights,
-            max_dist=dist,
-            return_reached=True,
-        )
-        points = [self._graph.vertex_names[vertex] for vertex in pred]
+        points_found = []
+        for source in self._source_vertices:
+            _, pred = shortest_distance(
+                self._graph,
+                source=source,
+                weights=self._graph.edge_weights,
+                max_dist=dist,
+                return_reached=True,
+            )
+            points_found.extend([self._graph.vertex_names[vertex] for vertex in pred])
 
         all_edges_found_topo_uuids_count = Counter(
             list(
                 itertools.chain(
-                    *[self._graph.find_edges_from_vertex(pt) for pt in points]
+                    *[self._graph.find_edges_from_vertex(pt) for pt in points_found]
                 )
             )
         )
@@ -261,34 +275,37 @@ class OsmGtIsochrone(OsmGtRoads):
 
         network_mask = self._network_gdf["topo_uuid"].isin(all_edges_found_topo_uuids)
 
-        iso_polygon = (
-            self._network_gdf.loc[network_mask]
-            .buffer(
-                self._display_mode_params["path_buffered"],
-                cap_style=self.__DEFAULT_CAPSTYLE,
-                join_style=self.__DEFAULT_JOINSTYLE,
-                resolution=self._display_mode_params["resolution"],
+        if self._build_polygon:
+            iso_polygon = (
+                self._network_gdf.loc[network_mask]
+                .buffer(
+                    self._display_mode_params["path_buffered"],
+                    cap_style=self.__DEFAULT_CAPSTYLE,
+                    join_style=self.__DEFAULT_JOINSTYLE,
+                    resolution=self._display_mode_params["resolution"],
+                )
+                .unary_union.buffer(  # merge them now
+                    self._display_mode_params["dilatation"],
+                    cap_style=self._display_mode_params["cap_style"],
+                    join_style=self._display_mode_params["join_style"],
+                    resolution=self._display_mode_params["resolution"],
+                )
+                .buffer(
+                    self._display_mode_params["erosion"],
+                    cap_style=self._display_mode_params["cap_style"],
+                    join_style=self._display_mode_params["join_style"],
+                    resolution=self._display_mode_params["resolution"],
+                )
             )
-            .unary_union.buffer(  # merge them now
-                self._display_mode_params["dilatation"],
-                cap_style=self._display_mode_params["cap_style"],
-                join_style=self._display_mode_params["join_style"],
-                resolution=self._display_mode_params["resolution"],
+            # compute exterior
+            iso_polygon = MultiPolygon(
+                [
+                    Polygon(iso_polygon_part.exterior)
+                    for iso_polygon_part in convert_to_polygon(iso_polygon)
+                ]
             )
-            .buffer(
-                self._display_mode_params["erosion"],
-                cap_style=self._display_mode_params["cap_style"],
-                join_style=self._display_mode_params["join_style"],
-                resolution=self._display_mode_params["resolution"],
-            )
-        )
-        # compute exterior
-        iso_polygon = MultiPolygon(
-            [
-                Polygon(iso_polygon_part.exterior)
-                for iso_polygon_part in convert_to_polygon(iso_polygon)
-            ]
-        )
+        else:
+            iso_polygon = None
 
         self._isochrones_data.append(
             {
