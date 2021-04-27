@@ -31,13 +31,11 @@ import pandas as pd
 import itertools
 from collections import Counter
 
-try:
-    from graph_tool.topology import shortest_distance
-except ModuleNotFoundError:
-    pass
+from graph_tool.topology import shortest_distance
 
-from shapely.geometry import base
+from shapely.wkt import loads
 from shapely.geometry import Point
+from shapely.geometry import MultiPoint
 from shapely.geometry import Polygon
 from shapely.geometry import MultiPolygon
 
@@ -47,11 +45,7 @@ from osmgt.geometry.geom_helpers import convert_to_polygon
 
 from shapely.ops import unary_union
 
-# to facilitate debugging
-try:
-    from osmgt.network.gt_helper import GraphHelpers
-except ModuleNotFoundError:
-    pass
+from osmgt.network.gt_helper import GraphHelpers
 
 import concurrent.futures
 from collections import Counter
@@ -82,15 +76,10 @@ class OsmGtIsochrone(OsmGtRoads):
     __NETWORK_MASK: str = "topo_uuids"
     __DECIMAL_ROUNDED: int = 2
 
-    __CLEANING_NETWORK_BUFFER_VALUE: float = 0.000001
-    __CLEANING_NETWORK_CAP_STYLE: int = 3
-    __CLEANING_NETWORK_RESOLUTION: int = 4
     __ROADS_BUFFER_EROSION_DIVISOR: int = 10
 
     __DEFAULT_CAPSTYLE: int = 1
     __DEFAULT_JOINSTYLE: int = 1
-
-    __DEFAULT_BUFFER_VALUE_2: float = 0.00001
 
     __DISTANCE_UNIT_FIELD: str = "distance_unit"
     __TIME_UNIT_FIELD: str = "time_unit"
@@ -175,10 +164,13 @@ class OsmGtIsochrone(OsmGtRoads):
     def from_location_points(
         self, location_points: List[Point], mode: str
     ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
-
         self._mode = mode
 
-        from shapely.geometry import MultiPoint
+        location_points = [
+            loads(node)
+            for node in set([point.wkt for point in location_points])
+        ]
+
         points_bbox = MultiPoint(location_points)
         max_distance = max(self._isochrones_times, key=itemgetter(1))[-1]
         # compute bbox
@@ -194,11 +186,11 @@ class OsmGtIsochrone(OsmGtRoads):
             {self._TOPO_FIELD: idx, "geometry": location_point}
             for idx, location_point in enumerate(location_points)
         ]
-        df = pd.DataFrame(additional_nodes)
+        pois_df = pd.DataFrame(additional_nodes)
 
-        geometry = df["geometry"]
+        geometry = pois_df["geometry"]
         additional_nodes_gdf = gpd.GeoDataFrame(
-            df.drop(["geometry"], axis=1),
+            pois_df.drop(["geometry"], axis=1),
             crs=int(epsg_4326),
             geometry=geometry.to_list(),
         )
@@ -225,6 +217,7 @@ class OsmGtIsochrone(OsmGtRoads):
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self._compute_isochrone, self._isochrones_times)
+        # to debug
         # for param in self._isochrones_times:
         #     self._compute_isochrone(param)
 
@@ -275,8 +268,9 @@ class OsmGtIsochrone(OsmGtRoads):
 
         network_mask = self._network_gdf["topo_uuid"].isin(all_edges_found_topo_uuids)
 
+
         if self._build_polygon:
-            iso_polygon = (
+            iso_polygon_computed = (
                 self._network_gdf.loc[network_mask]
                 .buffer(
                     self._display_mode_params["path_buffered"],
@@ -284,19 +278,30 @@ class OsmGtIsochrone(OsmGtRoads):
                     join_style=self.__DEFAULT_JOINSTYLE,
                     resolution=self._display_mode_params["resolution"],
                 )
-                .unary_union.buffer(  # merge them now
+                .unary_union
+            )
+            # we want to isolate subnetwork, so if we got a multipolygon it means that we have 2+ subnetwork
+            if iso_polygon_computed.geom_type == "Polygon":
+                iso_polygon_computed = MultiPolygon([iso_polygon_computed])
+
+            output_iso_polygon = []
+            for polyg in iso_polygon_computed.geoms:
+                iso_polygon = polyg.buffer(  # merge them now
                     self._display_mode_params["dilatation"],
                     cap_style=self._display_mode_params["cap_style"],
                     join_style=self._display_mode_params["join_style"],
                     resolution=self._display_mode_params["resolution"],
-                )
-                .buffer(
+                ).buffer(
                     self._display_mode_params["erosion"],
                     cap_style=self._display_mode_params["cap_style"],
                     join_style=self._display_mode_params["join_style"],
                     resolution=self._display_mode_params["resolution"],
                 )
-            )
+                iso_polygon = convert_to_polygon(iso_polygon)
+                output_iso_polygon.extend(iso_polygon)
+
+            iso_polygon = MultiPolygon(output_iso_polygon)
+
             # compute exterior
             iso_polygon = MultiPolygon(
                 [
@@ -364,7 +369,6 @@ class OsmGtIsochrone(OsmGtRoads):
         iso_values_map: Dict = {
             x[0]: x[-1] for x in list(zip(iso_values, iso_values[1:]))
         }
-
         self._isochrones_built = []
         for iso_value_main_part, iso_value_part_to_remove in iso_values_map.items():
             # get main and part_to_remove isochrones
@@ -477,6 +481,8 @@ class OsmGtIsochrone(OsmGtRoads):
         return isochrone_computed
 
     def __get_water_area_from_osm(self) -> None:
+
+        self.logger.info("Get water data from OSM")
         # get water area
         bbox_input: Tuple[float] = self._location_point_reprojected_buffered_bounds
         bbox_value = (bbox_input[1], bbox_input[0], bbox_input[3], bbox_input[2])

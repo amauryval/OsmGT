@@ -11,7 +11,7 @@ def test_isochrones_from_times(
     isochrones_polygons_output_default_columns,
     isochrones_lines_output_default_columns,
 ):
-    output_data = OsmGt.isochrone_from_source_node(
+    output_data = OsmGt.isochrone_times_from_nodes(
         [location_point], list(isochrone_values), 3, mode="pedestrian"
     )
     isochrones_polygons, isochrones_lines = output_data
@@ -28,7 +28,7 @@ def test_isochrones_from_times(
     geometries_area_sorted = sorted(
         list([(geom.area, geom) for geom in geometries]), reverse=True
     )
-    print(geometries_area_sorted)
+
     geometries_area_sorted = [feature[-1] for feature in geometries_area_sorted]
     geometries_parent_and_child = [
         (x[0], x[-1])
@@ -63,7 +63,7 @@ def test_isochrone_from_distance(
     (
         isochrones_polygons,
         isochrones_lines,
-    ) = OsmGt.isochrone_distance_from_source_node(
+    ) = OsmGt.isochrone_distances_from_nodes(
         [location_point], [isochrone_distance_values[-1]], 3, mode="pedestrian"
     )
 
@@ -91,16 +91,11 @@ def test_isochrone_from_distance(
     )
 
 
-def test_isochrone_from_distances(
-    location_point,
-    isochrone_distance_values,
-    isochrones_polygons_output_default_columns,
-    isochrones_lines_output_default_columns,
-):
+def test_isochrone_from_distances(location_point, isochrone_distance_values, isochrones_polygons_output_default_columns, isochrones_lines_output_default_columns):
     (
         isochrones_polygons,
         isochrones_lines,
-    ) = OsmGt.isochrone_distance_from_source_node(
+    ) = OsmGt.isochrone_distances_from_nodes(
         [location_point], isochrone_distance_values, 3, mode="vehicle"
     )
 

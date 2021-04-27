@@ -13,6 +13,10 @@ from typing import Optional
 from typing import Union
 
 
+class OsmgGtLimit(Exception):
+    pass
+
+
 class OsmGt:
     @staticmethod
     def roads_from_location(
@@ -87,7 +91,7 @@ class OsmGt:
         return osm_poi
 
     @staticmethod
-    def isochrone_from_source_node(
+    def isochrone_times_from_nodes(
         source_nodes: List[Point],
         isochrones_times: List[Union[int, float]],
         trip_speed: float,
@@ -106,6 +110,10 @@ class OsmGt:
         :rtype: tuple(geopandas.GeoDataFrame)
         """
 
+        min_time = 1
+        if min(isochrones_times) < min_time:
+            raise OsmgGtLimit(f"Minimal distance must be >= {min_time} minutes")
+
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
             trip_speed, isochrones_times
         ).from_location_points(source_nodes, mode)
@@ -113,7 +121,7 @@ class OsmGt:
         return isochrone_polygons_gdf, isochrone_lines_gdf
 
     @staticmethod
-    def isochrone_distance_from_source_node(
+    def isochrone_distances_from_nodes(
         source_nodes: List[Point],
         distances: List[Union[int, float]],
         trip_speed: float,
@@ -131,6 +139,9 @@ class OsmGt:
         :return: 2 GeoDataframe : isochrones polygons and isochrones lines (roads)
         :rtype: tuple(geopandas.GeoDataFrame)
         """
+        min_distance = 20
+        if min(distances) < min_distance:
+            raise OsmgGtLimit(f"Minimal distance must be >= {min_distance} meters")
 
         isochrone_polygons_gdf, isochrone_lines_gdf = OsmGtIsochrone(
             trip_speed, None, distances
