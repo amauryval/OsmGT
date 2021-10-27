@@ -73,5 +73,6 @@ jobs:
       with:
         CondaDir: 'conda_recipe'
         Platforms: 'linux-64'
+        Channels: 'conda-forge'
         CondaUsername: ${{ secrets.CONDA_USERNAME }}
         CondaPassword: ${{ secrets.CONDA_PASSWORD }}
