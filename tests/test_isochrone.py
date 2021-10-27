@@ -105,7 +105,7 @@ def test_isochrone_from_distances(
     )
 
     # polygons
-    assert isochrones_polygons.shape[0] == 11
+    assert isochrones_polygons.shape[0] == 12
     assert set(isochrones_polygons["iso_name"].to_list()) == {5.0, 10.0, 20.0}
     assert isochrones_polygons_output_default_columns.issubset(
         set(isochrones_polygons.columns.to_list())

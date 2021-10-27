@@ -5,19 +5,19 @@ channels:
   - amauryval
   - defaults
 dependencies:
-  - python=3.8
-  - geopandas=0.8.0
-  - gdf2bokeh=2.0.1
-  - numpy=1.18.1
-  - geojson=2.5.0
-  - python-dateutil=2.8.1
-  - graph-tool=2.33
-  - cairo=1.16.0
-  - scipy=1.5.0
-  - pytest=5.4.1
-  - pytest-cov=2.8.1
+  - python=3.9
+  - geopandas>=0.8.0
+  - gdf2bokeh>=2.3.1
+  - numpy>=1.18.1
+  - geojson>=2.5.0
+  - python-dateutil>=2.8.1
+  - graph-tool>=2.33
+  - cairo>=1.16.0
+  - scipy>=1.5.0
+  - pytest
+  - pytest-cov
   - jupyterlab
-  - numba=0.48.0
-  - requests-futures=1.0.0
-  - pygeos=0.8.0
+  - numba>=0.48.0
+  - requests-futures>=1.0.0
+  - pygeos>=0.8.0
   - black
