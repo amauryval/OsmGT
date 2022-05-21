@@ -47,13 +47,6 @@ jobs:
         conda install --yes --quiet mamba -c conda-forge
         mamba env create --file environment.yml
 
-    - name: Run tests
-      shell: bash
-      run: |
-        source ~/miniconda3/etc/profile.d/conda.sh
-        conda activate osmgt
-        python -m pytest --cov=osmgt --cov-report=xml tests/
-
     - name: Build the notebook index.html
       run: |
         source ~/miniconda3/etc/profile.d/conda.sh
