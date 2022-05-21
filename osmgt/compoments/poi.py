@@ -10,7 +10,9 @@ from osmgt.helpers.global_values import poi_query
 
 
 class OsmGtPoi(OsmGtCore):
-
+    __slots__ = (
+        "_output_data"
+    )
     _FEATURE_OSM_TYPE: str = "node"
 
     _OUTPUT_EXPECTED_GEOM_TYPE = "Point"

@@ -33,6 +33,16 @@ class GraphHelpers(Graph):
     - find_vertex_names_from_edge_name()
     """
 
+    __slots__ = (
+        "_logger",
+        "vertex_names",
+        "edge_names",
+        "edge_weights",
+        "vertices_content",
+        "edges_content",
+        "edges_vertices_content",
+    )
+
     def __init__(self, logger, is_directed: bool = True) -> None:
         """
         :param logger: logger
@@ -155,6 +165,8 @@ class GraphHelpers(Graph):
             print(f"Edge {edge_name} already exists")
 
             return None
+
+
 
     def find_edge_from_name(self, edge_name: str):
         """

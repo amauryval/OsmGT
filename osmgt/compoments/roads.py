@@ -38,10 +38,13 @@ class AdditionalNodesOutsideWorkingArea(Exception):
 
 
 class OsmGtRoads(OsmGtCore):
-
+    __slots__ = (
+        "_mode",
+        "_output_data",
+        "_OUTPUT_EXPECTED_GEOM_TYPE"
+    )
     _FEATURE_OSM_TYPE: str = "way"
 
-    _OUTPUT_EXPECTED_GEOM_TYPE = "LineString"
 
     def __init__(self) -> None:
         super().__init__()
@@ -55,6 +58,10 @@ class OsmGtRoads(OsmGtCore):
         mode: str,
         interpolate_lines: bool = False,
     ) -> None:
+
+        # TODO refactor (dependency on isochone class)
+        self._OUTPUT_EXPECTED_GEOM_TYPE = "LineString"
+
         self._check_transport_mode(mode)
         super().from_location(location_name)
         self._mode = mode
@@ -73,6 +80,10 @@ class OsmGtRoads(OsmGtCore):
         mode: str,
         interpolate_lines: bool = False,
     ) -> None:
+
+        # TODO refactor (dependency on isochone class)
+        self._OUTPUT_EXPECTED_GEOM_TYPE = "LineString"
+
         self._check_transport_mode(mode)
         super().from_bbox(bbox_value)
         self._mode = mode

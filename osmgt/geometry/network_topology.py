@@ -32,6 +32,21 @@ class NetworkTopologyError(Exception):
 
 
 class NetworkTopology:
+    __slots__ = (
+        "__topology_stats",
+        "_network_data",
+        "_mode_post_processing",
+        "_improve_line_output",
+        "_additional_nodes",
+        "__FIELD_ID",
+        "_original_field_id",
+        "_intersections_found",
+        "__connections_added",
+        "_output",
+        "logger",
+        "__tree_index",
+        "__node_by_nearest_lines"
+    )
 
     __INTERPOLATION_LEVEL: int = 7
     __INTERPOLATION_LINE_LEVEL: int = 4

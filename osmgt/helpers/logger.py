@@ -8,6 +8,12 @@ import logging
 
 class Logger:
 
+    __slots__ = (
+        "__logger_name",
+        "logger",
+        "raise_error"
+    )
+
     _log_dir: str = "logs"
     _formatter = logging.Formatter(
         "%(asctime)s - %(name)-15s - %(levelname)-8s : %(message)s",

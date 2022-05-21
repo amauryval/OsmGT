@@ -11,6 +11,10 @@ class ErrorNominatimApi(ValueError):
 
 class NominatimApi(ApiCore):
 
+    __slots__ = (
+        "__RESULT_QUERY"
+    )
+
     nominatim_url: str = "https://nominatim.openstreetmap.org/search/?"
 
     query_parameter: str = "q"
