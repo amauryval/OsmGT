@@ -9,7 +9,7 @@ requirements = [
     "scipy >=1.7.1",
     "more-itertools >=8.10.0",
     "requests-futures >=1.0.0",
-    "numba >=0.48.0"
+    "numba >=0.53.1"
 ]
 
 setup_requirements = []
@@ -20,7 +20,7 @@ setup(
     author="amauryval",
     author_email='amauryval@gmail.com',
     url="https://github.com/amauryval/osmgt",
-    version='0.8.9',
+    version='0.8.10',
     description="A library to play with OSM roads (and POIs) data using graph tool network library",
     entry_points={},
     install_requires=requirements,
