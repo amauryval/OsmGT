@@ -31,6 +31,17 @@ If you do not want to wait (OsmGt docker building takes time here on myBinder), 
 
 [Open the wiki](https://github.com/amauryval/osmgt/wiki/OsmGT-Wiki)
 
+# Releases
+
+- 0.8.9:
+
+Code cleaning...
+
+
+- 0.8.4:
+
+First usable version
+
 
 # How to install it 
 
