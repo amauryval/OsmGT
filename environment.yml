@@ -6,7 +6,7 @@ channels:
   - defaults
 dependencies:
   - python=3.9
-  - geopandas>=0.8.0
+  - geopandas>=0.10.2
   - gdf2bokeh>=2.3.1
   - numpy>=1.18.1
   - geojson>=2.5.0
