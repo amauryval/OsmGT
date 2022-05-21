@@ -33,7 +33,7 @@ If you do not want to wait (OsmGt docker building takes time here on myBinder), 
 
 # Releases
 
-- 0.8.9:
+- 0.8.12:
 
 Code cleaning...
 
