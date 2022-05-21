@@ -39,10 +39,17 @@ class EmptyData(Exception):
 
 
 class OsmGtCore(Logger):
-
+    __slots__ = (
+        "_study_area_geom",
+        "_output_data",
+        "_bbox_value",
+        "_bbox_mode",
+        "_study_area_geom",
+        "_location_id"
+    )
     _QUERY_ELEMENTS_FIELD: str = "elements"
     __USELESS_COLUMNS: List = []
-    _location_id: Optional[int] = None
+    # _location_id: Optional[int] = None
 
     _NOMINATIM_DEFAULT_ID: int = 3600000000  # this is it
     _NOMINATIM_OSM_ID_FIELD: str = "osm_id"

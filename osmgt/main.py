@@ -13,11 +13,15 @@ from typing import Optional
 from typing import Union
 
 
+
 class OsmgGtLimit(Exception):
     pass
 
 
 class OsmGt:
+
+    __slots__ = ()
+
     @staticmethod
     def roads_from_location(
         location_name: str,

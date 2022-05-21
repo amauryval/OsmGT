@@ -9,6 +9,10 @@ class ErrorOverpassApi(ValueError):
 
 class OverpassApi(ApiCore):
 
+    __slots__ = (
+        "logger"
+    )
+
     __OVERPASS_URL: str = "https://www.overpass-api.de/api/interpreter"
     __OVERPASS_QUERY_PREFIX: str = "[out:json];"
     # __OVERPASS_QUERY_SUFFIX = ";(._;>;);out geom;"

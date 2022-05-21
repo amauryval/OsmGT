@@ -19,6 +19,15 @@ import concurrent.futures
 
 
 class OsmGtShortestPath(OsmGtRoads):
+    __slots__ = (
+        "_source_target_points",
+        "_all_points",
+        "_graph",
+        "_gdf",
+        "_additional_nodes_gdf",
+        "_output_data"
+    )
+
     def __init__(self, source_target_points: List[Tuple[Point, Point]]) -> None:
         super().__init__()
         self.logger.info("Shortest path processing...")

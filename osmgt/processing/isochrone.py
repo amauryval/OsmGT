@@ -66,6 +66,21 @@ class IsochroneError(Exception):
 
 
 class OsmGtIsochrone(OsmGtRoads):
+    __slots__ = (
+        "_isochrones_data",
+        "_source_vertex",
+        "_location_point_reprojected_buffered_bounds",
+        "_network_gdf",
+        "_graph",
+        "_build_polygon",
+        "_source_vertices",
+        "_display_mode_params",
+        "_speed_to_m_s",
+        "_isochrones_times",
+        "_water_area",
+        "_isochrones_built",
+    )
+
     logging.getLogger("geopandas.geodataframe").setLevel(logging.CRITICAL)
 
     __DISTANCE_TOLERANCE: float = 1.3
@@ -94,7 +109,6 @@ class OsmGtIsochrone(OsmGtRoads):
         super().__init__()
         self.logger.info("Isochrone processing...")
 
-        self.__topo_uuids: List[str] = []
         self._isochrones_data: List[Dict] = []
         self._source_vertex: Optional[str] = None
         self._location_point_reprojected_buffered_bounds: Optional[Tuple[float]] = None
@@ -225,7 +239,8 @@ class OsmGtIsochrone(OsmGtRoads):
         if self._build_polygon:
             self.__clean_isochrones()
 
-        self._OUTPUT_EXPECTED_GEOM_TYPE = "Polygon"  # mandatory
+        # TODO refactor (dependency on isochone class)
+        self._OUTPUT_EXPECTED_GEOM_TYPE = "Polygon"  # mandatory.. from OsmGtRoads class
 
         isochrones_gdf = None
         if self._build_polygon:
