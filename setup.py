@@ -9,6 +9,7 @@ requirements = [
     "scipy >=1.7.1",
     "more-itertools >=8.10.0",
     "requests-futures >=1.0.0",
+    "numba >=0.48.0"
 ]
 
 setup_requirements = []
