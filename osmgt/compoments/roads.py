@@ -118,16 +118,6 @@ class OsmGtRoads(OsmGtCore):
         if len(self._output_data) == 0:
             raise EmptyData("Data is empty!")
 
-    # def __compute_edges(self, feature: Dict) -> Tuple[str, str, str, float]:
-    #     geometry = feature[self._GEOMETRY_FIELD]
-    #     first_coords, *_, last_coords = geometry.coords
-    #     return (
-    #         Point(first_coords).wkt,
-    #         Point(last_coords).wkt,
-    #         feature[self._TOPO_FIELD],
-    #         compute_wg84_line_length(geometry),
-    #     )
-
     def __build_network_topology(
         self,
         raw_data: List[Dict],
@@ -200,7 +190,7 @@ class OsmGtRoads(OsmGtCore):
     def topology_checker(self) -> Dict[str, gpd.GeoDataFrame]:
         self.logger.info("Prepare topology data")
 
-        network_gdf = super().get_gdf(verbose=False)
+        network_gdf = super().get_gdf_from_network_feature(verbose=False)
 
         lines_unchanged = network_gdf.loc[network_gdf["topology"] == "unchanged"]
         lines_added = network_gdf.loc[network_gdf["topology"] == "added"]

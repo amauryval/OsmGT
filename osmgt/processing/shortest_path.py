@@ -94,7 +94,7 @@ class OsmGtShortestPath(OsmGtRoads):
 
     def _compute_data_and_graph(self) -> gpd.GeoDataFrame:
         self._graph = super().get_graph()
-        self._gdf = self.get_gdf()
+        self._gdf = self.get_gdf_from_network_feature()
 
         self._output_data = []
 
