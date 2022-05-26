@@ -24,7 +24,6 @@ def test_if_shortest_path_from_bbox_with_duplicated_nodes_pairs(
     )
     assert set(shortest_paths.columns.to_list()) == shortest_path_output_default_columns
     assert len(shortest_paths["osm_ids"]) > 0
-    assert len(shortest_paths["osm_urls"]) > 0
     assert shortest_paths.shape[0] == 1
 
 

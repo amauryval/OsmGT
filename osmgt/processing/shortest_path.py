@@ -137,10 +137,6 @@ class OsmGtShortestPath(OsmGtRoads):
                 lambda x: isinstance(x, str),
                 osm_roads_features[self._ID_OSM_FIELD].to_list(),
             )
-            path_osm_urls = filter(
-                lambda x: isinstance(x, str),
-                osm_roads_features[self._OSM_URL_FIELD].to_list(),
-            )
 
             # reorder linestring
             path_found = linemerge(path_geoms)
@@ -153,7 +149,6 @@ class OsmGtShortestPath(OsmGtRoads):
                     "source_node": source_node.wkt,
                     "target_node": target_node.wkt,
                     "osm_ids": ", ".join(path_osm_ids),
-                    "osm_urls": ", ".join(path_osm_urls),
                     "geometry": path_found,
                 }
             )

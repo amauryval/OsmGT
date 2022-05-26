@@ -104,7 +104,12 @@ class OsmGtRoads(OsmGtCore):
         )
 
         for feature in self._output_data:
-            graph.add_edge(*self.__compute_edges(feature))
+            graph.add_edge(
+                feature.start_coords(),
+                feature.end_coords(),
+                getattr(feature, self._TOPO_FIELD),
+                feature.length()
+            )
 
         return graph
 
@@ -113,26 +118,15 @@ class OsmGtRoads(OsmGtCore):
         if len(self._output_data) == 0:
             raise EmptyData("Data is empty!")
 
-        # here we check the first feature, all feature should have the same structure
-        first_feature = self._output_data[0]
-        assert (
-            self._GEOMETRY_FIELD in first_feature
-        ), f"{self._GEOMETRY_FIELD} key not found!"
-        assert (
-            first_feature[self._GEOMETRY_FIELD].geom_type
-            == self._OUTPUT_EXPECTED_GEOM_TYPE
-        ), f"{self._GEOMETRY_FIELD} key not found!"
-        assert self._TOPO_FIELD in first_feature, f"{self._TOPO_FIELD} key not found!"
-
-    def __compute_edges(self, feature: Dict) -> Tuple[str, str, str, float]:
-        geometry = feature[self._GEOMETRY_FIELD]
-        first_coords, *_, last_coords = geometry.coords
-        return (
-            Point(first_coords).wkt,
-            Point(last_coords).wkt,
-            feature[self._TOPO_FIELD],
-            compute_wg84_line_length(geometry),
-        )
+    # def __compute_edges(self, feature: Dict) -> Tuple[str, str, str, float]:
+    #     geometry = feature[self._GEOMETRY_FIELD]
+    #     first_coords, *_, last_coords = geometry.coords
+    #     return (
+    #         Point(first_coords).wkt,
+    #         Point(last_coords).wkt,
+    #         feature[self._TOPO_FIELD],
+    #         compute_wg84_line_length(geometry),
+    #     )
 
     def __build_network_topology(
         self,

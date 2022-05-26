@@ -7,6 +7,7 @@ from graph_tool import Graph
 from graph_tool.all import graph_draw
 from graph_tool.draw import sfdp_layout
 
+import collections
 
 class ErrorGraphHelpers(ValueError):
     pass
@@ -40,7 +41,6 @@ class GraphHelpers(Graph):
         "edge_weights",
         "vertices_content",
         "edges_content",
-        "edges_vertices_content",
     )
 
     def __init__(self, logger, is_directed: bool = True) -> None:
@@ -58,9 +58,8 @@ class GraphHelpers(Graph):
 
         self.edge_weights = self.new_edge_property("double")
 
-        self.vertices_content: Dict = {}
-        self.edges_content: Dict = {}
-        self.edges_vertices_content: Dict = {}
+        self.vertices_content: Dict = collections.defaultdict(lambda: None)
+        self.edges_content: Dict = collections.defaultdict(lambda: None)
 
     def find_edges_from_vertex(self, vertex_name: str) -> List[str]:
         vertex = self.find_vertex_from_name(vertex_name)
@@ -152,9 +151,6 @@ class GraphHelpers(Graph):
             edge = super(GraphHelpers, self).add_edge(source, target)
             self.edge_names[edge] = edge_name
             self.edges_content[edge_name] = edge
-            self.edges_vertices_content[edge_name] = frozenset(
-                [source_vertex_name, target_vertex_name]
-            )
 
             if weight is not None:
                 self.edge_weights[edge] = weight
@@ -177,10 +173,8 @@ class GraphHelpers(Graph):
         :return: Edge object
         :rtype: graph_tool.libgraph_tool_core.Edge
         """
-        try:
-            return self.edges_content[str(edge_name)]
-        except KeyError:
-            return None
+        return self.edges_content[str(edge_name)]
+
 
     def edge_exists_from_name(self, edge_name: str):
         """
@@ -242,10 +236,8 @@ class GraphHelpers(Graph):
         :rtype: graph_tool.libgraph_tool_core.Vertex or None
         """
 
-        try:
-            return self.vertices_content[vertex_name]
-        except KeyError:
-            return None
+        return self.vertices_content[vertex_name]
+
 
     def vertex_exists_from_name(self, vertex_name: str) -> bool:
         """

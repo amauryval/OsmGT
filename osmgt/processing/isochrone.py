@@ -459,6 +459,7 @@ class OsmGtIsochrone(OsmGtRoads):
         current_main_isochrone: Dict,
     ) -> Union[Polygon, MultiPolygon]:
         # add roads on the raw isochrone to respect isochrone area
+        assert True
         iso_value_main_part_roads_buffered = (
             self._network_gdf.loc[
                 self._network_gdf[self.__ISOCHRONE_NAME_FIELD]
