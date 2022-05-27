@@ -66,6 +66,7 @@ class OsmGtRoads(OsmGtCore):
         self._output_data: List[NetworkFeature] = self.__build_network_topology(
             raw_data, additional_nodes, mode, interpolate_lines
         )
+        return self.get_gdf()
 
     def from_bbox(
         self,
@@ -185,7 +186,7 @@ class OsmGtRoads(OsmGtCore):
     def topology_checker(self) -> Dict[str, gpd.GeoDataFrame]:
         self.logger.info("Prepare topology data")
 
-        network_gdf = super().get_gdf_from_network_feature(verbose=False)
+        network_gdf = super().get_gdf(verbose=False)
 
         lines_unchanged = network_gdf.loc[network_gdf["topology"] == "unchanged"]
         lines_added = network_gdf.loc[network_gdf["topology"] == "added"]

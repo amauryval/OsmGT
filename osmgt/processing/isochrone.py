@@ -216,7 +216,7 @@ class OsmGtIsochrone(OsmGtRoads):
 
         self.__get_water_area_from_osm()
 
-        self._network_gdf = super().get_gdf_from_network_feature()
+        self._network_gdf = super().get_gdf()
         if self._network_gdf.shape[0] == 0:
             raise IsochroneError("None network found!")
         self._graph = self.get_graph()

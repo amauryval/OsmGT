@@ -169,11 +169,15 @@ class OsmGtCore(Logger):
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             # more performance comparing .from_features() method
             df = pd.DataFrame()
-            data = self._output_data
+
+            if isinstance(self._output_data[0], NetworkFeature):
+                data = list(map(lambda x: x.to_dict(), self._output_data))
+            else:
+                data = self._output_data
+
             for chunk in chunker(data, 100000):
                 df_tmp = pd.DataFrame(chunk)
                 df = pd.concat((df, df_tmp), axis=0)
-
             output_gdf: gpd.GeoDataFrame = df_to_gdf(df)
 
         else:
@@ -184,43 +188,6 @@ class OsmGtCore(Logger):
         output_gdf: gpd.GeoDataFrame = self._clean_attributes(output_gdf)
 
         self.logger.info("GeoDataframe Ready")
-
-        return output_gdf
-
-    def get_gdf_from_network_feature(self, verbose: bool = True) -> gpd.GeoDataFrame:
-        """
-        Return a GeoDataframe
-
-        :param verbose: to activate log messages
-        :return: geopandas.GeoDataframe
-        """
-        if verbose:
-            self.logger.info("Prepare GeoDataframe")
-
-        if len(self._output_data) == 0:
-            raise EmptyData(
-                "GeoDataframe creation is impossible, because no data has been found"
-            )
-
-        if not isinstance(self._output_data, gpd.GeoDataFrame):
-            # more performance comparing .from_features() method
-            df = pd.DataFrame()
-            data = list(map(lambda x: x.to_dict(), self._output_data))
-            for chunk in chunker(data, 100000):
-                df_tmp = pd.DataFrame(chunk)
-                df = pd.concat((df, df_tmp), axis=0)
-
-            output_gdf: gpd.GeoDataFrame = df_to_gdf(df)
-
-        else:
-            output_gdf: gpd.GeoDataFrame = self._output_data
-
-        self._check_build_input_data(output_gdf)
-
-        output_gdf: gpd.GeoDataFrame = self._clean_attributes(output_gdf)
-
-        self.logger.info("GeoDataframe Ready")
-
         return output_gdf
 
     def _check_build_input_data(self, output_gdf) -> None:

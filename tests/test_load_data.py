@@ -66,7 +66,7 @@ def test_run_from_location_name_with_additional_nodes(
     assert study_area.geom_type == "Polygon"
 
     graph_computed = network_initialized.get_graph()
-    network_gdf = network_initialized.get_gdf_from_network_feature()
+    network_gdf = network_initialized.get_gdf()
 
     shared_asserts(
         pois_gdf,
@@ -96,7 +96,7 @@ def test_run_from_location_name_without_additional_nodes(
 
     network_initialized = OsmGt.roads_from_location(location_name, "pedestrian")
     graph_computed = network_initialized.get_graph()
-    network_gdf = network_initialized.get_gdf_from_network_feature()
+    network_gdf = network_initialized.get_gdf()
 
     shared_asserts(
         None,
@@ -138,7 +138,7 @@ def test_run_from_bbox_func(
     assert study_area.geom_type == "Polygon"
 
     graph_computed = network_initialized.get_graph()
-    network_gdf = network_initialized.get_gdf_from_network_feature()
+    network_gdf = network_initialized.get_gdf()
 
     shared_asserts(
         None,
@@ -182,7 +182,7 @@ def test_run_from_bbox_func_usa(
     assert network_study_area.geom_type == "Polygon"
 
     graph_computed = network_initialized.get_graph()
-    network_gdf = network_initialized.get_gdf_from_network_feature()
+    network_gdf = network_initialized.get_gdf()
 
     shared_asserts(
         None,
