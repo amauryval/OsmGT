@@ -165,11 +165,9 @@ class GraphHelpers(Graph):
         return None
 
     def add_edges(self, edges: List[NetworkFeature]):
-        # 0:x, 1:y, 2:weight, 3:edge_name
+        graph_vertices = self.add_edge_list(map(lambda x: [x.start_coords, x.end_coords, x.length], edges), hashed=True, eprops=[self.edge_weights])
 
-        a = self.add_edge_list(map(lambda x: [x.start_coords, x.end_coords, x.length], edges), hashed=True, eprops=[self.edge_weights])
-
-        self.vertices_content = {a[i]: self.vertex(i) for i in range(self.num_vertices())}
+        self.vertices_content = {graph_vertices[i]: self.vertex(i) for i in range(self.num_vertices())}
         self.vertices_features = {vertex: vertex_name for vertex_name, vertex in self.vertices_content.items()}
 
         self.edges_content = {
@@ -177,7 +175,6 @@ class GraphHelpers(Graph):
             for feature in edges
         }
         self.edge_features = {edge: edge_name for edge_name, edge in self.edges_content.items()}
-        assert True
 
     def find_edge_from_name(self, edge_name: str):
         """
@@ -188,8 +185,11 @@ class GraphHelpers(Graph):
         :return: Edge object
         :rtype: graph_tool.libgraph_tool_core.Edge
         """
-
-        return self.edges_content[edge_name] if edge_name in self.edges_content else None
+        try:
+            return self.edges_content[edge_name]
+        except:
+            return None
+        # return self.edges_content[edge_name] if edge_name in self.edges_content else None
 
     def edge_exists_from_name(self, edge_name: str):
         """
@@ -250,8 +250,11 @@ class GraphHelpers(Graph):
         :return: vertex object or none if not exists
         :rtype: graph_tool.libgraph_tool_core.Vertex or None
         """
-
-        return self.vertices_content[vertex_name] if vertex_name in self.vertices_content else None
+        try:
+            return self.vertices_content[vertex_name]
+        except:
+            return None
+        # return self.vertices_content[vertex_name] if vertex_name in self.vertices_content else None
 
     def vertex_exists_from_name(self, vertex_name: str) -> bool:
         """

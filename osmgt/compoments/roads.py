@@ -13,6 +13,7 @@ from osmgt.compoments.core import OsmGtCore
 from osmgt.compoments.core import EmptyData
 
 from osmgt.geometry.network_topology import NetworkTopology
+from osmgt.geometry.network_topology import NetworkFeature
 
 from osmgt.geometry.geom_helpers import linestring_points_fom_positions
 
@@ -62,7 +63,7 @@ class OsmGtRoads(OsmGtCore):
         query = self._get_query_from_mode(mode)
         request = self._from_location_name_query_builder(self._location_id, query)
         raw_data = self._query_on_overpass_api(request)
-        self._output_data = self.__build_network_topology(
+        self._output_data: List[NetworkFeature] = self.__build_network_topology(
             raw_data, additional_nodes, mode, interpolate_lines
         )
 
@@ -96,7 +97,14 @@ class OsmGtRoads(OsmGtCore):
             self.logger, is_directed=network_queries[self._mode]["directed_graph"]
         )
 
-        graph.add_edges(self._output_data)
+        # graph.add_edges(self._output_data)  # BULK mode
+        for feature in self._output_data:
+            graph.add_edge(
+                feature.start_coords,
+                feature.end_coords,
+                feature.topo_uuid,
+                feature.length
+            )
         self.logger.info("Graph ok")
         return graph
 
