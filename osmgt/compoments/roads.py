@@ -1,3 +1,4 @@
+
 import geopandas as gpd
 from typing import Tuple
 from typing import List
@@ -13,18 +14,11 @@ from osmgt.compoments.core import EmptyData
 
 from osmgt.geometry.network_topology import NetworkTopology
 
-from osmgt.geometry.geom_helpers import compute_wg84_line_length
 from osmgt.geometry.geom_helpers import linestring_points_fom_positions
 
 from shapely.geometry import LineString
-from shapely.geometry import Point
 
-# to facilitate debugging
-try:
-    from osmgt.network.gt_helper import GraphHelpers
-except ModuleNotFoundError:
-    pass
-
+from osmgt.network.gt_helper import GraphHelpers
 
 from osmgt.helpers.global_values import network_queries
 
@@ -44,7 +38,6 @@ class OsmGtRoads(OsmGtCore):
         "_OUTPUT_EXPECTED_GEOM_TYPE"
     )
     _FEATURE_OSM_TYPE: str = "way"
-
 
     def __init__(self) -> None:
         super().__init__()
@@ -95,7 +88,7 @@ class OsmGtRoads(OsmGtCore):
             raw_data, additional_nodes, mode, interpolate_lines
         )
 
-    def get_graph(self) -> GraphHelpers:
+    def get_graph(self):
         self.logger.info("Prepare graph")
         self._check_network_output_data()
 
@@ -103,13 +96,15 @@ class OsmGtRoads(OsmGtCore):
             self.logger, is_directed=network_queries[self._mode]["directed_graph"]
         )
 
-        for feature in self._output_data:
+        [
             graph.add_edge(
-                feature.start_coords(),
-                feature.end_coords(),
-                getattr(feature, self._TOPO_FIELD),
-                feature.length()
+                feature.start_coords,
+                feature.end_coords,
+                feature.topo_uuid,
+                feature.length
             )
+            for feature in self._output_data
+        ]
 
         return graph
 

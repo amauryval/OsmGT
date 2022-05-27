@@ -33,7 +33,7 @@ from osmgt.helpers.global_values import backward_tag
 class NetworkTopologyError(Exception):
     pass
 
-class NetworkFeature():
+class NetworkFeature:
     __slots__ = (
         "geometry",
         "topo_uuid",
@@ -49,13 +49,16 @@ class NetworkFeature():
         self.oneway = oneway
         self.topology = topology
 
+    @property
     def start_coords(self) -> str:
         return Point(self.geometry.coords[0]).wkt
 
+    @property
     def end_coords(self) -> str:
         return Point(self.geometry.coords[-1]).wkt
 
-    def length(self) -> int:
+    @property
+    def length(self) -> float:
         return compute_wg84_line_length(self.geometry)
 
     def to_dict(self) -> Dict:
@@ -66,6 +69,15 @@ class NetworkFeature():
             "oneway": self.oneway,
             "topology": self.topology,
         }
+
+    @property
+    def to_graph(self):
+        return (
+            self.start_coords,
+            self.end_coords,
+            self.topo_uuid,
+            self.length
+        )
 
 class NetworkTopology:
     __slots__ = (

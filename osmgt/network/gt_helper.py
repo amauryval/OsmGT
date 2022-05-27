@@ -36,8 +36,8 @@ class GraphHelpers(Graph):
 
     __slots__ = (
         "_logger",
-        "vertex_names",
-        "edge_names",
+        "vertices_features",
+        "edge_features",
         "edge_weights",
         "vertices_content",
         "edges_content",
@@ -53,19 +53,19 @@ class GraphHelpers(Graph):
         super(GraphHelpers, self).__init__(directed=is_directed)
 
         self._logger = logger
-        self.vertex_names = self.new_vertex_property("string")
-        self.edge_names = self.new_edge_property("string")
+        self.vertices_features = self.new_vertex_property("string")
+        self.edge_features = self.new_edge_property("string")
 
         self.edge_weights = self.new_edge_property("double")
 
-        self.vertices_content: Dict = collections.defaultdict(lambda: None)
-        self.edges_content: Dict = collections.defaultdict(lambda: None)
+        self.vertices_content = {}
+        self.edges_content = {}
 
     def find_edges_from_vertex(self, vertex_name: str) -> List[str]:
         vertex = self.find_vertex_from_name(vertex_name)
         if vertex is not None:
             all_edges_found = vertex.all_edges()
-            edges_names = [self.edge_names[edge] for edge in all_edges_found]
+            edges_names = [self.edge_features[edge] for edge in all_edges_found]
             edges_exist = list(map(self.edge_exists_from_name, edges_names))
             if all(edges_exist):
                 return edges_names
@@ -78,8 +78,8 @@ class GraphHelpers(Graph):
         edge = self.find_edge_from_name(edge_name)
         if edge is not None:
 
-            vertex_source_name = self.vertex_names[edge.source()]
-            vertex_target_name = self.vertex_names[edge.target()]
+            vertex_source_name = self.vertices_features[edge.source()]
+            vertex_target_name = self.vertices_features[edge.target()]
 
             if all(
                 [
@@ -109,7 +109,8 @@ class GraphHelpers(Graph):
             raise ExistingVertex(f"Vertex {vertex_name} already exists")
 
         vertex = super(GraphHelpers, self).add_vertex()
-        self.vertex_names[vertex] = vertex_name
+        self.vertices_features[vertex] = vertex_name
+
         self.vertices_content[vertex_name] = vertex
 
         return vertex
@@ -149,7 +150,8 @@ class GraphHelpers(Graph):
                 target = self.add_vertex(target_vertex_name)
 
             edge = super(GraphHelpers, self).add_edge(source, target)
-            self.edge_names[edge] = edge_name
+            self.edge_features[edge] = edge_name
+
             self.edges_content[edge_name] = edge
 
             if weight is not None:
@@ -157,12 +159,7 @@ class GraphHelpers(Graph):
 
             return edge
 
-        else:
-            print(f"Edge {edge_name} already exists")
-
-            return None
-
-
+        return None
 
     def find_edge_from_name(self, edge_name: str):
         """
@@ -173,8 +170,8 @@ class GraphHelpers(Graph):
         :return: Edge object
         :rtype: graph_tool.libgraph_tool_core.Edge
         """
-        return self.edges_content[str(edge_name)]
 
+        return self.edges_content[edge_name] if edge_name in self.edges_content else None
 
     def edge_exists_from_name(self, edge_name: str):
         """
@@ -236,8 +233,7 @@ class GraphHelpers(Graph):
         :rtype: graph_tool.libgraph_tool_core.Vertex or None
         """
 
-        return self.vertices_content[vertex_name]
-
+        return self.vertices_content[vertex_name] if vertex_name in self.vertices_content else None
 
     def vertex_exists_from_name(self, vertex_name: str) -> bool:
         """

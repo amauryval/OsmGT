@@ -128,7 +128,7 @@ class OsmGtShortestPath(OsmGtRoads):
             # # get path by using edge names
             osm_roads_features = gdf_copy[
                 gdf_copy[self._TOPO_FIELD].isin(
-                    [self._graph.edge_names[edge] for edge in path_edges]
+                    [self._graph.edge_features[edge] for edge in path_edges]
                 )
             ]
 

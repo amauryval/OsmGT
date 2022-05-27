@@ -29,7 +29,6 @@ import geopandas as gpd
 import pandas as pd
 
 import itertools
-from collections import Counter
 
 from graph_tool.topology import shortest_distance
 
@@ -262,7 +261,7 @@ class OsmGtIsochrone(OsmGtRoads):
                 max_dist=dist,
                 return_reached=True,
             )
-            points_found.extend([self._graph.vertex_names[vertex] for vertex in pred])
+            points_found.extend([self._graph.vertices_features[vertex] for vertex in pred])
 
         all_edges_found_topo_uuids_count = Counter(
             list(
