@@ -287,10 +287,13 @@ class NetworkTopology:
             # by default
             new_forward_feature = self._direction_processing(input_feature, forward_tag)
             new_elements.extend(new_forward_feature)
-            if input_feature.get(self.__JUNCTION_FIELD, None) in self.__JUNCTION_VALUES:
+
+            if input_feature[self.__JUNCTION_FIELD] if self.__JUNCTION_FIELD in input_feature else None \
+                in self.__JUNCTION_VALUES:
                 return new_elements
 
-            if input_feature.get(self.__ONEWAY_FIELD, None) != self.__ONEWAY_VALUE:
+            if input_feature[self.__ONEWAY_FIELD] if self.__ONEWAY_FIELD in input_feature else None\
+                != self.__ONEWAY_VALUE:
 
                 new_backward_feature = self._direction_processing(
                     input_feature, backward_tag
