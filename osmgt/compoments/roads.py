@@ -96,16 +96,8 @@ class OsmGtRoads(OsmGtCore):
             self.logger, is_directed=network_queries[self._mode]["directed_graph"]
         )
 
-        [
-            graph.add_edge(
-                feature.start_coords,
-                feature.end_coords,
-                feature.topo_uuid,
-                feature.length
-            )
-            for feature in self._output_data
-        ]
-
+        graph.add_edges(self._output_data)
+        self.logger.info("Graph ok")
         return graph
 
     def _check_network_output_data(self):

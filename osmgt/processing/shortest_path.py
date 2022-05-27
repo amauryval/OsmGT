@@ -98,9 +98,10 @@ class OsmGtShortestPath(OsmGtRoads):
 
         self._output_data = []
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(self._compute_shortest_path, self._source_target_points)
-
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     executor.map(self._compute_shortest_path, self._source_target_points)
+        for f in self._source_target_points:
+            self._compute_shortest_path(f)
         return self.get_gdf()
 
     def _compute_shortest_path(self, nodes: Tuple[Point, Point]) -> None:

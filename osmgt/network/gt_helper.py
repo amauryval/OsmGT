@@ -9,6 +9,9 @@ from graph_tool.draw import sfdp_layout
 
 import collections
 
+from osmgt.geometry.network_topology import NetworkFeature
+
+
 class ErrorGraphHelpers(ValueError):
     pass
 
@@ -160,6 +163,21 @@ class GraphHelpers(Graph):
             return edge
 
         return None
+
+    def add_edges(self, edges: List[NetworkFeature]):
+        # 0:x, 1:y, 2:weight, 3:edge_name
+
+        a = self.add_edge_list(map(lambda x: [x.start_coords, x.end_coords, x.length], edges), hashed=True, eprops=[self.edge_weights])
+
+        self.vertices_content = {a[i]: self.vertex(i) for i in range(self.num_vertices())}
+        self.vertices_features = {vertex: vertex_name for vertex_name, vertex in self.vertices_content.items()}
+
+        self.edges_content = {
+            feature.topo_uuid: self.find_edge_from_vertices_name(feature.start_coords, feature.end_coords)
+            for feature in edges
+        }
+        self.edge_features = {edge: edge_name for edge_name, edge in self.edges_content.items()}
+        assert True
 
     def find_edge_from_name(self, edge_name: str):
         """
