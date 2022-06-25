@@ -62,7 +62,7 @@ jobs:
         publish_dir: _build/
 
     - name: publish-to-conda
-      uses: amauryval/publish_conda_package_action@2.0.1
+      uses: amauryval/publish_conda_package_action@2.0.3
       with:
         CondaDir: 'conda_recipe'
         Platforms: 'linux-64'
