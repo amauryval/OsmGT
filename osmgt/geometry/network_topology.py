@@ -28,10 +28,12 @@ import concurrent.futures
 
 from osmgt.helpers.global_values import forward_tag
 from osmgt.helpers.global_values import backward_tag
+from osmgt.network.gt_helper import GraphHelpers
 
 
 class NetworkTopologyError(Exception):
     pass
+
 
 class NetworkFeature:
     __slots__ = (
@@ -92,6 +94,7 @@ class NetworkTopology:
         "__connections_added",
         "_output",
         "logger",
+        "_graph",
         "__tree_index",
         "__node_by_nearest_lines"
     )
@@ -135,6 +138,7 @@ class NetworkTopology:
         original_field_id: str,
         mode_post_processing: str,
         improve_line_output: bool = False,
+        directed_graph: bool = True,
     ) -> None:
         """
 
@@ -143,6 +147,8 @@ class NetworkTopology:
         :type additional_nodes: list of dict
         :type uuid_field: str
         :type mode_post_processing: str
+        :type improve_line_output: bool
+        :type directed_graph: bool
         """
         self.logger = logger
         self.logger.info("Network cleaning...")
@@ -167,7 +173,11 @@ class NetworkTopology:
         self.__connections_added: Dict = {}
         self._output: List[NetworkFeature] = []
 
-    def run(self) -> List[NetworkFeature]:
+        self._graph = GraphHelpers(
+            self.logger, is_directed=directed_graph
+        )
+
+    def run(self) -> Tuple[List[NetworkFeature], GraphHelpers]:
         self._prepare_data()
 
         # ugly footway processing...
@@ -185,7 +195,7 @@ class NetworkTopology:
         for feature in self._network_data.values():
             self.build_lines(feature)
 
-        return self._output
+        return self._output, self._graph
 
     # def prepare_footway_nodes(self) -> None:
     #     import itertools
@@ -308,6 +318,14 @@ class NetworkTopology:
 
         return new_elements
 
+    def add_graph_edge(self, feature: NetworkFeature):
+        self._graph.add_edge(
+                feature.start_coords,
+                feature.end_coords,
+                feature.topo_uuid,
+                feature.length
+            )
+
     def _direction_processing(
         self, input_feature: Dict, direction: Optional[str] = None
     ) -> List[NetworkFeature]:
@@ -357,14 +375,19 @@ class NetworkTopology:
         else:
             uuid = f"{input_feature[self.__FIELD_ID]}{idx}"
 
+        feature_built = self._build_network_feature(input_feature, new_linestring, uuid)
+        return feature_built
 
-        return NetworkFeature(
+    def _build_network_feature(self, input_feature: Dict, new_linestring: LineString, uuid: str):
+        feature = NetworkFeature(
             id_value=input_feature["id"],
             geometry=new_linestring,
             oneway=input_feature["oneway"] if "oneway" in input_feature else None,
             topology=input_feature["topology"],
             topo_uuid=uuid,
         )
+        self.add_graph_edge(feature)
+        return feature
 
     def _split_line(self, feature: Dict, interpolation_level: int) -> List:
         new_line_coords = interpolate_curve_based_on_original_points(

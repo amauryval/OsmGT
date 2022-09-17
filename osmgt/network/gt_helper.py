@@ -9,7 +9,6 @@ from graph_tool.draw import sfdp_layout
 
 import collections
 
-from osmgt.geometry.network_topology import NetworkFeature
 
 
 class ErrorGraphHelpers(ValueError):
@@ -164,7 +163,7 @@ class GraphHelpers(Graph):
 
         return None
 
-    def add_edges(self, edges: List[NetworkFeature]):
+    def add_edges(self, edges: List):
         graph_vertices = self.add_edge_list(map(lambda x: [x.start_coords, x.end_coords, x.length], edges), hashed=True, eprops=[self.edge_weights])
 
         self.vertices_content = {graph_vertices[i]: self.vertex(i) for i in range(self.num_vertices())}

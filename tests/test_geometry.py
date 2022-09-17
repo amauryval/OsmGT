@@ -4,7 +4,7 @@ from osmgt.compoments.core import OsmGtCore
 
 
 def test_connect_lines(some_line_features, some_point_features):
-    raw_data_topology_rebuild = NetworkTopology(
+    raw_data_topology_rebuild, _ = NetworkTopology(
         OsmGtCore().logger,
         some_line_features,
         some_point_features,
@@ -54,7 +54,7 @@ def test_connect_lines(some_line_features, some_point_features):
     assert set([feature.geometry.geom_type for feature in raw_data_topology_rebuild]) == {"LineString"}
 
 def test_connect_lines_interpolate_lines(some_line_features, some_point_features):
-    raw_data_topology_rebuild = NetworkTopology(
+    raw_data_topology_rebuild, _ = NetworkTopology(
         OsmGtCore().logger,
         some_line_features,
         some_point_features,

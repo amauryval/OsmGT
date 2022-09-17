@@ -35,6 +35,7 @@ class AdditionalNodesOutsideWorkingArea(Exception):
 class OsmGtRoads(OsmGtCore):
     __slots__ = (
         "_mode",
+        "_graph",
         "_output_data",
         "_OUTPUT_EXPECTED_GEOM_TYPE"
     )
@@ -44,6 +45,7 @@ class OsmGtRoads(OsmGtCore):
         super().__init__()
 
         self._mode = None
+        self._graph = None
 
     def from_location(
         self,
@@ -63,7 +65,7 @@ class OsmGtRoads(OsmGtCore):
         query = self._get_query_from_mode(mode)
         request = self._from_location_name_query_builder(self._location_id, query)
         raw_data = self._query_on_overpass_api(request)
-        self._output_data: List[NetworkFeature] = self.__build_network_topology(
+        self._output_data, self._graph = self.__build_network_topology(
             raw_data, additional_nodes, mode, interpolate_lines
         )
         return self.get_gdf()
@@ -86,28 +88,29 @@ class OsmGtRoads(OsmGtCore):
         query = self._get_query_from_mode(mode)
         request = self._from_bbox_query_builder(self._bbox_value, query)
         raw_data = self._query_on_overpass_api(request)
-        self._output_data = self.__build_network_topology(
+        self._output_data, self._graph = self.__build_network_topology(
             raw_data, additional_nodes, mode, interpolate_lines
         )
 
     def get_graph(self):
-        self.logger.info("Prepare graph")
-        self._check_network_output_data()
-
-        graph = GraphHelpers(
-            self.logger, is_directed=network_queries[self._mode]["directed_graph"]
-        )
-
-        # graph.add_edges(self._output_data)  # BULK mode
-        for feature in self._output_data:
-            graph.add_edge(
-                feature.start_coords,
-                feature.end_coords,
-                feature.topo_uuid,
-                feature.length
-            )
-        self.logger.info("Graph ok")
-        return graph
+        return self._graph
+        # self.logger.info("Prepare graph")
+        # self._check_network_output_data()
+        #
+        # graph = GraphHelpers(
+        #     self.logger, is_directed=network_queries[self._mode]["directed_graph"]
+        # )
+        #
+        # # graph.add_edges(self._output_data)  # BULK mode
+        # for feature in self._output_data:
+        #     graph.add_edge(
+        #         feature.start_coords,
+        #         feature.end_coords,
+        #         feature.topo_uuid,
+        #         feature.length
+        #     )
+        # self.logger.info("Graph ok")
+        # return graph
 
     def _check_network_output_data(self):
 
@@ -145,7 +148,8 @@ class OsmGtRoads(OsmGtCore):
             additional_nodes = additional_nodes_filtered.to_dict("records")
 
         raw_data_restructured = self.__rebuild_network_data(raw_data)
-        raw_data_topology_rebuild = NetworkTopology(
+
+        raw_data_topology_rebuild, graph = NetworkTopology(
             self.logger,
             raw_data_restructured,
             additional_nodes,
@@ -153,9 +157,10 @@ class OsmGtRoads(OsmGtCore):
             self._ID_OSM_FIELD,
             mode,
             interpolate_lines,
+            network_queries[self._mode]["directed_graph"]
         ).run()
 
-        return raw_data_topology_rebuild
+        return raw_data_topology_rebuild, graph
 
     def __rebuild_network_data(self, raw_data: List[Dict]) -> List[Dict]:
         self.logger.info("Rebuild network data")
