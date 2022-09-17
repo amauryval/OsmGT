@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Tuple
 from typing import List
 from typing import Dict
@@ -8,9 +9,11 @@ from typing import Iterator
 
 from scipy import spatial
 
+from shapely.geometry import Point
 from shapely.geometry import LineString
 
 import rtree
+from osmgt.geometry.geom_helpers import compute_wg84_line_length
 
 import numpy as np
 
@@ -30,6 +33,51 @@ from osmgt.helpers.global_values import backward_tag
 class NetworkTopologyError(Exception):
     pass
 
+class NetworkFeature:
+    __slots__ = (
+        "geometry",
+        "topo_uuid",
+        "id",
+        "oneway",
+        "topology",
+    )
+
+    def __init__(self, geometry: LineString, topo_uuid: str, id_value: str, oneway: str, topology: str):
+        self.geometry = geometry
+        self.topo_uuid = topo_uuid
+        self.id = id_value
+        self.oneway = oneway
+        self.topology = topology
+
+    @property
+    def start_coords(self) -> str:
+        return Point(self.geometry.coords[0]).wkt
+
+    @property
+    def end_coords(self) -> str:
+        return Point(self.geometry.coords[-1]).wkt
+
+    @property
+    def length(self) -> float:
+        return compute_wg84_line_length(self.geometry)
+
+    def to_dict(self) -> Dict:
+        return {
+            "geometry": self.geometry,
+            "topo_uuid": self.topo_uuid,
+            "id": self.id,
+            "oneway": self.oneway,
+            "topology": self.topology,
+        }
+
+    @property
+    def to_graph(self):
+        return (
+            self.start_coords,
+            self.end_coords,
+            self.topo_uuid,
+            self.length
+        )
 
 class NetworkTopology:
     __slots__ = (
@@ -117,9 +165,9 @@ class NetworkTopology:
 
         self._intersections_found: Optional[Set[Tuple[float, float]]] = None
         self.__connections_added: Dict = {}
-        self._output: List[Dict] = []
+        self._output: List[NetworkFeature] = []
 
-    def run(self) -> List[Dict]:
+    def run(self) -> List[NetworkFeature]:
         self._prepare_data()
 
         # ugly footway processing...
@@ -232,17 +280,20 @@ class NetworkTopology:
                 new_features = self.mode_processing(feature)
                 self._output.extend(new_features)
 
-    def mode_processing(self, input_feature):
+    def mode_processing(self, input_feature: Dict) -> List[NetworkFeature]:
         new_elements = []
 
         if self._mode_post_processing == "vehicle":
             # by default
             new_forward_feature = self._direction_processing(input_feature, forward_tag)
             new_elements.extend(new_forward_feature)
-            if input_feature.get(self.__JUNCTION_FIELD, None) in self.__JUNCTION_VALUES:
+
+            if input_feature[self.__JUNCTION_FIELD] if self.__JUNCTION_FIELD in input_feature else None \
+                in self.__JUNCTION_VALUES:
                 return new_elements
 
-            if input_feature.get(self.__ONEWAY_FIELD, None) != self.__ONEWAY_VALUE:
+            if input_feature[self.__ONEWAY_FIELD] if self.__ONEWAY_FIELD in input_feature else None\
+                != self.__ONEWAY_VALUE:
 
                 new_backward_feature = self._direction_processing(
                     input_feature, backward_tag
@@ -259,7 +310,7 @@ class NetworkTopology:
 
     def _direction_processing(
         self, input_feature: Dict, direction: Optional[str] = None
-    ):
+    ) -> List[NetworkFeature]:
         new_features = []
         input_feature_copy = dict(input_feature)
 
@@ -287,8 +338,7 @@ class NetworkTopology:
 
     def __proceed_direction_geom(
         self, direction, input_feature, sub_line_coords, idx=None
-    ):
-        feature = dict(input_feature)
+    ) -> NetworkFeature:
 
         if idx is not None:
             idx = f"_{idx}"
@@ -301,14 +351,20 @@ class NetworkTopology:
             new_linestring = LineString(sub_line_coords)
         else:
             raise NetworkTopologyError(f"Direction issue: value '{direction}' found")
-        feature[self.__GEOMETRY_FIELD] = new_linestring
 
         if direction is not None:
-            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}{idx}_{direction}"
+            uuid = f"{input_feature[self.__FIELD_ID]}{idx}_{direction}"
         else:
-            feature[self.__FIELD_ID] = f"{feature[self.__FIELD_ID]}{idx}"
+            uuid = f"{input_feature[self.__FIELD_ID]}{idx}"
 
-        return feature
+
+        return NetworkFeature(
+            id_value=input_feature["id"],
+            geometry=new_linestring,
+            oneway=input_feature["oneway"] if "oneway" in input_feature else None,
+            topology=input_feature["topology"],
+            topo_uuid=uuid,
+        )
 
     def _split_line(self, feature: Dict, interpolation_level: int) -> List:
         new_line_coords = interpolate_curve_based_on_original_points(
@@ -319,23 +375,12 @@ class NetworkTopology:
     def _prepare_data(self):
 
         self._network_data = {
-            feature[self.__FIELD_ID]: {
-                **{self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[:]},
-                **feature,
-                **{self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_UNCHANGED},
-            }
+            feature[self.__FIELD_ID]: {self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[:]} | feature | {self.__CLEANING_FILED_STATUS: self.__TOPOLOGY_TAG_UNCHANGED}
             for feature in self._network_data
         }
         if self._additional_nodes is not None:
             self._additional_nodes = {
-                feature[self.__FIELD_ID]: {
-                    **{
-                        self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[
-                            0
-                        ]
-                    },
-                    **feature,
-                }
+                feature[self.__FIELD_ID]: {self.__COORDINATES_FIELD: feature[self.__GEOMETRY_FIELD].coords[0]} | feature
                 for feature in self._additional_nodes
             }
 
@@ -353,7 +398,7 @@ class NetworkTopology:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self.split_line, node_keys_by_nearest_lines_filled)
 
-        self._network_data: Dict = {**self._network_data, **self.__connections_added}
+        self._network_data: Dict = self._network_data | self.__connections_added
 
         self.logger.info(
             f"Topology lines checker: {', '.join([f'{key}: {value}' for key, value in self.__topology_stats.items()])}"

@@ -12,6 +12,8 @@ from osmgt.helpers.logger import Logger
 from osmgt.apis.nominatim import NominatimApi
 from osmgt.apis.overpass import OverpassApi
 
+from osmgt.geometry.network_topology import NetworkFeature
+
 from osmgt.helpers.global_values import network_queries
 from osmgt.helpers.global_values import epsg_4326
 from osmgt.helpers.global_values import out_geom_query
@@ -23,7 +25,7 @@ from shapely.geometry import box
 
 from osmgt.helpers.global_values import osm_url
 
-from osmgt.helpers.misc import chunker
+from osmgt.helpers.misc import chunker, df_to_gdf
 
 
 class ErrorOsmGtCore(Exception):
@@ -167,17 +169,16 @@ class OsmGtCore(Logger):
         if not isinstance(self._output_data, gpd.GeoDataFrame):
             # more performance comparing .from_features() method
             df = pd.DataFrame()
-            for chunk in chunker(self._output_data, 100000):
+
+            if isinstance(self._output_data[0], NetworkFeature):
+                data = list(map(lambda x: x.to_dict(), self._output_data))
+            else:
+                data = self._output_data
+
+            for chunk in chunker(data, 100000):
                 df_tmp = pd.DataFrame(chunk)
                 df = pd.concat((df, df_tmp), axis=0)
-            df: pd.DataFrame = pd.DataFrame(self._output_data)
-
-            geometry = df[self._GEOMETRY_FIELD]
-            output_gdf: gpd.GeoDataFrame = gpd.GeoDataFrame(
-                df.drop([self._GEOMETRY_FIELD], axis=1),
-                crs=f"EPSG:{epsg_4326}",
-                geometry=geometry.to_list(),
-            )
+            output_gdf: gpd.GeoDataFrame = df_to_gdf(df)
 
         else:
             output_gdf: gpd.GeoDataFrame = self._output_data
@@ -187,7 +188,6 @@ class OsmGtCore(Logger):
         output_gdf: gpd.GeoDataFrame = self._clean_attributes(output_gdf)
 
         self.logger.info("GeoDataframe Ready")
-
         return output_gdf
 
     def _check_build_input_data(self, output_gdf) -> None:
@@ -216,6 +216,7 @@ class OsmGtCore(Logger):
     def _build_feature_from_osm(
         self, uuid_enum: int, geometry: Union[Point, LineString], properties: Dict
     ) -> Dict:
+        # TODO improve it: get()
         properties_found: Dict = properties.get(self._PROPERTIES_OSM_FIELD, {})
         properties_found[self._ID_OSM_FIELD] = str(properties[self._ID_OSM_FIELD])
         properties_found[
