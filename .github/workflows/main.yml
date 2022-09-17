@@ -47,7 +47,7 @@ jobs:
         conda config --set auto_update_conda off
         conda install --yes --quiet $CONDA_REQS
         conda install --yes --quiet mamba -c conda-forge
-        mamba env create --file environment.yml
+        mamba env create --file environment.dev.yml
 
     - name: Run tests
       shell: bash
