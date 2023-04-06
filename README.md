@@ -1,6 +1,8 @@
 OsmGT
 ====
 
+## This package will not be maintain: a new package [OsmRx](https://github.com/amauryval/OsmRx) based on rustworkx has been built and is currently developed!
+
 ![CI](https://github.com/amauryval/osmgt/workflows/CI/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/amauryval/osmgt/branch/master/graph/badge.svg)](https://codecov.io/gh/amauryval/osmgt)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
