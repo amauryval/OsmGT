@@ -19,7 +19,7 @@ forward_tag: str = "forward"
 backward_tag: str = "backward"
 
 # topology
-topology_fields: List[str] = ["topo_uuid", "id", "topology", "osm_url", "geometry"]
+topology_fields: List[str] = ["topo_uuid", "id", "topology", "geometry"]
 
 # POIs overpass query
 poi_query: str = (

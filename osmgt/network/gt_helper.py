@@ -7,6 +7,10 @@ from graph_tool import Graph
 from graph_tool.all import graph_draw
 from graph_tool.draw import sfdp_layout
 
+import collections
+
+from osmgt.geometry.network_topology import NetworkFeature
+
 
 class ErrorGraphHelpers(ValueError):
     pass
@@ -35,12 +39,11 @@ class GraphHelpers(Graph):
 
     __slots__ = (
         "_logger",
-        "vertex_names",
-        "edge_names",
+        "vertices_features",
+        "edge_features",
         "edge_weights",
         "vertices_content",
         "edges_content",
-        "edges_vertices_content",
     )
 
     def __init__(self, logger, is_directed: bool = True) -> None:
@@ -53,20 +56,19 @@ class GraphHelpers(Graph):
         super(GraphHelpers, self).__init__(directed=is_directed)
 
         self._logger = logger
-        self.vertex_names = self.new_vertex_property("string")
-        self.edge_names = self.new_edge_property("string")
+        self.vertices_features = self.new_vertex_property("string")
+        self.edge_features = self.new_edge_property("string")
 
         self.edge_weights = self.new_edge_property("double")
 
-        self.vertices_content: Dict = {}
-        self.edges_content: Dict = {}
-        self.edges_vertices_content: Dict = {}
+        self.vertices_content = {}
+        self.edges_content = {}
 
     def find_edges_from_vertex(self, vertex_name: str) -> List[str]:
         vertex = self.find_vertex_from_name(vertex_name)
         if vertex is not None:
             all_edges_found = vertex.all_edges()
-            edges_names = [self.edge_names[edge] for edge in all_edges_found]
+            edges_names = [self.edge_features[edge] for edge in all_edges_found]
             edges_exist = list(map(self.edge_exists_from_name, edges_names))
             if all(edges_exist):
                 return edges_names
@@ -79,8 +81,8 @@ class GraphHelpers(Graph):
         edge = self.find_edge_from_name(edge_name)
         if edge is not None:
 
-            vertex_source_name = self.vertex_names[edge.source()]
-            vertex_target_name = self.vertex_names[edge.target()]
+            vertex_source_name = self.vertices_features[edge.source()]
+            vertex_target_name = self.vertices_features[edge.target()]
 
             if all(
                 [
@@ -110,7 +112,8 @@ class GraphHelpers(Graph):
             raise ExistingVertex(f"Vertex {vertex_name} already exists")
 
         vertex = super(GraphHelpers, self).add_vertex()
-        self.vertex_names[vertex] = vertex_name
+        self.vertices_features[vertex] = vertex_name
+
         self.vertices_content[vertex_name] = vertex
 
         return vertex
@@ -150,23 +153,28 @@ class GraphHelpers(Graph):
                 target = self.add_vertex(target_vertex_name)
 
             edge = super(GraphHelpers, self).add_edge(source, target)
-            self.edge_names[edge] = edge_name
+            self.edge_features[edge] = edge_name
+
             self.edges_content[edge_name] = edge
-            self.edges_vertices_content[edge_name] = frozenset(
-                [source_vertex_name, target_vertex_name]
-            )
 
             if weight is not None:
                 self.edge_weights[edge] = weight
 
             return edge
 
-        else:
-            print(f"Edge {edge_name} already exists")
+        return None
 
-            return None
+    def add_edges(self, edges: List[NetworkFeature]):
+        graph_vertices = self.add_edge_list(map(lambda x: [x.start_coords, x.end_coords, x.length], edges), hashed=True, eprops=[self.edge_weights])
 
+        self.vertices_content = {graph_vertices[i]: self.vertex(i) for i in range(self.num_vertices())}
+        self.vertices_features = {vertex: vertex_name for vertex_name, vertex in self.vertices_content.items()}
 
+        self.edges_content = {
+            feature.topo_uuid: self.find_edge_from_vertices_name(feature.start_coords, feature.end_coords)
+            for feature in edges
+        }
+        self.edge_features = {edge: edge_name for edge_name, edge in self.edges_content.items()}
 
     def find_edge_from_name(self, edge_name: str):
         """
@@ -178,9 +186,10 @@ class GraphHelpers(Graph):
         :rtype: graph_tool.libgraph_tool_core.Edge
         """
         try:
-            return self.edges_content[str(edge_name)]
-        except KeyError:
+            return self.edges_content[edge_name]
+        except:
             return None
+        # return self.edges_content[edge_name] if edge_name in self.edges_content else None
 
     def edge_exists_from_name(self, edge_name: str):
         """
@@ -241,11 +250,11 @@ class GraphHelpers(Graph):
         :return: vertex object or none if not exists
         :rtype: graph_tool.libgraph_tool_core.Vertex or None
         """
-
         try:
             return self.vertices_content[vertex_name]
-        except KeyError:
+        except:
             return None
+        # return self.vertices_content[vertex_name] if vertex_name in self.vertices_content else None
 
     def vertex_exists_from_name(self, vertex_name: str) -> bool:
         """

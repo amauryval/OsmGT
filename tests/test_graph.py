@@ -41,6 +41,7 @@ def test_create_vertices(point_a, point_b):
         _ = graph.add_vertex(point_b.wkt)
 
     assert vertex_b == graph.find_vertex_from_name(point_b.wkt)
+    assert graph.find_vertex_from_name("coucou") is None
     assert graph.vertex_exists_from_name(point_b.wkt)
     assert not graph.vertex_exists_from_name("Hello ?")
 
@@ -53,6 +54,7 @@ def test_create_edges_with_an_undirected_graph(point_a, point_b, point_c):
     assert edge_3 is None
 
     assert edge_2 == graph.find_edge_from_name("edge_2")
+    assert graph.find_edge_from_name("vouvou") is None
     assert graph.edge_exists_from_name("edge_2")
 
     assert edge_2 == graph.find_edge_from_vertices_name(point_b.wkt, point_c.wkt)

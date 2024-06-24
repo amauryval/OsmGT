@@ -98,9 +98,10 @@ class OsmGtShortestPath(OsmGtRoads):
 
         self._output_data = []
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(self._compute_shortest_path, self._source_target_points)
-
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     executor.map(self._compute_shortest_path, self._source_target_points)
+        for f in self._source_target_points:
+            self._compute_shortest_path(f)
         return self.get_gdf()
 
     def _compute_shortest_path(self, nodes: Tuple[Point, Point]) -> None:
@@ -128,7 +129,7 @@ class OsmGtShortestPath(OsmGtRoads):
             # # get path by using edge names
             osm_roads_features = gdf_copy[
                 gdf_copy[self._TOPO_FIELD].isin(
-                    [self._graph.edge_names[edge] for edge in path_edges]
+                    [self._graph.edge_features[edge] for edge in path_edges]
                 )
             ]
 
@@ -136,10 +137,6 @@ class OsmGtShortestPath(OsmGtRoads):
             path_osm_ids = filter(
                 lambda x: isinstance(x, str),
                 osm_roads_features[self._ID_OSM_FIELD].to_list(),
-            )
-            path_osm_urls = filter(
-                lambda x: isinstance(x, str),
-                osm_roads_features[self._OSM_URL_FIELD].to_list(),
             )
 
             # reorder linestring
@@ -153,7 +150,6 @@ class OsmGtShortestPath(OsmGtRoads):
                     "source_node": source_node.wkt,
                     "target_node": target_node.wkt,
                     "osm_ids": ", ".join(path_osm_ids),
-                    "osm_urls": ", ".join(path_osm_urls),
                     "geometry": path_found,
                 }
             )

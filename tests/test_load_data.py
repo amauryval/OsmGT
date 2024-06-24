@@ -37,7 +37,6 @@ def shared_asserts(
     # check graph
     assert len(list(graph_computed.edges())) > 0
     assert len(list(graph_computed.vertices())) > 0
-    assert type(graph_computed.vertices_content) == dict
     assert len(graph_computed.vertices_content) > 0
 
 
@@ -87,7 +86,7 @@ def test_run_from_location_name_with_additional_nodes(
     } == set(network_topology_gdfs.keys())
     for topology_gdf in network_topology_gdfs.values():
         assert topology_gdf.shape[0] > 0
-        assert topology_gdf.shape[1] == 5
+        assert topology_gdf.shape[1] == 4
 
 
 def test_run_from_location_name_without_additional_nodes(
@@ -120,7 +119,7 @@ def test_run_from_location_name_without_additional_nodes(
             assert topology_gdf.shape[0] == 0
         else:
             assert topology_gdf.shape[0] > 0
-        assert topology_gdf.shape[-1] == 5
+        assert topology_gdf.shape[-1] == 4
 
 
 def test_run_from_bbox_func(
@@ -162,7 +161,7 @@ def test_run_from_bbox_func(
             assert topology_gdf.shape[0] > 0
         else:
             assert topology_gdf.shape[0] > 0
-        assert topology_gdf.shape[-1] == 5
+        assert topology_gdf.shape[-1] == 4
 
 
 def test_run_from_bbox_func_usa(
@@ -206,4 +205,4 @@ def test_run_from_bbox_func_usa(
             assert topology_gdf.shape[0] > 0
         else:
             assert topology_gdf.shape[0] > 0
-        assert topology_gdf.shape[-1] == 5
+        assert topology_gdf.shape[-1] == 4

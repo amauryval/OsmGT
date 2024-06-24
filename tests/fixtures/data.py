@@ -168,12 +168,12 @@ def default_output_pois_columns():
 
 @pytest.fixture
 def default_output_network_columns():
-    return {"id", "topo_uuid", "topology", "geometry", "osm_url"}
+    return {"id", "topo_uuid", "topology", "geometry"}
 
 
 @pytest.fixture
 def shortest_path_output_default_columns():
-    return {"id", "source_node", "target_node", "osm_ids", "osm_urls", "geometry"}
+    return {"id", "source_node", "target_node", "osm_ids",  "geometry"}
 
 
 @pytest.fixture()
@@ -183,7 +183,7 @@ def isochrones_polygons_output_default_columns():
 
 @pytest.fixture()
 def isochrones_lines_output_default_columns():
-    return {"id", "iso_name", "iso_distance", "topo_uuid", "topology", "osm_url", "geometry"}
+    return {"id", "iso_name", "iso_distance", "topo_uuid", "topology", "geometry"}
 
 
 @pytest.fixture

@@ -1,3 +1,4 @@
+
 import geopandas as gpd
 from typing import Tuple
 from typing import List
@@ -12,19 +13,13 @@ from osmgt.compoments.core import OsmGtCore
 from osmgt.compoments.core import EmptyData
 
 from osmgt.geometry.network_topology import NetworkTopology
+from osmgt.geometry.network_topology import NetworkFeature
 
-from osmgt.geometry.geom_helpers import compute_wg84_line_length
 from osmgt.geometry.geom_helpers import linestring_points_fom_positions
 
 from shapely.geometry import LineString
-from shapely.geometry import Point
 
-# to facilitate debugging
-try:
-    from osmgt.network.gt_helper import GraphHelpers
-except ModuleNotFoundError:
-    pass
-
+from osmgt.network.gt_helper import GraphHelpers
 
 from osmgt.helpers.global_values import network_queries
 
@@ -44,7 +39,6 @@ class OsmGtRoads(OsmGtCore):
         "_OUTPUT_EXPECTED_GEOM_TYPE"
     )
     _FEATURE_OSM_TYPE: str = "way"
-
 
     def __init__(self) -> None:
         super().__init__()
@@ -69,9 +63,10 @@ class OsmGtRoads(OsmGtCore):
         query = self._get_query_from_mode(mode)
         request = self._from_location_name_query_builder(self._location_id, query)
         raw_data = self._query_on_overpass_api(request)
-        self._output_data = self.__build_network_topology(
+        self._output_data: List[NetworkFeature] = self.__build_network_topology(
             raw_data, additional_nodes, mode, interpolate_lines
         )
+        return self.get_gdf()
 
     def from_bbox(
         self,
@@ -95,7 +90,7 @@ class OsmGtRoads(OsmGtCore):
             raw_data, additional_nodes, mode, interpolate_lines
         )
 
-    def get_graph(self) -> GraphHelpers:
+    def get_graph(self):
         self.logger.info("Prepare graph")
         self._check_network_output_data()
 
@@ -103,36 +98,21 @@ class OsmGtRoads(OsmGtCore):
             self.logger, is_directed=network_queries[self._mode]["directed_graph"]
         )
 
+        # graph.add_edges(self._output_data)  # BULK mode
         for feature in self._output_data:
-            graph.add_edge(*self.__compute_edges(feature))
-
+            graph.add_edge(
+                feature.start_coords,
+                feature.end_coords,
+                feature.topo_uuid,
+                feature.length
+            )
+        self.logger.info("Graph ok")
         return graph
 
     def _check_network_output_data(self):
 
         if len(self._output_data) == 0:
             raise EmptyData("Data is empty!")
-
-        # here we check the first feature, all feature should have the same structure
-        first_feature = self._output_data[0]
-        assert (
-            self._GEOMETRY_FIELD in first_feature
-        ), f"{self._GEOMETRY_FIELD} key not found!"
-        assert (
-            first_feature[self._GEOMETRY_FIELD].geom_type
-            == self._OUTPUT_EXPECTED_GEOM_TYPE
-        ), f"{self._GEOMETRY_FIELD} key not found!"
-        assert self._TOPO_FIELD in first_feature, f"{self._TOPO_FIELD} key not found!"
-
-    def __compute_edges(self, feature: Dict) -> Tuple[str, str, str, float]:
-        geometry = feature[self._GEOMETRY_FIELD]
-        first_coords, *_, last_coords = geometry.coords
-        return (
-            Point(first_coords).wkt,
-            Point(last_coords).wkt,
-            feature[self._TOPO_FIELD],
-            compute_wg84_line_length(geometry),
-        )
 
     def __build_network_topology(
         self,
